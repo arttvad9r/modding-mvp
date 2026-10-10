@@ -1,0 +1,75 @@
+# Product specification v0.1
+
+## Purpose
+Build a service that turns a natural-language request into a validated, installable Factorio mod for a user who does not need to know Lua or the Factorio mod API.
+
+The public product name is intentionally undecided.
+
+## MVP promise
+For a supported request, the user should be able to:
+1. describe the desired Factorio change in natural language;
+2. receive a generated mod package;
+3. know whether the mod passed automated validation in a real Factorio headless runtime;
+4. download and install the resulting ZIP.
+
+The product must prefer an explicit unsupported/failed result over claiming that an unverified mod works.
+
+## Initial target
+- Game: Factorio.
+- Game line: stable 2.0.x only.
+- Development runtime is pinned to a specific validated patch release.
+- Initial mod scope: prototype-stage changes.
+
+## Initial supported capability families
+The first usable MVP should cover a narrow set of deterministic changes:
+- prototype property changes, such as crafting speed or other scalar properties;
+- recipe ingredient/result changes;
+- technology cost and prerequisite changes;
+- similarly structured changes that can be represented safely in a typed ModSpec.
+
+Exact properties and prototype types are allow-listed as capabilities are implemented and tested.
+
+## Explicit non-goals for the first MVP
+- runtime `control.lua` gameplay systems;
+- generated textures, sound, 3D assets, or other media;
+- multiplayer cheats, anti-cheat interference, DRM bypass, or binary patching;
+- Minecraft, RimWorld, Terraria, or any second game;
+- marketplace or social features;
+- Steam Workshop publishing;
+- complex billing or subscriptions;
+- desktop or mobile apps.
+
+## Core user flow
+`prompt -> understand request -> generate -> validate -> repair if needed -> package -> download -> feedback`
+
+A request outside the current capability set returns `unsupported` with a concise explanation rather than attempting an unbounded generation.
+
+## Quality principles
+- Real validation is part of the product, not an optional developer check.
+- False success is worse than an explicit failure.
+- Generated output must be reproducible from persisted inputs and attempts where practical.
+- Repair loops are bounded.
+- Generated mod code never receives arbitrary host shell access.
+
+## MVP success hypotheses
+These are working product hypotheses to test during private beta, not established market facts:
+- >= 80% overall success for prompts inside the declared supported capability set;
+- >= 60% success without a repair attempt;
+- <= 2 automatic repair attempts per generation;
+- median prompt-to-result time <= 3 minutes;
+- false-success rate < 5%;
+- at least 30 private beta testers;
+- at least 10 testers create a second mod;
+- at least 3 testers demonstrate willingness to pay.
+
+## Product telemetry required before monetization
+For every generation record:
+- requested capability;
+- outcome and failure stage;
+- number of attempts;
+- duration per stage;
+- LLM token usage and estimated cost when LLMs are introduced;
+- Factorio test duration;
+- user feedback on whether the downloaded mod worked.
+
+Pricing decisions should be based on this observed unit economics and user behavior rather than assumed cost per generated mod.

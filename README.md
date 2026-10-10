@@ -2,14 +2,29 @@
 
 Working repository for a prompt-to-mod service. The public product name is intentionally undecided.
 
-## Current milestone
+## Product direction
+The first MVP targets Factorio stable 2.0.x and aims to turn a supported natural-language request into a validated, installable mod ZIP.
 
-M0 — Factorio Mod Test Harness:
+The project deliberately starts with prototype-stage modifications and one game. See [`docs/product-spec.md`](docs/product-spec.md) for scope and non-goals.
 
-1. Accept a local Factorio mod directory.
-2. Run it in an isolated Factorio 2.0.x headless environment.
-3. Capture exit status and logs.
-4. Return a structured PASS/FAIL result.
+## Current status
+- M0 — Factorio Mod Test Harness: complete.
+- M1 — Deterministic ModSpec engine: current milestone.
+
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results.
+
+## Documentation
+Start with [`docs/README.md`](docs/README.md).
+
+Key documents:
+- [`docs/product-spec.md`](docs/product-spec.md) — product specification;
+- [`docs/technical-spec.md`](docs/technical-spec.md) — technical specification;
+- [`docs/architecture.md`](docs/architecture.md) — current architecture;
+- [`docs/roadmap.md`](docs/roadmap.md) — milestone plan;
+- [`docs/backlog.md`](docs/backlog.md) — actionable engineering backlog;
+- [`docs/adr/README.md`](docs/adr/README.md) — architecture decision records.
+
+AI coding agents must also follow [`AGENTS.md`](AGENTS.md).
 
 ## Setup
 

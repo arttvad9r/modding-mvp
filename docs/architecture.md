@@ -1,13 +1,17 @@
-# Architecture v0.1
+# Architecture v0.2
 
-## Product pipeline
+## Current state
+M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-`prompt -> planner -> generator -> validator -> Factorio tester -> repair loop -> ZIP`
+Current development milestone: M1 — deterministic ModSpec engine.
 
-M0 implements only the Factorio tester boundary. The rest of the pipeline must treat it as a stable contract.
+## Target product pipeline
 
-## M0 contract
+`prompt -> Planner -> ModSpec -> Generator -> static validation -> Factorio tester -> bounded Repair -> ZIP`
 
+The pipeline intentionally separates natural-language interpretation from code generation and real-runtime validation.
+
+## Current implemented boundary: factorio-harness
 Input:
 - path to a local Factorio mod directory;
 - path to a Factorio headless binary;
@@ -17,24 +21,36 @@ Output:
 - `ok: true` when Factorio loads the mod and successfully creates a test map;
 - otherwise `ok: false` with exit code, normalized error summary, and bounded logs.
 
-## Isolation
+Every run creates a fresh temporary directory containing a dedicated `mods/` directory, generated `mod-list.json`, and temporary output save. The supplied source mod is copied and never mutated.
 
-Every run creates a fresh temporary directory containing:
-- a dedicated `mods/` directory;
-- generated `mod-list.json`;
-- a temporary output save.
+See ADR-0003 for why real Factorio is the validation authority.
 
-The supplied mod is copied into that directory. A run never mutates the source mod.
+## Next boundary: deterministic ModSpec engine
+M1 introduces:
+- `packages/domain` for typed ModSpec contracts;
+- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation;
+- semantic assertions derived from ModSpec;
+- safe ZIP packaging;
+- an end-to-end local command for ModSpec -> generated mod -> Factorio validation -> ZIP.
 
-## Version policy
+No LLM is required for M1. This allows generator correctness and the Factorio contract to be established before natural-language planning is introduced.
 
-MVP development targets the current Factorio stable 2.0.x line. Experimental branches are not supported. Later releases must be deliberately validated before changing the pinned test version.
+## Planned package/application boundaries
+- `packages/domain`: ModSpec, generation states, shared typed errors.
+- `packages/factorio-harness`: executes and normalizes Factorio validation.
+- `packages/factorio-generator`: deterministic Factorio artifact generation.
+- `packages/factorio-knowledge`: curated versioned rules/examples when needed.
+- `packages/llm`: model provider abstraction.
+- `packages/agent-core`: Planner/Repair orchestration.
+- `apps/worker`: asynchronous generation jobs when a service requires them.
+- `apps/web`: UI/API when local end-to-end behavior is proven.
 
-## Future package boundaries
+## Architecture invariants
+- Factorio-specific behavior stays behind Factorio package boundaries.
+- ModSpec is the typed intent boundary; see ADR-0004.
+- Generated files are materialized from a bounded manifest, not by granting an LLM shell access.
+- Real Factorio validation cannot be replaced by a static-only success claim.
+- External execution is isolated, timed out, and bounded.
+- Initial capability scope remains prototype-stage only; see ADR-0005.
 
-- `factorio-harness`: executes and normalizes Factorio validation.
-- `domain`: typed ModSpec and generation state contracts.
-- `agent-core`: planner, generator, repair orchestration.
-- `llm`: provider abstraction.
-- `worker`: async job runner.
-- `web`: UI/API.
+Detailed requirements live in `technical-spec.md`; durable rationale lives in `docs/adr/`.
