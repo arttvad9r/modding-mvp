@@ -23,7 +23,7 @@ import {
   getSupportedRecipeIngredient,
   getSupportedTechnologyCost,
   getSupportedTechnologyPrerequisite,
-} from "./supported.js";
+} from "@project/factorio-knowledge";
 
 const GENERATED_VERSION = "0.1.0";
 const GENERATED_AUTHOR = "Generated mod";

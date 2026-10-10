@@ -42,12 +42,12 @@ Completed slices:
 - `recipe_ingredient`: set/multiply the amount of an existing allow-listed base-game item ingredient, with semantic validation and validated ZIP output;
 - `technology_cost`: set/multiply finite research `unit.count` for allow-listed base-game technologies, with semantic validation and validated ZIP output;
 - `technology_prerequisite`: add/remove one reviewed prerequisite edge with baseline-aware semantic validation;
-- deterministic E2E corpus: 20 real Factorio fixtures across four capability families.
+- deterministic E2E corpus: 20 real Factorio fixtures across four capability families;
+- `packages/factorio-knowledge` plus machine-readable capability registry for future Planner discovery.
 
 Remaining scope:
-- explicit capability metadata for Planner discovery;
 - richer normalized Factorio errors;
-- golden fixtures for every capability.
+- final M2 exit review.
 
 Exit criteria:
 - >= 20 deterministic ModSpec fixtures across capability families;

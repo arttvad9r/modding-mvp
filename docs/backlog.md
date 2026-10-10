@@ -75,10 +75,17 @@ Before starting M2:
 - [x] Generate semantic technology cost assertions.
 - [x] Pass five technology fixtures through real Factorio and ZIP packaging.
 
+### Capability discovery
+- [x] Create `packages/factorio-knowledge` as the support-knowledge boundary.
+- [x] Move deterministic allow-lists/baselines out of the generator package.
+- [x] Add machine-readable capability metadata for Planner discovery.
+- [x] Derive registry targets from the same allow-lists used by generation.
+- [x] Add ADR-0007 for registry-driven Planner scope.
+
 ### Remaining M2 candidates
 - [x] Technology prerequisite capability.
 - [ ] Richer Factorio error taxonomy.
-- [ ] Capability registry/metadata for Planner discovery.
+- [x] Capability registry/metadata for Planner discovery.
 - [x] Expand deterministic eval corpus to >=20 fixtures.
 
 ## Agent task template

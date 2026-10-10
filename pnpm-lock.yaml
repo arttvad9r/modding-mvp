@@ -35,11 +35,20 @@ importers:
       '@project/factorio-harness':
         specifier: workspace:*
         version: link:../factorio-harness
+      '@project/factorio-knowledge':
+        specifier: workspace:*
+        version: link:../factorio-knowledge
       fflate:
         specifier: ^0.8.2
         version: 0.8.3
 
   packages/factorio-harness: {}
+
+  packages/factorio-knowledge:
+    dependencies:
+      '@project/domain':
+        specifier: workspace:*
+        version: link:../domain
 
 packages:
 

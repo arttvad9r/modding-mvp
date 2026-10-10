@@ -1,9 +1,9 @@
-# Architecture v0.4
+# Architecture v0.5
 
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 is complete. M2 — expand deterministic capabilities — is in progress; completed M2 slices now include deterministic `recipe_ingredient` and `technology_cost` mutations.
+M1 is complete. M2 — expand deterministic capabilities — is in progress; four deterministic capability families and the Planner-facing Factorio capability registry are implemented.
 
 ## Target product pipeline
 
@@ -28,7 +28,8 @@ See ADR-0003 for why real Factorio is the validation authority.
 ## Implemented deterministic artifact boundary
 The current deterministic core provides:
 - `packages/domain` for typed ModSpec and generated-file manifest contracts;
-- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation on base-game furnace `crafting_speed`, allow-listed recipe item ingredient amounts, and allow-listed finite technology research costs, and reviewed technology prerequisite edges;
+- `packages/factorio-knowledge` for versioned Factorio allow-lists/baselines plus machine-readable Planner capability metadata;
+- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation across prototype property, recipe ingredient, technology cost, and reviewed technology prerequisite changes;
 - semantic assertion Lua generated separately from the user artifact;
 - `packages/factorio-harness` temporary companion validator mod and structured semantic failure classification;
 - temporary-only manifest materialization;
@@ -41,7 +42,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `packages/domain`: ModSpec, generation states, shared typed errors.
 - `packages/factorio-harness`: executes and normalizes Factorio validation.
 - `packages/factorio-generator`: deterministic Factorio artifact generation.
-- `packages/factorio-knowledge`: curated versioned rules/examples when needed.
+- `packages/factorio-knowledge`: versioned Factorio support targets/baselines and Planner-facing capability registry.
 - `packages/llm`: model provider abstraction.
 - `packages/agent-core`: Planner/Repair orchestration.
 - `apps/worker`: asynchronous generation jobs when a service requires them.

@@ -176,3 +176,19 @@ export function assertSupportedTechnologyPrerequisite(
 ): void {
   getSupportedTechnologyPrerequisite(change);
 }
+
+export function listSupportedPrototypeProperties(): readonly SupportedPrototypeProperty[] {
+  return [...supportedPrototypeProperties.values()];
+}
+
+export function listSupportedRecipeIngredients(): readonly SupportedRecipeIngredient[] {
+  return [...supportedRecipeIngredients.values()];
+}
+
+export function listSupportedTechnologyCosts(): readonly SupportedTechnologyCost[] {
+  return [...supportedTechnologyCosts.values()];
+}
+
+export function listSupportedTechnologyPrerequisites(): readonly SupportedTechnologyPrerequisite[] {
+  return [...supportedTechnologyPrerequisites.values()];
+}

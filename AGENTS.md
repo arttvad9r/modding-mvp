@@ -11,6 +11,7 @@ Before making a non-trivial change, read the relevant repository documentation:
 - `docs/technical-spec.md` — target contracts, boundaries, validation/security rules;
 - `docs/roadmap.md` — milestone sequence and exit criteria;
 - `docs/backlog.md` — current engineering tasks;
+- `docs/capabilities.md` — Factorio capability registry/source-of-truth rules;
 - `docs/architecture.md` — concise current system map;
 - `docs/adr/README.md` and applicable ADRs — decisions that must not be silently reversed.
 
@@ -28,6 +29,7 @@ M0 Factorio Mod Test Harness and M1 Deterministic ModSpec engine are complete an
 
 ## Architecture rules
 - Keep Factorio-specific behavior inside `packages/factorio-*` packages.
+- Planner-supported Factorio scope must come from `@project/factorio-knowledge`; do not duplicate a separate capability list in prompts.
 - Prefer typed data contracts over free-form text between components.
 - User prompt must not be passed directly to an unconstrained filesystem/shell-writing agent.
 - Generated mod code must never receive shell access.

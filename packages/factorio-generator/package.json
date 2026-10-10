@@ -14,6 +14,7 @@
   "dependencies": {
     "@project/domain": "workspace:*",
     "@project/factorio-harness": "workspace:*",
+    "@project/factorio-knowledge": "workspace:*",
     "fflate": "^0.8.2"
   }
 }

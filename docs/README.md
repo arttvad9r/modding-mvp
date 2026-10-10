@@ -8,7 +8,8 @@ This directory is the durable project memory for human and AI-agent development.
 3. [`architecture.md`](architecture.md) — concise current architecture map.
 4. [`roadmap.md`](roadmap.md) — milestone sequence and exit criteria.
 5. [`backlog.md`](backlog.md) — current implementation tasks.
-6. [`adr/README.md`](adr/README.md) — accepted architecture decisions.
+6. [`capabilities.md`](capabilities.md) — machine-readable Factorio support registry and ownership.
+7. [`adr/README.md`](adr/README.md) — accepted architecture decisions.
 
 ## Document responsibilities
 - Product behavior/scope changes belong in `product-spec.md`.
@@ -16,6 +17,7 @@ This directory is the durable project memory for human and AI-agent development.
 - `architecture.md` should remain a compact description of what exists and the intended package boundaries.
 - Milestone order and gates belong in `roadmap.md`.
 - Actionable tasks belong in `backlog.md`.
+- Factorio capability discovery/registry ownership is documented in `capabilities.md`.
 - Durable decisions and their trade-offs belong in ADRs.
 
 Avoid copying the same detailed rule into several files. Link to the owning document instead.

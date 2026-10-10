@@ -12,7 +12,7 @@ The project deliberately starts with prototype-stage modifications and one game.
 - M1 — Deterministic ModSpec engine: complete.
 - M2 — Expand deterministic capabilities: in progress.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 currently adds allow-listed recipe item ingredient amount changes and finite technology research-cost changes.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 now has four deterministic capability families plus a machine-readable Planner-facing registry in `packages/factorio-knowledge`.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -23,6 +23,7 @@ Key documents:
 - [`docs/architecture.md`](docs/architecture.md) — current architecture;
 - [`docs/roadmap.md`](docs/roadmap.md) — milestone plan;
 - [`docs/backlog.md`](docs/backlog.md) — actionable engineering backlog;
+- [`docs/capabilities.md`](docs/capabilities.md) — Factorio capability registry;
 - [`docs/adr/README.md`](docs/adr/README.md) — architecture decision records.
 
 AI coding agents must also follow [`AGENTS.md`](AGENTS.md).
@@ -62,4 +63,4 @@ pnpm mod:build -- examples/double-automation-research-cost.json dist
 pnpm mod:build -- examples/remove-steel-prerequisite.json dist
 ```
 
-The examples cover a prototype scalar property, an existing recipe item ingredient amount, and a finite technology research-unit count. The command validates the ModSpec, generates only allow-listed files in a temporary build directory, runs Factorio plus semantic assertions, and writes an installable ZIP only after validation passes.
+The examples cover a prototype scalar property, an existing recipe item ingredient amount, a finite technology research-unit count, and a reviewed technology prerequisite edit. The command validates the ModSpec, generates only allow-listed files in a temporary build directory, runs Factorio plus semantic assertions, and writes an installable ZIP only after validation passes.
