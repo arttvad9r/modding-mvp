@@ -25,6 +25,7 @@ if (!rawModPath) {
         JSON.stringify(
           {
             status: 'FAIL',
+            errorType: result.errorType,
             exitCode: result.exitCode,
             signal: result.signal,
             summary: result.summary,

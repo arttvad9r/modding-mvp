@@ -28,11 +28,12 @@ See ADR-0003 for why real Factorio is the validation authority.
 ## Current M1 boundary: deterministic ModSpec engine
 Implemented:
 - `packages/domain` for typed ModSpec contracts;
-- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation (currently `furnace.crafting_speed`).
+- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation on base-game furnace `crafting_speed`;
+- semantic assertion Lua generated separately from the user artifact;
+- `packages/factorio-harness` temporary companion validator mod and structured semantic failure classification.
 
 Remaining M1 scope:
-- semantic assertions derived from ModSpec;
-- safe ZIP packaging;
+- safe generated-file manifest and ZIP packaging;
 - an end-to-end local command for ModSpec -> generated mod -> Factorio validation -> ZIP.
 
 No LLM is required for M1. This allows generator correctness and the Factorio contract to be established before natural-language planning is introduced.

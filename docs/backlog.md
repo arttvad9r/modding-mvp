@@ -11,7 +11,7 @@ This file tracks milestone-level tasks suitable for human or AI-agent execution.
 - [x] Add valid and invalid fixture mods.
 - [x] Add real Factorio integration tests.
 
-## M1 — next
+## M1 — in progress
 
 ### Domain contract
 - [x] Create `packages/domain`.
@@ -32,10 +32,10 @@ This file tracks milestone-level tasks suitable for human or AI-agent execution.
 - [x] Add deterministic generator snapshot/golden tests.
 
 ### Semantic validation
-- [ ] Design a semantic assertion mechanism for data-stage prototype state.
-- [ ] Generate an assertion from `prototype_property` ModSpec.
-- [ ] Integrate assertion failure into structured harness result.
-- [ ] Add fixture proving load-success but semantic-failure is detected.
+- [x] Design a semantic assertion mechanism for data-stage prototype state.
+- [x] Generate an assertion from `prototype_property` ModSpec.
+- [x] Integrate assertion failure into structured harness result.
+- [x] Add fixture proving load-success but semantic-failure is detected.
 
 ### Packaging and command flow
 - [ ] Add safe generated file manifest contract.
@@ -52,7 +52,7 @@ Before starting M2:
 - [ ] Run `pnpm build`.
 - [ ] Review package boundaries against `technical-spec.md`.
 - [ ] Add/update ADRs for any architecture decision made during M1.
-- [ ] Confirm at least five ModSpec fixtures pass through the real Factorio runtime.
+- [x] Confirm at least five ModSpec fixtures pass through the real Factorio runtime.
 
 ## M2 candidates
 Do not start these until M1 exit criteria are met unless explicitly reprioritized:

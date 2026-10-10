@@ -32,6 +32,10 @@ importers:
       '@project/domain':
         specifier: workspace:*
         version: link:../domain
+    devDependencies:
+      '@project/factorio-harness':
+        specifier: workspace:*
+        version: link:../factorio-harness
 
   packages/factorio-harness: {}
 

@@ -1,2 +1,2 @@
-export { extractErrorSummary, runFactorioModTest } from './harness.js';
-export type { HarnessOptions, HarnessResult } from './harness.js';
+export { classifyHarnessError, extractErrorSummary, runFactorioModTest } from './harness.js';
+export type { HarnessErrorType, HarnessOptions, HarnessResult } from './harness.js';

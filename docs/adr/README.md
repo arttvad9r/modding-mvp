@@ -38,3 +38,4 @@ Do not create an ADR merely for:
 - [ADR-0003: Real Factorio headless is the runtime validation authority](0003-factorio-headless-validation.md)
 - [ADR-0004: Typed ModSpec as the intent-to-code boundary](0004-typed-modspec.md)
 - [ADR-0005: Prototype-stage changes before runtime scripting](0005-prototype-stage-first.md)
+- [ADR-0006: Semantic validation via a temporary companion mod](0006-semantic-validation-companion-mod.md)

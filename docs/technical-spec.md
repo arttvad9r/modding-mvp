@@ -25,7 +25,7 @@ Initial change types:
 
 Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned.
 
-For the first deterministic generator slice, `packages/factorio-generator` supports only `furnace.crafting_speed`. It validates the ModSpec at entry, rejects unsupported prototype/property pairs, emits deterministic metadata (`version` 0.1.0), and renders guarded numeric prototype mutations without using unchecked Lua identifiers.
+For the first deterministic generator slice, `packages/factorio-generator` supports `crafting_speed` on the base-game stone, steel, and electric furnace prototypes. The allow-list stores the pinned base value for each supported address so relative operations such as `multiply` can be converted into an absolute semantic expectation. The generator validates ModSpec at entry, rejects unsupported addresses, emits deterministic metadata (`version` 0.1.0), and renders guarded numeric prototype mutations without using unchecked Lua identifiers.
 
 ### Generated file manifest
 The Generator returns a bounded manifest rather than direct filesystem or shell operations:
@@ -66,6 +66,8 @@ Examples:
 - expected scalar property equals/matches the ModSpec result;
 - expected recipe ingredients/results match the specification;
 - expected technology prerequisites/cost match the specification.
+
+For the current `prototype_property` capability, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
 
 ## Repair loop
 A Repair step receives:

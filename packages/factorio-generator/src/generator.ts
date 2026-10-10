@@ -1,14 +1,19 @@
 import {
   ModSpecSchema,
   type ModSpec,
+  type PrototypePropertyAssertion,
   type PrototypePropertyChange,
   type ScalarOperation,
 } from "@project/domain";
 
-import { assertSupportedPrototypeProperty } from "./supported.js";
+import {
+  assertSupportedPrototypeProperty,
+  getSupportedPrototypeProperty,
+} from "./supported.js";
 
 const GENERATED_VERSION = "0.1.0";
 const GENERATED_AUTHOR = "Generated mod";
+const SEMANTIC_MARKER = "__PROJECT_SEMANTIC_ASSERTION__";
 const safeLuaIdentifier = /^[A-Za-z0-9_-]+$/;
 const safeLuaProperty = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const controlCharacter = /[\u0000-\u001f\u007f]/;
@@ -19,6 +24,7 @@ export interface GeneratedFactorioMod {
   readonly directoryName: string;
   readonly infoJson: string;
   readonly dataLua: string;
+  readonly semanticAssertionLua: string;
 }
 
 function quoteLuaText(value: string): string {
@@ -49,6 +55,18 @@ function renderOperation(operation: ScalarOperation, propertyExpression: string)
     : `${propertyExpression} * ${luaNumber(operation.factor)}`;
 }
 
+function expectedValue(
+  operation: ScalarOperation,
+  baseValue: number,
+): number {
+  const value =
+    operation.type === "set" ? operation.value : baseValue * operation.factor;
+  if (!Number.isFinite(value)) {
+    throw new Error("Semantic expectation must be finite");
+  }
+  return value;
+}
+
 function renderChange(change: PrototypePropertyChange): string {
   assertSupportedPrototypeProperty(change);
 
@@ -69,6 +87,34 @@ function renderChange(change: PrototypePropertyChange): string {
     `  assert(prototype, ${missingMessage})`,
     `  assert(type(${propertyExpression}) == \"number\", ${nonNumericMessage})`,
     `  ${propertyExpression} = ${renderOperation(change.operation, propertyExpression)}`,
+    "end",
+  ].join("\n");
+}
+
+function renderAssertion(assertion: PrototypePropertyAssertion): string {
+  const supported = getSupportedPrototypeProperty({
+    type: "prototype_property",
+    prototypeType: assertion.prototypeType,
+    prototypeName: assertion.prototypeName,
+    property: assertion.property,
+    operation: assertion.expectation,
+  });
+  const expected = expectedValue(assertion.expectation, supported.baseValue);
+  const type = quoteLuaIdentifier(assertion.prototypeType, "identifier");
+  const name = quoteLuaIdentifier(assertion.prototypeName, "identifier");
+  const property = quoteLuaIdentifier(assertion.property, "property");
+  const address = `${assertion.prototypeType}.${assertion.prototypeName}.${assertion.property}`;
+  const markerPrefix = quoteLuaText(`${SEMANTIC_MARKER}|${address}|expected=${expected}|actual=`);
+
+  return [
+    "do",
+    `  local prototype = data.raw[${type}] and data.raw[${type}][${name}]`,
+    `  local actual = prototype and prototype[${property}] or nil`,
+    `  local expected = ${luaNumber(expected)}`,
+    "  local tolerance = 1e-9 * math.max(1, math.abs(expected))",
+    "  if type(actual) ~= \"number\" or math.abs(actual - expected) > tolerance then",
+    `    error(${markerPrefix} .. tostring(actual), 0)`,
+    "  end",
     "end",
   ].join("\n");
 }
@@ -94,5 +140,6 @@ export function generateFactorioMod(input: ModSpec): GeneratedFactorioMod {
     directoryName: `${spec.slug}_${GENERATED_VERSION}`,
     infoJson: `${JSON.stringify(info, null, 2)}\n`,
     dataLua: `${spec.changes.map(renderChange).join("\n\n")}\n`,
+    semanticAssertionLua: `${spec.assertions.map(renderAssertion).join("\n\n")}\n`,
   };
 }

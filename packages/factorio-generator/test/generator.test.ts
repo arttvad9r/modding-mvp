@@ -58,8 +58,19 @@ const expectedMultiplyLua = `do
 end
 `;
 
+const expectedMultiplyAssertionLua = `do
+  local prototype = data.raw["furnace"] and data.raw["furnace"]["steel-furnace"]
+  local actual = prototype and prototype["crafting_speed"] or nil
+  local expected = 4
+  local tolerance = 1e-9 * math.max(1, math.abs(expected))
+  if type(actual) ~= "number" or math.abs(actual - expected) > tolerance then
+    error("__PROJECT_SEMANTIC_ASSERTION__|furnace.steel-furnace.crafting_speed|expected=4|actual=" .. tostring(actual), 0)
+  end
+end
+`;
+
 describe("generateFactorioMod", () => {
-  it("generates deterministic metadata and Lua for a supported multiply change", () => {
+  it("generates deterministic metadata, mutation Lua, and semantic assertion Lua", () => {
     const generated = generateFactorioMod(makeSpec());
 
     expect(generated).toEqual({
@@ -68,17 +79,19 @@ describe("generateFactorioMod", () => {
       directoryName: "faster-steel-furnaces_0.1.0",
       infoJson: expectedInfo,
       dataLua: expectedMultiplyLua,
+      semanticAssertionLua: expectedMultiplyAssertionLua,
     });
   });
 
-  it("renders set operations without reading the previous scalar value", () => {
+  it("renders set operations and derives an absolute semantic expectation", () => {
     const generated = generateFactorioMod(makeSpec({ type: "set", value: 4 }));
 
     expect(generated.dataLua).toContain('prototype["crafting_speed"] = 4');
     expect(generated.dataLua).not.toContain('prototype["crafting_speed"] * 4');
+    expect(generated.semanticAssertionLua).toContain("local expected = 4");
   });
 
-  it("rejects unsupported prototype/property pairs before generating files", () => {
+  it("rejects unsupported prototype addresses before generating files", () => {
     const spec = makeSpec();
     const firstChange = spec.changes[0]!;
     const firstAssertion = spec.assertions[0]!;
@@ -93,7 +106,23 @@ describe("generateFactorioMod", () => {
     };
 
     expect(() => generateFactorioMod(spec)).toThrow(
-      "Unsupported prototype property: assembling-machine.crafting_speed",
+      "Unsupported prototype property: assembling-machine.steel-furnace.crafting_speed",
+    );
+  });
+
+  it("rejects unknown furnace names because multiply needs a known baseline", () => {
+    const spec = makeSpec();
+    const firstChange = spec.changes[0]!;
+    const firstAssertion = spec.assertions[0]!;
+
+    spec.changes[0] = { ...firstChange, prototypeName: "mystery-furnace" };
+    spec.assertions[0] = {
+      ...firstAssertion,
+      prototypeName: "mystery-furnace",
+    };
+
+    expect(() => generateFactorioMod(spec)).toThrow(
+      "Unsupported prototype property: furnace.mystery-furnace.crafting_speed",
     );
   });
 
@@ -106,7 +135,7 @@ describe("generateFactorioMod", () => {
     expect(() => generateFactorioMod(invalid)).toThrow();
   });
 
-  it("preserves change order deterministically for multiple furnaces", () => {
+  it("preserves change and assertion order deterministically", () => {
     const spec = makeSpec();
     const firstChange = spec.changes[0]!;
     const firstAssertion = spec.assertions[0]!;
@@ -124,6 +153,9 @@ describe("generateFactorioMod", () => {
     const generated = generateFactorioMod(spec);
     expect(generated.dataLua.indexOf("steel-furnace")).toBeLessThan(
       generated.dataLua.indexOf("stone-furnace"),
+    );
+    expect(generated.semanticAssertionLua.indexOf("steel-furnace")).toBeLessThan(
+      generated.semanticAssertionLua.indexOf("stone-furnace"),
     );
     expect(generateFactorioMod(spec)).toEqual(generated);
   });
