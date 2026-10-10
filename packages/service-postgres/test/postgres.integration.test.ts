@@ -151,6 +151,12 @@ describe("PostgreSQL service adapters", () => {
     expect(await repository.compareAndSet(generationId, 0, running)).toBe(true);
     expect(await repository.compareAndSet(generationId, 0, running)).toBe(false);
     expect(await repository.get(generationId)).toEqual(running);
+    expect(
+      await repository.listRunningUpdatedBefore(
+        new Date(now.getTime() + 60_000).toISOString(),
+        10,
+      ),
+    ).toEqual([running]);
   });
 
   it("commits generation + pg-boss job atomically and rolls the row back when enqueue fails", async () => {

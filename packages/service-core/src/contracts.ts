@@ -177,6 +177,7 @@ export interface GenerationRepository {
     expectedRevision: number,
     next: GenerationRecord,
   ): Promise<boolean>;
+  listRunningUpdatedBefore(cutoff: string, limit: number): Promise<readonly RunningGenerationRecord[]>;
 }
 
 export interface GenerationQueue {

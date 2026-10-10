@@ -73,7 +73,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `packages/service-core` owns transport/infrastructure-neutral generation records, jobs, telemetry, artifact references, feedback, and lifecycle schemas.
 - Lifecycle is `queued -> running -> succeeded | unsupported | failed`.
 - API submission persists `queued` state and publishes a versioned queue message containing only `generationId`; the API must not run Planner, Factorio, or Repair inline.
-- Workers use a monotonically increasing `revision` for compare-and-set claiming/updates; duplicate delivery after a terminal state is a no-op and already-running work is not executed twice.
+- Workers use a monotonically increasing `revision` for compare-and-set claiming/updates; duplicate delivery after a terminal state is a no-op and already-running work is not executed twice. Active jobs refresh revision/`updatedAt` heartbeats, and a CAS-safe recovery pass converts genuinely stale running records into retryable process failures.
 - `GenerationRepository`, `GenerationQueue`, `ArtifactStore`, and `GenerationExecutor` are ports. Future HTTP/PostgreSQL/pg-boss/S3 implementations are adapters around them.
 - `packages/factorio-service-executor` implements `GenerationExecutor` by running the proven M5 pipeline in an isolated temporary root, mapping telemetry to service schemas, reading only the validated ZIP bytes, and deleting temporary reports/artifacts afterward.
 - Successful workers publish the validated ZIP through `ArtifactStore` before persisting `succeeded`; unsupported/failed outcomes do not publish artifacts.

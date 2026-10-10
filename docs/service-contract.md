@@ -6,7 +6,7 @@ This document describes the M6 service boundary. It is transport-facing design, 
 
 `queued -> running -> succeeded | unsupported | failed`
 
-A generation is created before queue publication. Every record carries a monotonically increasing `revision`; repository updates use revision compare-and-set semantics so same-status updates such as feedback cannot silently overwrite each other. Workers claim only `queued` records. Terminal records are immutable except for bounded user feedback. Duplicate queue delivery after a terminal state is a no-op.
+A generation is created before queue publication. Every record carries a monotonically increasing `revision`; repository updates use revision compare-and-set semantics so same-status updates such as feedback cannot silently overwrite each other. Workers claim only `queued` records. While execution is active, the worker refreshes `updatedAt` through revision CAS heartbeats. Terminal records are immutable except for bounded user feedback. Duplicate queue delivery after a terminal state is a no-op.
 
 The queue message is versioned and contains only:
 
@@ -67,9 +67,11 @@ A successful generation stores a private object reference such as `generations/<
 2. If terminal, acknowledge/no-op.
 3. If already running, do not execute it again.
 4. Atomically claim `queued -> running`.
-5. Execute the M5 pipeline.
-6. On success, validate the bounded ZIP filename/size, publish it first, verify returned artifact metadata matches the uploaded bytes/key, then persist `succeeded`.
-7. Persist `unsupported` or typed `failed` outcomes without publishing an artifact.
-8. Preserve Planner/Repair attempt metadata, usage/cost, validation metadata, and duration.
+5. Refresh the running record with bounded revision-CAS heartbeats while execution is active.
+6. Execute the M5 pipeline.
+7. On success, validate the bounded ZIP filename/size, publish it first, verify returned artifact metadata matches the uploaded bytes/key, then persist `succeeded`.
+8. Persist `unsupported` or typed `failed` outcomes without publishing an artifact.
+9. Preserve Planner/Repair attempt metadata, usage/cost, validation metadata, and duration.
+10. A separate recovery pass may mark a running record `failed` with retryable `process_error` only when its heartbeat is older than the configured stale threshold; CAS prevents racing a live worker.
 
-Cancellation, stale-running leases, retry scheduling, authentication, and rate limiting are later M6 slices and must be added explicitly rather than inferred.
+Cancellation, explicit retry scheduling/requeue, authentication, and rate limiting are later M6 slices and must be added explicitly rather than inferred.

@@ -26,6 +26,7 @@ export interface ProcessGenerationJobOptions {
   readonly executor: GenerationExecutor;
   readonly job: GenerationJob;
   readonly now?: () => Date;
+  readonly heartbeatIntervalMs?: number;
 }
 
 export interface ProcessGenerationJobResult {
@@ -34,9 +35,92 @@ export interface ProcessGenerationJobResult {
 }
 
 const MAX_SERVICE_ARTIFACT_BYTES = 10 * 1024 * 1024;
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
+const MIN_HEARTBEAT_INTERVAL_MS = 10;
+const MAX_HEARTBEAT_INTERVAL_MS = 300_000;
 
 function terminal(record: GenerationRecord): boolean {
   return record.status === "succeeded" || record.status === "unsupported" || record.status === "failed";
+}
+
+interface HeartbeatStopResult {
+  readonly running: RunningGenerationRecord;
+  readonly lostRecord?: GenerationRecord;
+  readonly error?: ProjectError;
+}
+
+function startRunningHeartbeat(
+  repository: GenerationRepository,
+  initial: RunningGenerationRecord,
+  intervalMs: number,
+  now: () => Date,
+): { stop(): Promise<HeartbeatStopResult> } {
+  let current = initial;
+  let stopped = false;
+  let timer: NodeJS.Timeout | undefined;
+  let inFlight: Promise<void> = Promise.resolve();
+  let lostRecord: GenerationRecord | undefined;
+  let heartbeatError: ProjectError | undefined;
+
+  const schedule = () => {
+    if (stopped || lostRecord !== undefined || heartbeatError !== undefined) return;
+    timer = setTimeout(() => {
+      inFlight = beat();
+    }, intervalMs);
+    timer.unref?.();
+  };
+
+  const beat = async (): Promise<void> => {
+    if (stopped || lostRecord !== undefined || heartbeatError !== undefined) return;
+    try {
+      const updatedAt = now().toISOString();
+      const next = GenerationRecordSchema.parse({
+        ...current,
+        revision: current.revision + 1,
+        updatedAt,
+      });
+      if (next.status !== "running") throw new Error("Heartbeat unexpectedly changed generation status");
+
+      if (await repository.compareAndSet(current.id, current.revision, next)) {
+        current = next;
+      } else {
+        const actual = await repository.get(current.id);
+        if (actual === null) {
+          heartbeatError = new ProjectError({
+            code: "internal_error",
+            stage: "internal",
+            message: `Generation disappeared during heartbeat: ${current.id}`,
+          });
+        } else {
+          lostRecord = GenerationRecordSchema.parse(actual);
+        }
+      }
+    } catch (error) {
+      heartbeatError = normalizeProjectError(error, {
+        code: "process_error",
+        stage: "process",
+        message: "Generation heartbeat failed",
+        retryable: true,
+      });
+    } finally {
+      schedule();
+    }
+  };
+
+  schedule();
+
+  return {
+    async stop() {
+      stopped = true;
+      if (timer !== undefined) clearTimeout(timer);
+      await inFlight;
+      return {
+        running: current,
+        ...(lostRecord === undefined ? {} : { lostRecord }),
+        ...(heartbeatError === undefined ? {} : { error: heartbeatError }),
+      };
+    },
+  };
 }
 
 function normalizeExecution(execution: ServiceGenerationExecution): ServiceGenerationExecution {
@@ -161,6 +245,18 @@ export async function processGenerationJob(
 ): Promise<ProcessGenerationJobResult> {
   const job = GenerationJobSchema.parse(options.job);
   const now = options.now ?? (() => new Date());
+  const heartbeatIntervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+  if (
+    !Number.isInteger(heartbeatIntervalMs) ||
+    heartbeatIntervalMs < MIN_HEARTBEAT_INTERVAL_MS ||
+    heartbeatIntervalMs > MAX_HEARTBEAT_INTERVAL_MS
+  ) {
+    throw new ProjectError({
+      code: "input_error",
+      stage: "input",
+      message: `Generation heartbeat interval must be an integer in range ${MIN_HEARTBEAT_INTERVAL_MS}..${MAX_HEARTBEAT_INTERVAL_MS} ms`,
+    });
+  }
   const existing = await options.repository.get(job.generationId);
   if (existing === null) {
     throw new ProjectError({
@@ -176,18 +272,37 @@ export async function processGenerationJob(
     now,
   );
   if (!("status" in claimed)) return claimed;
-  const running = claimed;
-
-  let execution: ServiceGenerationExecution;
+  const heartbeat = startRunningHeartbeat(options.repository, claimed, heartbeatIntervalMs, now);
+  let execution: ServiceGenerationExecution | undefined;
+  let executionError: unknown;
   try {
     execution = normalizeExecution(
       await options.executor.execute({
-        generationId: running.id,
-        prompt: running.prompt,
+        generationId: claimed.id,
+        prompt: claimed.prompt,
       }),
     );
   } catch (error) {
-    const normalized = normalizeProjectError(error, {
+    executionError = error;
+  }
+
+  const heartbeatState = await heartbeat.stop();
+  const running = heartbeatState.running;
+  if (heartbeatState.lostRecord !== undefined) {
+    const actual = heartbeatState.lostRecord;
+    if (terminal(actual)) return { outcome: "already_terminal", record: actual };
+    if (actual.status === "running") return { outcome: "already_running", record: actual };
+    throw new ProjectError({
+      code: "process_error",
+      stage: "process",
+      message: `Generation lost its running claim: ${running.id}`,
+      retryable: true,
+    });
+  }
+
+  if (heartbeatState.error !== undefined) executionError = heartbeatState.error;
+  if (executionError !== undefined) {
+    const normalized = normalizeProjectError(executionError, {
       code: "process_error",
       stage: "process",
       message: "Generation executor failed",
@@ -203,6 +318,13 @@ export async function processGenerationJob(
     });
     const record = await persistTerminal(options.repository, running, failed);
     return { outcome: "processed", record };
+  }
+  if (execution === undefined) {
+    throw new ProjectError({
+      code: "internal_error",
+      stage: "internal",
+      message: "Generation executor completed without a result",
+    });
   }
 
   const finishedAt = now().toISOString();
@@ -288,4 +410,72 @@ export async function processGenerationJob(
   });
   const record = await persistTerminal(options.repository, running, succeeded);
   return { outcome: "processed", record };
+}
+
+export interface RecoverStaleRunningGenerationsOptions {
+  readonly repository: GenerationRepository;
+  readonly staleAfterMs: number;
+  readonly limit?: number;
+  readonly now?: () => Date;
+}
+
+export interface RecoverStaleRunningGenerationsResult {
+  readonly scanned: number;
+  readonly recovered: number;
+  readonly skipped: number;
+}
+
+export async function recoverStaleRunningGenerations(
+  options: RecoverStaleRunningGenerationsOptions,
+): Promise<RecoverStaleRunningGenerationsResult> {
+  const limit = options.limit ?? 100;
+  if (!Number.isInteger(options.staleAfterMs) || options.staleAfterMs < 1_000) {
+    throw new ProjectError({
+      code: "input_error",
+      stage: "input",
+      message: "staleAfterMs must be an integer >= 1000",
+    });
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > 1_000) {
+    throw new ProjectError({
+      code: "input_error",
+      stage: "input",
+      message: "Stale generation recovery limit must be an integer in range 1..1000",
+    });
+  }
+
+  const now = options.now ?? (() => new Date());
+  const recoveryTime = now();
+  const cutoff = new Date(recoveryTime.getTime() - options.staleAfterMs).toISOString();
+  const candidates = await options.repository.listRunningUpdatedBefore(cutoff, limit);
+  let recovered = 0;
+  let skipped = 0;
+
+  for (const candidate of candidates) {
+    const finishedAt = recoveryTime.toISOString();
+    const failed = GenerationRecordSchema.parse({
+      ...candidate,
+      revision: candidate.revision + 1,
+      status: "failed",
+      updatedAt: finishedAt,
+      finishedAt,
+      error: {
+        code: "process_error",
+        stage: "process",
+        message: "Generation worker heartbeat became stale",
+        retryable: true,
+        details: {
+          staleAfterMs: options.staleAfterMs,
+          lastHeartbeatAt: candidate.updatedAt,
+        },
+      },
+    });
+    if (await options.repository.compareAndSet(candidate.id, candidate.revision, failed)) {
+      recovered += 1;
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { scanned: candidates.length, recovered, skipped };
 }

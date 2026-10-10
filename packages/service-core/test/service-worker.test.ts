@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   GenerationRecordSchema,
   processGenerationJob,
+  recoverStaleRunningGenerations,
   recordGenerationFeedback,
   submitGeneration,
   type ArtifactRef,
@@ -87,6 +88,17 @@ class MemoryRepository implements GenerationRepository {
     if (!current || current.revision !== expectedRevision) return false;
     this.records.set(id, GenerationRecordSchema.parse(next));
     return true;
+  }
+
+  async listRunningUpdatedBefore(cutoff: string, limit: number) {
+    return [...this.records.values()]
+      .filter((record) => record.status === "running" && record.updatedAt < cutoff)
+      .sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))
+      .slice(0, limit)
+      .map((record) => {
+        if (record.status !== "running") throw new Error("Expected running record");
+        return record;
+      });
   }
 }
 
@@ -302,6 +314,71 @@ describe("generation worker state machine", () => {
       error: { code: "process_error", retryable: true },
       telemetry: { usage: { totalTokens: 120 } },
     });
+  });
+
+  it("heartbeats a long-running generation and persists the terminal state from the latest revision", async () => {
+    const repository = new MemoryRepository();
+    const queue = new MemoryQueue();
+    await queued(repository, queue);
+    let tick = 0;
+    const executor: GenerationExecutor = {
+      async execute() {
+        await new Promise((resolve) => setTimeout(resolve, 45));
+        return {
+          status: "unsupported",
+          reason: "Synthetic long-running request",
+          telemetry,
+        };
+      },
+    };
+
+    const result = await processGenerationJob({
+      repository,
+      artifactStore: new MemoryArtifactStore(),
+      executor,
+      job: queue.jobs[0]!,
+      heartbeatIntervalMs: 10,
+      now: () => new Date(fixedDate.getTime() + tick++ * 1_000),
+    });
+
+    expect(result.record.status).toBe("unsupported");
+    expect(result.record.revision).toBeGreaterThan(2);
+  });
+
+  it("recovers only stale running generations with compare-and-set protection", async () => {
+    const repository = new MemoryRepository();
+    const stale = GenerationRecordSchema.parse({
+      schemaVersion: 1,
+      id: generationId,
+      revision: 4,
+      prompt: "stale generation",
+      status: "running",
+      createdAt: "2026-10-11T00:00:00.000Z",
+      updatedAt: "2026-10-11T00:01:00.000Z",
+      startedAt: "2026-10-11T00:00:10.000Z",
+    });
+    const fresh = GenerationRecordSchema.parse({
+      ...stale,
+      id: "22222222-2222-4222-8222-222222222222",
+      prompt: "fresh generation",
+      updatedAt: "2026-10-11T00:09:30.000Z",
+    });
+    repository.records.set(stale.id, stale);
+    repository.records.set(fresh.id, fresh);
+
+    const recovery = await recoverStaleRunningGenerations({
+      repository,
+      staleAfterMs: 5 * 60_000,
+      now: () => new Date("2026-10-11T00:10:00.000Z"),
+    });
+
+    expect(recovery).toEqual({ scanned: 1, recovered: 1, skipped: 0 });
+    expect(await repository.get(stale.id)).toMatchObject({
+      status: "failed",
+      revision: 5,
+      error: { code: "process_error", retryable: true },
+    });
+    expect(await repository.get(fresh.id)).toMatchObject({ status: "running", revision: 4 });
   });
 
   it("rejects an unsafe executor ZIP name before calling the artifact store", async () => {

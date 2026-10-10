@@ -1,10 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, lt } from "drizzle-orm";
 
 import {
   GenerationRecordSchema,
   type GenerationRecord,
   type GenerationRepository,
   type QueuedGenerationRecord,
+  type RunningGenerationRecord,
 } from "@project/service-core";
 
 import type { ServicePostgresDb } from "./db.js";
@@ -69,5 +70,22 @@ export class PostgresGenerationRepository implements GenerationRepository {
       .where(and(eq(generations.id, id), eq(generations.revision, expectedRevision)))
       .returning({ id: generations.id });
     return rows.length === 1;
+  }
+
+  async listRunningUpdatedBefore(
+    cutoff: string,
+    limit: number,
+  ): Promise<readonly RunningGenerationRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(generations)
+      .where(and(eq(generations.status, "running"), lt(generations.updatedAt, new Date(cutoff))))
+      .orderBy(asc(generations.updatedAt))
+      .limit(limit);
+    return rows.map((row) => {
+      const record = rowToRecord(row);
+      if (record.status !== "running") throw new Error(`Expected running generation: ${record.id}`);
+      return record;
+    });
   }
 }

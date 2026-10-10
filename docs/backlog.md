@@ -195,7 +195,8 @@ Before starting M2:
 - [ ] Add worker process consuming generation jobs and preserving typed terminal outcomes/telemetry.
 - [ ] Add `POST /v1/generations`, `GET /v1/generations/:id`, and terminal feedback endpoint.
 - [ ] Add basic authentication and per-user/IP rate limits for private beta.
-- [ ] Add stale-running/retry/recovery policy before deployment.
+- [x] Add running-generation heartbeat and CAS-safe stale-running recovery to retryable `failed`.
+- [ ] Add explicit retry/requeue policy before deployment.
 
 ### Private deployment/beta
 - [ ] Deploy API, worker, PostgreSQL, and private object storage.
