@@ -23,6 +23,8 @@ Initial change types:
 - `recipe_change`;
 - `technology_change`.
 
+Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned.
+
 ### Generated file manifest
 The Generator returns a bounded manifest rather than direct filesystem or shell operations:
 - relative path;

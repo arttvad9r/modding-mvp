@@ -14,13 +14,13 @@ This file tracks milestone-level tasks suitable for human or AI-agent execution.
 ## M1 — next
 
 ### Domain contract
-- [ ] Create `packages/domain`.
-- [ ] Define `GameTarget` with Factorio stable 2.0 target policy.
-- [ ] Define `ModSpec` root schema.
-- [ ] Define `prototype_property` change schema.
-- [ ] Define `set` and `multiply` operations.
-- [ ] Define semantic assertion schema.
-- [ ] Add schema unit tests for valid and invalid examples.
+- [x] Create `packages/domain`.
+- [x] Define `GameTarget` with Factorio stable 2.0 target policy.
+- [x] Define `ModSpec` root schema.
+- [x] Define `prototype_property` change schema.
+- [x] Define `set` and `multiply` operations.
+- [x] Define semantic assertion schema.
+- [x] Add schema unit tests for valid and invalid examples.
 
 ### Factorio generator
 - [ ] Create `packages/factorio-generator`.
