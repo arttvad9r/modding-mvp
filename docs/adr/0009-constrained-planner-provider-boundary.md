@@ -24,7 +24,7 @@ Malformed or unsupported structured model output receives at most one correction
 
 `packages/llm` may contain multiple provider adapters. `packages/agent-core` must not depend on a provider-specific SDK or HTTP response shape.
 
-The first concrete adapter uses the OpenAI Responses API through native `fetch` and JSON response mode. Model selection remains configuration, not an architecture decision.
+The first concrete adapter uses the OpenAI Responses API through native `fetch`. A second generic OpenAI-compatible Chat Completions transport supports alternate providers such as Ollama Cloud and Z.ai. Provider/model/base URL selection remains runtime configuration, not an architecture decision.
 
 ## Alternatives considered
 - Ask the LLM to write Lua directly — rejected because the deterministic generator is the trusted code-generation boundary.
@@ -36,7 +36,7 @@ The first concrete adapter uses the OpenAI Responses API through native `fetch` 
 ### Positive
 - LLM influence ends at a small typed intent boundary.
 - Downstream deterministic generation remains unchanged.
-- Provider adapters can be swapped without rewriting Planner logic.
+- Provider adapters can be swapped without rewriting Planner logic; golden evals can compare providers using the same corpus.
 - Registry changes automatically affect Planner scope.
 - Malformed model output is bounded and observable.
 - Golden prompt evals can compare classification and semantic changes independent of title/slug wording.

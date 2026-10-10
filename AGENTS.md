@@ -20,7 +20,7 @@ If code and documentation disagree, do not guess. Report the conflict and make t
 ## Current milestone
 M3: Natural-language Planner (in progress).
 
-M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, and M2 deterministic capability expansion are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. The first M3 Planner/provider/eval slice is implemented; live model eval is still required before M3 can close.
+M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, and M2 deterministic capability expansion are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. The first M3 Planner/provider/eval slice is implemented, including Ollama Cloud and Z.ai runtime presets; live model eval is still required before M3 can close.
 
 ## Current scope
 - Factorio stable 2.0.x only.

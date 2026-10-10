@@ -8,3 +8,5 @@ coverage/
 .tmp/
 *.log
 .DS_Store
+
+keys.txt

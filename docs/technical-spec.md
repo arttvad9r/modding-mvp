@@ -41,6 +41,16 @@ Official prototype references: `RecipePrototype::ingredients`, `ItemIngredientPr
 
 The future Planner must derive supported scope from this registry instead of maintaining an independent capability list in prompt text. Registry targets are generated from the same allow-lists used by generator lookup functions. See `docs/capabilities.md` and ADR-0007.
 
+### Planner provider boundary
+`packages/llm` exposes a provider-agnostic JSON contract. `packages/agent-core` does not import vendor SDKs or depend on vendor HTTP response shapes. Runtime provider selection is configuration-only.
+
+Implemented transports/presets:
+- OpenAI Responses API for direct OpenAI use;
+- OpenAI-compatible Chat Completions for Ollama Cloud at `https://ollama.com/v1`;
+- OpenAI-compatible Chat Completions for Z.ai, using `https://api.z.ai/api/paas/v4` for general/prepaid usage or `https://api.z.ai/api/coding/paas/v4` for Coding Plan keys.
+
+Ollama Cloud uses JSON mode plus application-side Zod validation/retry; strict provider-native structured outputs are not assumed. Z.ai defaults to prompt-only JSON plus the same application validation so Planner correctness does not depend on undocumented response-format behavior. API keys are read only from environment/runtime configuration and are never persisted in prompts or repository files.
+
 ### Planner contract
 `packages/agent-core` owns natural-language planning. It consumes the machine-readable Factorio registry and a provider-agnostic `LlmProvider` from `packages/llm`. The model must not emit Lua, file manifests, target metadata, or semantic assertions.
 

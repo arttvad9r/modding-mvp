@@ -54,7 +54,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `packages/factorio-harness`: executes and normalizes Factorio validation.
 - `packages/factorio-generator`: deterministic Factorio artifact generation.
 - `packages/factorio-knowledge`: versioned Factorio support targets/baselines and Planner-facing capability registry.
-- `packages/llm`: model provider abstraction.
+- `packages/llm`: model provider abstraction plus OpenAI Responses and OpenAI-compatible Chat Completions transports/presets.
 - `packages/agent-core`: Planner/Repair orchestration.
 - `apps/worker`: asynchronous generation jobs when a service requires them.
 - `apps/web`: UI/API when local end-to-end behavior is proven.

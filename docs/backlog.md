@@ -107,6 +107,8 @@ Before starting M2:
 ## M3 — in progress
 - [x] Add LLM provider abstraction.
 - [x] Add first provider adapter (OpenAI Responses API) behind the generic boundary.
+- [x] Add reusable OpenAI-compatible Chat Completions transport.
+- [x] Add Ollama Cloud and Z.ai runtime presets without changing Planner logic.
 - [x] Build Planner input from `factorioCapabilityRegistry`.
 - [x] Produce structured Planner output and validate derived output through `ModSpecSchema`.
 - [x] Derive Factorio target and semantic assertions deterministically rather than asking the model to duplicate them.
@@ -116,7 +118,7 @@ Before starting M2:
 - [x] Create 24-case golden natural-language prompt eval set.
 - [x] Add reusable eval runner and `pnpm planner:eval`.
 - [x] Add ADR-0009 for the constrained Planner/provider boundary.
-- [ ] Configure a real runtime API key locally and run the golden eval corpus.
+- [ ] Configure Ollama Cloud and/or Z.ai runtime API keys locally and run the golden eval corpus.
 - [ ] Reach classification accuracy >= 90%.
 - [ ] Reach supported ModSpec accuracy >= 80%.
 - [ ] Review failed golden cases before declaring M3 complete.
