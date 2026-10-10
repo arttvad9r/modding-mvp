@@ -25,10 +25,12 @@ Every run creates a fresh temporary directory containing a dedicated `mods/` dir
 
 See ADR-0003 for why real Factorio is the validation authority.
 
-## Next boundary: deterministic ModSpec engine
-M1 introduces:
+## Current M1 boundary: deterministic ModSpec engine
+Implemented:
 - `packages/domain` for typed ModSpec contracts;
-- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation;
+- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation (currently `furnace.crafting_speed`).
+
+Remaining M1 scope:
 - semantic assertions derived from ModSpec;
 - safe ZIP packaging;
 - an end-to-end local command for ModSpec -> generated mod -> Factorio validation -> ZIP.

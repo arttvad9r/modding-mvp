@@ -23,13 +23,13 @@ This file tracks milestone-level tasks suitable for human or AI-agent execution.
 - [x] Add schema unit tests for valid and invalid examples.
 
 ### Factorio generator
-- [ ] Create `packages/factorio-generator`.
-- [ ] Generate deterministic mod slug/name/version metadata.
-- [ ] Generate `info.json` from a ModSpec.
-- [ ] Generate safe `data.lua` for one scalar prototype mutation.
-- [ ] Escape/validate all Lua string inputs rather than concatenating unchecked values.
-- [ ] Add allow-list for initially supported prototype/property pairs.
-- [ ] Add deterministic generator snapshot/golden tests.
+- [x] Create `packages/factorio-generator`.
+- [x] Generate deterministic mod slug/name/version metadata.
+- [x] Generate `info.json` from a ModSpec.
+- [x] Generate safe `data.lua` for one scalar prototype mutation.
+- [x] Escape/validate all Lua string inputs rather than concatenating unchecked values.
+- [x] Add allow-list for initially supported prototype/property pairs.
+- [x] Add deterministic generator snapshot/golden tests.
 
 ### Semantic validation
 - [ ] Design a semantic assertion mechanism for data-stage prototype state.

@@ -25,6 +25,8 @@ Initial change types:
 
 Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned.
 
+For the first deterministic generator slice, `packages/factorio-generator` supports only `furnace.crafting_speed`. It validates the ModSpec at entry, rejects unsupported prototype/property pairs, emits deterministic metadata (`version` 0.1.0), and renders guarded numeric prototype mutations without using unchecked Lua identifiers.
+
 ### Generated file manifest
 The Generator returns a bounded manifest rather than direct filesystem or shell operations:
 - relative path;

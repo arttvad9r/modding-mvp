@@ -27,6 +27,12 @@ importers:
         specifier: ^4.1.12
         version: 4.6.5
 
+  packages/factorio-generator:
+    dependencies:
+      '@project/domain':
+        specifier: workspace:*
+        version: link:../domain
+
   packages/factorio-harness: {}
 
 packages:
