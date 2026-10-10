@@ -18,9 +18,9 @@ Before making a non-trivial change, read the relevant repository documentation:
 If code and documentation disagree, do not guess. Report the conflict and make the smallest change needed to restore a single source of truth.
 
 ## Current milestone
-M4: Repair loop (next).
+M5: Local end-to-end prototype (next).
 
-M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, M2 deterministic capability expansion, and M3 Natural-language Planner are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. The M3 golden corpus passed on Ollama Cloud `deepseek-v4.1-flash:cloud` at 100% classification and 100% supported ModSpec accuracy.
+M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, M2 deterministic capability expansion, M3 Natural-language Planner, and M4 bounded Repair are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. M4 permits the model to replace `data.lua` only, has a hard two-attempt cap, and requires the original semantic assertions to pass in real Factorio; its live golden corpus repaired 5/5 injected failures.
 
 ## Current scope
 - Factorio stable 2.0.x only.
@@ -32,6 +32,8 @@ M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, M2 deterministic 
 - Planner-supported Factorio scope must come from `@project/factorio-knowledge`; do not duplicate a separate capability list in prompts.
 - Planner LLM output is limited to classification plus typed changes; target/assertions/Lua/files are application-owned.
 - Planner/Repair control flow must branch on typed `ProjectError.code`, not parse human error-message text.
+- Repair must not change ModSpec, metadata, semantic assertions, file paths, or add files; current model output is replacement `data.lua` only.
+- Repair is limited to `factorio_load_failed` and `semantic_assertion_failed` and at most two model attempts.
 - Prefer typed data contracts over free-form text between components.
 - User prompt must not be passed directly to an unconstrained filesystem/shell-writing agent.
 - Generated mod code must never receive shell access.
@@ -60,6 +62,7 @@ Small refactors, implementation details, and patch dependency upgrades normally 
 - `pnpm factorio:test -- <mod-path>`
 - `pnpm prompt:plan -- "<request>"`
 - `pnpm planner:eval`
+- `pnpm repair:eval`
 
 ## Definition of done
 A task is done only when:

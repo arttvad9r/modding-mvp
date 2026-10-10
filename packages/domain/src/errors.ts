@@ -1,4 +1,4 @@
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 
 export type ProjectErrorCode =
   | "input_error"
@@ -20,9 +20,39 @@ export type ProjectErrorStage =
   | "process"
   | "internal";
 
+export const ProjectErrorCodeSchema = z.enum([
+  "input_error",
+  "schema_error",
+  "unsupported_capability",
+  "generation_error",
+  "packaging_error",
+  "factorio_load_failed",
+  "semantic_assertion_failed",
+  "process_error",
+  "internal_error",
+]);
+
+export const ProjectErrorStageSchema = z.enum([
+  "input",
+  "planning",
+  "generation",
+  "packaging",
+  "validation",
+  "process",
+  "internal",
+]);
+
 export interface ProjectErrorDetails {
   readonly [key: string]: unknown;
 }
+
+export const SerializedProjectErrorSchema = z.strictObject({
+  code: ProjectErrorCodeSchema,
+  stage: ProjectErrorStageSchema,
+  message: z.string().min(1),
+  retryable: z.boolean(),
+  details: z.record(z.string(), z.unknown()).optional(),
+});
 
 export interface ProjectErrorInit {
   readonly code: ProjectErrorCode;

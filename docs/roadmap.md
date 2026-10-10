@@ -76,22 +76,28 @@ Exit criteria:
 - deterministic downstream pipeline remains unchanged.
 
 ## M4 — Repair loop
-Status: next.
+Status: complete.
 
-Goal: automatically fix bounded generation/validation failures.
+Goal: automatically fix bounded generation/validation failures without changing accepted user intent.
 
-Scope:
-- normalized error contract passed to Repair;
-- maximum 2 repairs;
-- attempt history and cost tracking;
-- regression evals for known failure modes.
+Completed slices:
+- typed Repair contract around immutable ModSpec, previous bounded manifest, normalized error, provider, and validator;
+- `data.lua`-only model output while metadata, paths, semantic assertions, and ModSpec remain application-owned;
+- only Factorio load and semantic assertion failures are Repair-eligible; infrastructure/application failures bypass the model;
+- hard maximum of 2 model attempts with observable attempt/provider/model/usage/error history;
+- real-Factorio validation entrypoint for repaired bounded manifests using the original semantic assertions;
+- 5-case Repair golden corpus spanning load failure plus all four deterministic capability families;
+- live Ollama Cloud `deepseek-v4.1-flash:cloud` baseline: 5/5 repaired, 5 total model attempts, 3,964 model tokens.
 
 Exit criteria:
 - repair cannot expand scope beyond the accepted ModSpec without replanning;
-- attempts are persisted/observable;
-- loops terminate deterministically.
+- attempts are observable/persistence-ready;
+- every candidate passes the original semantic assertions before success;
+- loops terminate deterministically after at most two model attempts.
 
 ## M5 — Local end-to-end prototype
+Status: next.
+
 Goal: prompt -> validated ZIP through one local interface.
 
 Scope:

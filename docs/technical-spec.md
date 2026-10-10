@@ -75,7 +75,7 @@ The generic manifest contract rejects absolute paths, traversal segments, backsl
 Materialization occurs only inside a fresh temporary build directory. The candidate is validated there, then packaging creates a ZIP with a single top-level `<mod-name>_<version>/` folder. Validation-only companion mod files never enter the ZIP.
 
 ### Error taxonomy
-Public pipeline failures use `ProjectError` from `packages/domain`. Control flow must use stable `code` and `stage` values rather than parsing message text. Serialized errors expose `code`, `stage`, `message`, `retryable`, and optional bounded `details`; stack traces and raw causes are not part of the public contract.
+Public pipeline failures use `ProjectError` from `packages/domain`. Control flow must use stable `code` and `stage` values rather than parsing message text. Serialized errors expose `code`, `stage`, `message`, `retryable`, and optional bounded `details`; stack traces and raw causes are not part of the public contract. `SerializedProjectErrorSchema` runtime-validates this cross-component form before Repair consumes it.
 
 Initial codes:
 - `input_error`;
@@ -135,15 +135,22 @@ Reference deterministic inputs:
 - `examples/remove-steel-prerequisite.json` — M2 `technology_prerequisite`.
 
 ## Repair loop
-A Repair step receives:
-- original ModSpec;
-- previous generated file manifest;
-- normalized validation failure;
-- narrowly selected Factorio knowledge/context.
+`packages/agent-core` implements bounded Repair around an immutable accepted ModSpec. A Repair call receives:
+- the original validated ModSpec;
+- the previous bounded `info.json` + `data.lua` manifest;
+- a runtime-validated normalized `SerializedProjectError`;
+- a provider-agnostic `LlmProvider`;
+- a candidate validator that re-runs the Factorio pipeline.
 
-Maximum automatic repair attempts for the initial MVP: 2.
+Only `factorio_load_failed` and `semantic_assertion_failed` are Repair-eligible in the current prototype-stage scope. Packaging, process, schema/input, unsupported-scope, and other application/infrastructure errors terminate or return to their owning layer rather than being sent to the model.
 
-A repair may change generated files but must not silently expand the requested ModSpec scope.
+The model response schema is exactly `{ "dataLua": string }`. The application replaces only the existing `data.lua` content. The accepted ModSpec, `info.json`, manifest paths/roles, and semantic assertion Lua remain unchanged. Repair cannot add `control.lua`, dependencies, assets, validation files, or any other path.
+
+Every candidate is validated by real Factorio using the original semantic assertion Lua. The Factorio generator exposes `validateGeneratedFactorioMod` so repaired bounded manifests use the same validation authority without packaging first. A candidate is successful only when that validation passes.
+
+Maximum automatic Repair model attempts: **2 hard cap**. Attempt history captures outcome, provider/model when available, token/cost metadata, duration, normalized validation error, and terminal reason. Non-repairable validation errors terminate immediately rather than consuming a second model attempt. See ADR-0010.
+
+Repair regression evals live under `evals/repair/`. `pnpm repair:eval` injects known load/semantic failures into deterministic artifacts, then runs `failure -> Repair -> real Factorio -> original semantic assertions`. Initial development gate: >=80% repaired cases. Recorded M4 live baseline on 2026-10-11 with Ollama Cloud `deepseek-v4.1-flash:cloud`: 5/5 repaired (100%), 5 total model attempts, 3,483 input + 481 output tokens = 3,964 total.
 
 ## Package boundaries
 Planned repository boundaries:

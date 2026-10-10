@@ -26,6 +26,9 @@ importers:
       '@project/domain':
         specifier: workspace:*
         version: link:../domain
+      '@project/factorio-generator':
+        specifier: workspace:*
+        version: link:../factorio-generator
       '@project/factorio-knowledge':
         specifier: workspace:*
         version: link:../factorio-knowledge

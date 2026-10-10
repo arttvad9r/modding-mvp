@@ -12,7 +12,8 @@
     "factorio:test": "pnpm --filter @project/factorio-harness cli --",
     "mod:build": "pnpm --filter @project/factorio-generator cli --",
     "prompt:plan": "pnpm --filter @project/agent-core cli --",
-    "planner:eval": "pnpm --filter @project/agent-core eval --"
+    "planner:eval": "pnpm --filter @project/agent-core eval --",
+    "repair:eval": "pnpm --filter @project/agent-core repair:eval --"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

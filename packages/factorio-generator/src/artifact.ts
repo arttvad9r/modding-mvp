@@ -13,7 +13,7 @@ import {
 import { runFactorioModTest, type HarnessResult } from "@project/factorio-harness";
 import { strToU8, zipSync } from "fflate";
 
-import { generateFactorioMod } from "./generator.js";
+import { generateFactorioMod, type GeneratedFactorioMod } from "./generator.js";
 
 const allowedFiles = new Map<string, GeneratedTextFile["role"]>([
   ["info.json", "metadata"],
@@ -31,6 +31,11 @@ export interface BuildFactorioArtifactResult {
   readonly zipPath: string;
   readonly directoryName: string;
   readonly validation: HarnessResult;
+}
+
+export interface ValidateGeneratedFactorioModOptions {
+  readonly generated: GeneratedFactorioMod;
+  readonly factorioBin?: string;
 }
 
 function packagingError(message: string, cause?: unknown): ProjectError {
@@ -126,34 +131,32 @@ export function createFactorioZip(
   }
 }
 
-export async function buildValidatedFactorioArtifact(
-  options: BuildFactorioArtifactOptions,
-): Promise<BuildFactorioArtifactResult> {
-  const generated = generateFactorioMod(options.spec);
-
+export async function validateGeneratedFactorioMod(
+  options: ValidateGeneratedFactorioModOptions,
+): Promise<HarnessResult> {
   let buildRoot: string;
   try {
-    buildRoot = await mkdtemp(path.join(tmpdir(), "factorio-artifact-build-"));
+    buildRoot = await mkdtemp(path.join(tmpdir(), "factorio-artifact-validate-"));
   } catch (error) {
     throw normalizeProjectError(error, {
       code: "packaging_error",
       stage: "packaging",
-      message: "Failed to create temporary artifact directory",
+      message: "Failed to create temporary validation directory",
     });
   }
 
   try {
     const modPath = await materializeManifest(
-      generated.manifest,
+      options.generated.manifest,
       buildRoot,
-      generated.directoryName,
+      options.generated.directoryName,
     );
 
     let validation: HarnessResult;
     try {
       validation = await runFactorioModTest({
         modPath,
-        semanticAssertionLua: generated.semanticAssertionLua,
+        semanticAssertionLua: options.generated.semanticAssertionLua,
         ...(options.factorioBin ? { factorioBin: options.factorioBin } : {}),
       });
     } catch (error) {
@@ -180,26 +183,38 @@ export async function buildValidatedFactorioArtifact(
       });
     }
 
-    try {
-      const outputDirectory = path.resolve(options.outputDirectory);
-      await mkdir(outputDirectory, { recursive: true });
-      const zipPath = path.join(outputDirectory, `${generated.directoryName}.zip`);
-      const zipBytes = createFactorioZip(generated.manifest, generated.directoryName);
-      await writeFile(zipPath, zipBytes, { flag: "w" });
-
-      return {
-        zipPath,
-        directoryName: generated.directoryName,
-        validation,
-      };
-    } catch (error) {
-      throw normalizeProjectError(error, {
-        code: "packaging_error",
-        stage: "packaging",
-        message: "Failed to write validated Factorio artifact",
-      });
-    }
+    return validation;
   } finally {
     await rm(buildRoot, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+export async function buildValidatedFactorioArtifact(
+  options: BuildFactorioArtifactOptions,
+): Promise<BuildFactorioArtifactResult> {
+  const generated = generateFactorioMod(options.spec);
+  const validation = await validateGeneratedFactorioMod({
+    generated,
+    ...(options.factorioBin ? { factorioBin: options.factorioBin } : {}),
+  });
+
+  try {
+    const outputDirectory = path.resolve(options.outputDirectory);
+    await mkdir(outputDirectory, { recursive: true });
+    const zipPath = path.join(outputDirectory, `${generated.directoryName}.zip`);
+    const zipBytes = createFactorioZip(generated.manifest, generated.directoryName);
+    await writeFile(zipPath, zipBytes, { flag: "w" });
+
+    return {
+      zipPath,
+      directoryName: generated.directoryName,
+      validation,
+    };
+  } catch (error) {
+    throw normalizeProjectError(error, {
+      code: "packaging_error",
+      stage: "packaging",
+      message: "Failed to write validated Factorio artifact",
+    });
   }
 }

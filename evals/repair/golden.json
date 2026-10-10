@@ -1,0 +1,32 @@
+[
+  {
+    "id": "prototype-load-syntax",
+    "specPath": "examples/faster-steel-furnace.json",
+    "fault": "append_syntax_error",
+    "expectedInitialError": "factorio_load_failed"
+  },
+  {
+    "id": "prototype-semantic-noop",
+    "specPath": "examples/faster-steel-furnace.json",
+    "fault": "no_op",
+    "expectedInitialError": "semantic_assertion_failed"
+  },
+  {
+    "id": "recipe-semantic-noop",
+    "specPath": "examples/cheaper-iron-gears.json",
+    "fault": "no_op",
+    "expectedInitialError": "semantic_assertion_failed"
+  },
+  {
+    "id": "technology-cost-semantic-noop",
+    "specPath": "examples/double-automation-research-cost.json",
+    "fault": "no_op",
+    "expectedInitialError": "semantic_assertion_failed"
+  },
+  {
+    "id": "technology-prerequisite-semantic-noop",
+    "specPath": "examples/remove-steel-prerequisite.json",
+    "fault": "no_op",
+    "expectedInitialError": "semantic_assertion_failed"
+  }
+]

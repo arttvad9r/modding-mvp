@@ -42,3 +42,4 @@ Do not create an ADR merely for:
 - [ADR-0007: Machine-readable Factorio capability registry is the Planner scope source](0007-capability-registry-source-of-truth.md)
 - [ADR-0008: Typed cross-pipeline error taxonomy](0008-typed-error-taxonomy.md)
 - [ADR-0009: Constrained Planner behind a provider-agnostic JSON boundary](0009-constrained-planner-provider-boundary.md)
+- [ADR-0010: Bounded data.lua-only Repair preserves accepted ModSpec](0010-bounded-data-lua-repair.md)

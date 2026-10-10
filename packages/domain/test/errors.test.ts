@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ProjectError,
+  SerializedProjectErrorSchema,
   normalizeProjectError,
   serializeProjectError,
 } from "../src/index.js";
@@ -54,6 +55,27 @@ describe("ProjectError", () => {
         stage: "internal",
       }),
     ).toBe(original);
+  });
+
+  it("runtime-validates the serialized error contract", () => {
+    expect(
+      SerializedProjectErrorSchema.parse({
+        code: "semantic_assertion_failed",
+        stage: "validation",
+        message: "expected=4 actual=2",
+        retryable: false,
+        details: { expected: 4, actual: 2 },
+      }),
+    ).toMatchObject({ code: "semantic_assertion_failed", stage: "validation" });
+
+    expect(() =>
+      SerializedProjectErrorSchema.parse({
+        code: "made_up",
+        stage: "validation",
+        message: "x",
+        retryable: false,
+      }),
+    ).toThrow();
   });
 
   it("provides a stable internal fallback for unknown exceptions", () => {

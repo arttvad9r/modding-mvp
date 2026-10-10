@@ -132,13 +132,30 @@ Before starting M2:
 - [x] Provider/model/usage metadata is captured.
 - [x] Z.ai quota failure is classified as provider/process failure and is not counted as model-quality evidence.
 
-## M4 — next
-- [ ] Define typed Repair input/output contract around original ModSpec, prior manifest, and normalized error.
-- [ ] Enforce maximum 2 repair attempts.
-- [ ] Prevent Repair from expanding scope beyond the accepted ModSpec.
-- [ ] Track repair attempt history, provider/model/token/cost metadata, and terminal reason.
-- [ ] Add deterministic/fake-provider Repair tests before live-model evals.
-- [ ] Add regression eval cases for known generation/validation failure modes.
+## M4 — complete
+- [x] Define typed Repair input/output contract around original ModSpec, prior manifest, and runtime-validated normalized error.
+- [x] Enforce a hard maximum of 2 Repair model attempts.
+- [x] Restrict model output to replacement `data.lua` only; preserve ModSpec, `info.json`, paths/roles, and semantic assertions.
+- [x] Repair only `factorio_load_failed` and `semantic_assertion_failed`; do not send packaging/process/application failures to the model.
+- [x] Track Repair attempt history, provider/model/token/cost metadata, validation outcome, and terminal reason.
+- [x] Add fake-provider tests for success, retry, exhaustion, schema rejection, scope expansion, and infrastructure failure.
+- [x] Add real-Factorio integration proving load and semantic failures are repaired under the original assertions.
+- [x] Add 5-case Repair golden corpus across all four capability families.
+- [x] Run live Ollama Cloud Repair eval: 5/5 repaired, 5 total attempts, 3,964 model tokens.
+- [x] Add ADR-0010 for the bounded data.lua-only Repair boundary.
+
+## M4 exit review
+- [x] Repair cannot change accepted intent without replanning.
+- [x] Every candidate is revalidated by real Factorio plus the original semantic assertions.
+- [x] Repair loops terminate after at most two model attempts.
+- [x] Attempt history and usage metadata are observable and persistence-ready.
+- [x] Live Repair golden eval exceeds the initial 80% development gate (100% / 5 of 5).
+
+## M5 — next
+- [ ] Build one local `prompt -> Planner -> generation -> validation/Repair -> ZIP` command/interface.
+- [ ] Surface bounded progress/status and terminal typed failure.
+- [ ] Aggregate Planner + Repair attempts, token usage, duration, and validation metadata.
+- [ ] Return the final installable ZIP path only after real Factorio validation passes.
 
 ## Agent task template
 A task sent to Codex/Claude should include:
