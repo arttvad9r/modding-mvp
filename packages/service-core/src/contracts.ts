@@ -181,6 +181,10 @@ export interface GenerationQueue {
   enqueue(job: GenerationJob): Promise<void>;
 }
 
+export interface GenerationSubmissionStore {
+  submit(record: QueuedGenerationRecord, job: GenerationJob): Promise<void>;
+}
+
 export interface ArtifactStorePutInput {
   readonly key: string;
   readonly fileName: string;

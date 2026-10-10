@@ -3,7 +3,7 @@
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 through M5 are complete. The deterministic core has four capability families, a Planner-facing Factorio capability registry, 20 real-runtime E2E fixtures, and a typed cross-pipeline error taxonomy. Planner and Repair are provider-agnostic and pass their live eval gates on Z.ai `glm-5.3-flash`. M5 exposes the complete prompt-to-validated-ZIP flow locally. M6 is in progress: `packages/service-core` now defines the durable generation lifecycle and async API/worker ports; real PostgreSQL/pg-boss/S3 adapters are next.
+M1 through M5 are complete. The deterministic core has four capability families, a Planner-facing Factorio capability registry, 20 real-runtime E2E fixtures, and a typed cross-pipeline error taxonomy. Planner and Repair are provider-agnostic and pass their live eval gates on Z.ai `glm-5.3-flash`. M5 exposes the complete prompt-to-validated-ZIP flow locally. M6 is in progress: `packages/service-core` defines the durable generation lifecycle, `packages/factorio-service-executor` connects it to M5, and `packages/service-postgres` now provides real PostgreSQL persistence/pg-boss queueing with atomic submission. S3, process adapters, auth/rate limits, and recovery policy remain.
 
 ## Target product pipeline
 
@@ -77,8 +77,9 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `GenerationRepository`, `GenerationQueue`, `ArtifactStore`, and `GenerationExecutor` are ports. Future HTTP/PostgreSQL/pg-boss/S3 implementations are adapters around them.
 - `packages/factorio-service-executor` implements `GenerationExecutor` by running the proven M5 pipeline in an isolated temporary root, mapping telemetry to service schemas, reading only the validated ZIP bytes, and deleting temporary reports/artifacts afterward.
 - Successful workers publish the validated ZIP through `ArtifactStore` before persisting `succeeded`; unsupported/failed outcomes do not publish artifacts.
+- `packages/service-postgres` implements a Drizzle/node-postgres repository, versioned migration, pg-boss queue, and transactional `generation row + job` submission using pg-boss `fromDrizzle`.
+- The adapter integration test boots a checksum-pinned user-space PostgreSQL 18.6 server, applies migrations, exercises revision CAS, round-trips pg-boss jobs, and proves enqueue failure rolls back the generation row.
 - ADR-0011 defines the asynchronous service boundary. ADR-0012 selects PostgreSQL + Drizzle/node-postgres + pg-boss and private S3-compatible object storage for the private-beta adapters.
-- The laptop currently has no local PostgreSQL client/server and no Docker/Podman runtime, so real persistence adapters are not yet claimed as integration-tested.
 
 ## Planned package/application boundaries
 - `packages/domain`: ModSpec, generation states, shared typed errors.
@@ -89,7 +90,8 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `packages/agent-core`: Planner/Repair orchestration.
 - `packages/service-core`: private-beta generation state machine and service ports.
 - `packages/factorio-service-executor`: Factorio/M5 implementation of the service executor port.
-- future persistence/storage adapter package(s): PostgreSQL/pg-boss/S3 implementations.
+- `packages/service-postgres`: PostgreSQL/Drizzle persistence plus pg-boss queue adapter.
+- future storage adapter package: private S3-compatible implementation.
 - `apps/worker`: asynchronous generation job consumer.
 - `apps/web`: private-beta UI/API.
 

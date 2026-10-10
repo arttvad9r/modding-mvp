@@ -125,12 +125,13 @@ Completed first slice:
 - infrastructure ports for repository, queue, artifact store, and generation executor;
 - `packages/factorio-service-executor` adapter that runs M5 in an isolated temp root, returns validated ZIP bytes/service telemetry, and removes local run files;
 - real-Factorio integration coverage for the service executor adapter;
+- `packages/service-postgres` with Drizzle migration, revision-CAS repository, pg-boss queue, and atomic record+job submission;
+- checksum-pinned PostgreSQL 18.6 local integration runtime proving migration/CAS/queue/transaction rollback;
 - initial HTTP/service contract in `docs/service-contract.md`;
 - ADR-0011 asynchronous service/worker boundary;
 - ADR-0012 PostgreSQL + Drizzle/node-postgres + pg-boss + S3-compatible storage default.
 
 Remaining scope:
-- real PostgreSQL repository and pg-boss queue adapters with integration coverage;
 - S3-compatible artifact adapter and authorized download path;
 - worker adapter from M5 pipeline to `GenerationExecutor`;
 - HTTP API/web surface;

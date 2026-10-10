@@ -31,8 +31,7 @@ Request:
 
 Expected behavior:
 - validate prompt length/content;
-- persist status `queued`;
-- enqueue the generation ID;
+- atomically persist status `queued` and enqueue the generation ID when using the PostgreSQL adapter;
 - return `202 Accepted` with the generation record/ID;
 - never run Planner, Factorio, or Repair in the request handler.
 
@@ -56,7 +55,7 @@ A successful generation stores a private object reference such as `generations/<
 
 ## Service ports
 
-`packages/service-core` defines infrastructure-neutral ports:
+`packages/service-core` defines infrastructure-neutral ports. `packages/service-postgres` implements the PostgreSQL repository/queue paths and provides an atomic submission store that joins Drizzle and pg-boss in one database transaction:
 - `GenerationRepository` — durable records plus revision-based compare-and-set updates;
 - `GenerationQueue` — enqueue versioned generation jobs;
 - `ArtifactStore` — publish validated ZIP bytes and return serializable object metadata;

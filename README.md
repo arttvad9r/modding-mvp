@@ -16,7 +16,7 @@ The project deliberately starts with prototype-stage modifications and one game.
 - M5 — Local end-to-end prototype: complete.
 - M6 — Private beta service: in progress.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 is in progress: `packages/service-core` defines the asynchronous API/worker lifecycle and infrastructure ports, and `packages/factorio-service-executor` connects workers to the validated M5 pipeline without retaining local run files. PostgreSQL/pg-boss/S3 adapters are next.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 is in progress: `packages/service-core` defines the asynchronous API/worker lifecycle, `packages/factorio-service-executor` connects workers to the validated M5 pipeline, and `packages/service-postgres` now provides versioned Drizzle migrations, revision-CAS persistence, pg-boss queueing, and atomic generation+job submission verified against real PostgreSQL 18.6. Private S3 storage, worker/API processes, auth/rate limits, and recovery policy are next.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -38,9 +38,10 @@ AI coding agents must also follow [`AGENTS.md`](AGENTS.md).
 ```bash
 pnpm install
 pnpm factorio:setup
+pnpm postgres:setup
 ```
 
-The setup script downloads the pinned Factorio 2.0.77 Linux headless build, verifies its SHA-256 checksum, and stores it under the git-ignored `.tools/` directory.
+The setup scripts install the pinned Factorio 2.0.77 headless runtime and build PostgreSQL 18.6 for local M6 integration tests under git-ignored `.tools/`; both source archives are checksum-verified. The PostgreSQL runtime is a dev/test dependency, not a production deployment prescription.
 
 ## Checks
 

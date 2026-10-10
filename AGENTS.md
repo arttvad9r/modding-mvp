@@ -20,7 +20,7 @@ If code and documentation disagree, do not guess. Report the conflict and make t
 ## Current milestone
 M6: Private beta service (in progress).
 
-M0 through M5 are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. M6 has started with `packages/service-core`: API submission persists `queued` state and enqueues only a generation ID; workers claim `queued -> running`, execute through a `GenerationExecutor`, publish successful artifacts through `ArtifactStore`, and persist one terminal state. `packages/factorio-service-executor` is the real Factorio implementation of that executor port and must preserve M5 validation/Repair guarantees. ADR-0011 and ADR-0012 are accepted defaults.
+M0 through M5 are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. M6 has started with `packages/service-core`: API submission persists `queued` state and enqueues only a generation ID; workers claim `queued -> running`, execute through a `GenerationExecutor`, publish successful artifacts through `ArtifactStore`, and persist one terminal state. `packages/factorio-service-executor` is the real Factorio implementation of that executor port and must preserve M5 validation/Repair guarantees. `packages/service-postgres` implements revision-CAS persistence plus pg-boss queueing and atomic record+job submission; its integration test runs against a checksum-pinned local PostgreSQL 18.6 runtime. ADR-0011 and ADR-0012 are accepted defaults.
 
 ## Current scope
 - Factorio stable 2.0.x only.
@@ -62,6 +62,7 @@ Small refactors, implementation details, and patch dependency upgrades normally 
 - `pnpm test`
 - `pnpm test:integration`
 - `pnpm build`
+- `pnpm postgres:setup`
 - `pnpm factorio:test -- <mod-path>`
 - `pnpm prompt:plan -- "<request>"`
 - `pnpm planner:eval`

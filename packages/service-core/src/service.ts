@@ -11,24 +11,21 @@ import {
   type GenerationQueue,
   type GenerationRecord,
   type GenerationRepository,
+  type GenerationSubmissionStore,
   type QueuedGenerationRecord,
 } from "./contracts.js";
 
-export interface SubmitGenerationOptions {
-  readonly repository: GenerationRepository;
-  readonly queue: GenerationQueue;
+interface QueuedGenerationInput {
   readonly prompt: string;
   readonly generationId?: () => string;
   readonly now?: () => Date;
 }
 
-export async function submitGeneration(
-  options: SubmitGenerationOptions,
-): Promise<QueuedGenerationRecord> {
-  const request = SubmitGenerationRequestSchema.parse({ prompt: options.prompt });
-  const id = GenerationIdSchema.parse((options.generationId ?? randomUUID)());
-  const timestamp = (options.now ?? (() => new Date()))().toISOString();
-  const record = GenerationRecordSchema.parse({
+function createQueuedGeneration(input: QueuedGenerationInput): QueuedGenerationRecord {
+  const request = SubmitGenerationRequestSchema.parse({ prompt: input.prompt });
+  const id = GenerationIdSchema.parse((input.generationId ?? randomUUID)());
+  const timestamp = (input.now ?? (() => new Date()))().toISOString();
+  return GenerationRecordSchema.parse({
     schemaVersion: 1,
     id,
     revision: 0,
@@ -37,6 +34,22 @@ export async function submitGeneration(
     createdAt: timestamp,
     updatedAt: timestamp,
   }) as QueuedGenerationRecord;
+}
+
+export interface SubmitGenerationOptions extends QueuedGenerationInput {
+  readonly repository: GenerationRepository;
+  readonly queue: GenerationQueue;
+}
+
+export interface SubmitGenerationAtomicOptions extends QueuedGenerationInput {
+  readonly submissionStore: GenerationSubmissionStore;
+}
+
+export async function submitGeneration(
+  options: SubmitGenerationOptions,
+): Promise<QueuedGenerationRecord> {
+  const record = createQueuedGeneration(options);
+  const id = record.id;
 
   await options.repository.insert(record);
 
@@ -69,6 +82,34 @@ export async function submitGeneration(
     });
   }
 
+  return record;
+}
+
+export async function submitGenerationAtomically(
+  options: SubmitGenerationAtomicOptions,
+): Promise<QueuedGenerationRecord> {
+  const record = createQueuedGeneration(options);
+  try {
+    await options.submissionStore.submit(record, {
+      schemaVersion: 1,
+      generationId: record.id,
+    });
+  } catch (error) {
+    const normalized = normalizeProjectError(error, {
+      code: "process_error",
+      stage: "process",
+      message: "Failed to persist and enqueue generation atomically",
+      retryable: true,
+    });
+    throw new ProjectError({
+      code: normalized.code,
+      stage: normalized.stage,
+      message: normalized.message,
+      retryable: normalized.retryable,
+      details: { generationId: record.id },
+      cause: error,
+    });
+  }
   return record;
 }
 

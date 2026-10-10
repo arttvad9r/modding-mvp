@@ -40,5 +40,8 @@ The service-core ports remain authoritative. These technologies are adapters and
 - S3-compatible differences may require adapter configuration such as endpoint/path-style behavior.
 - A real PostgreSQL integration environment is required before calling adapters production-ready.
 
+## Implementation note
+The first adapter implementation is integration-tested against checksum-pinned PostgreSQL 18.6 built in user space. Drizzle migrations, revision CAS, pg-boss enqueue/fetch, and `fromDrizzle` transactional generation+job submission are exercised against the real server. This dev/test version pin does not require production hosting to use the identical minor patch, but production must use a supported PostgreSQL release and pass the same integration contract.
+
 ## Revisit when
 Reconsider the queue if measured load, isolation needs, managed-platform constraints, or cross-region requirements make a dedicated queue materially better. Reconsider artifact storage only if beta deployment provides an equivalent shared durable object service.

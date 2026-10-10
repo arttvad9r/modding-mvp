@@ -183,10 +183,10 @@ Before starting M2:
 
 ### Persistence, queue, artifacts
 - [x] Choose PostgreSQL + Drizzle/node-postgres + pg-boss and S3-compatible object storage; record ADR-0012.
-- [ ] Implement PostgreSQL generation repository and versioned migrations.
-- [ ] Implement pg-boss generation queue using the same PostgreSQL deployment.
-- [ ] Make submit persist+enqueue atomic where the adapters support a shared transaction.
-- [ ] Add a real PostgreSQL integration environment/test; do not mark adapters ready from mocks alone.
+- [x] Implement PostgreSQL generation repository and versioned migrations.
+- [x] Implement pg-boss generation queue using the same PostgreSQL deployment.
+- [x] Make PostgreSQL submit persist+enqueue atomic through Drizzle transaction + pg-boss `fromDrizzle`.
+- [x] Add checksum-pinned PostgreSQL 18.6 dev runtime plus real migration/repository/queue/rollback integration tests.
 - [ ] Implement private S3-compatible artifact store and authorized download flow.
 
 ### Worker/API

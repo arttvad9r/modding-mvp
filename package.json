@@ -9,6 +9,7 @@
     "test": "pnpm -r test",
     "test:integration": "pnpm -r --if-present test:integration",
     "factorio:setup": "bash scripts/setup-factorio.sh",
+    "postgres:setup": "bash scripts/setup-postgres-dev.sh",
     "factorio:test": "pnpm --filter @project/factorio-harness cli --",
     "mod:build": "pnpm --filter @project/factorio-generator cli --",
     "prompt:plan": "pnpm --filter @project/agent-core cli --",
