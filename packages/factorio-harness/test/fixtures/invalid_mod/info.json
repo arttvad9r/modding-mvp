@@ -1,0 +1,8 @@
+{
+  "name": "m0_invalid",
+  "version": "1.0.0",
+  "title": "M0 Invalid Fixture",
+  "author": "Project test fixture",
+  "factorio_version": "2.0",
+  "dependencies": ["base >= 2.0"]
+}
