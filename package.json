@@ -13,7 +13,9 @@
     "mod:build": "pnpm --filter @project/factorio-generator cli --",
     "prompt:plan": "pnpm --filter @project/agent-core cli --",
     "planner:eval": "pnpm --filter @project/agent-core eval --",
-    "repair:eval": "pnpm --filter @project/agent-core repair:eval --"
+    "repair:eval": "pnpm --filter @project/agent-core repair:eval --",
+    "prompt:build": "pnpm --filter @project/agent-core pipeline --",
+    "prompt:feedback": "pnpm --filter @project/agent-core feedback --"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -67,7 +67,7 @@ Completed slices:
 - 24-case golden prompt corpus plus reusable eval runner;
 - live Ollama Cloud `deepseek-v4.1-flash:cloud` baseline: 24/24 classification and 12/12 supported ModSpec cases (100% / 100%).
 
-The first Ollama run exposed a reasoning/JSON transport issue plus an underspecified typed-change prompt contract. After disabling thinking for the JSON planner transport and documenting exact change shapes, the complete corpus passed. A Z.ai `glm-5.3-flash` attempt returned provider quota errors and was not scored as model quality.
+The first Ollama run exposed a reasoning/JSON transport issue plus an underspecified typed-change prompt contract. After disabling thinking for the JSON planner transport and documenting exact change shapes, the complete corpus passed. The initial Z.ai attempt used the general endpoint with a Coding Plan key and hit the wrong quota. Re-running on `https://api.z.ai/api/coding/paas/v4` with `glm-5.3-flash` passed 24/24 classification and 12/12 supported ModSpec cases (100% / 100%).
 
 Exit criteria:
 - Planner never writes files directly;
@@ -87,7 +87,7 @@ Completed slices:
 - hard maximum of 2 model attempts with observable attempt/provider/model/usage/error history;
 - real-Factorio validation entrypoint for repaired bounded manifests using the original semantic assertions;
 - 5-case Repair golden corpus spanning load failure plus all four deterministic capability families;
-- live Ollama Cloud `deepseek-v4.1-flash:cloud` baseline: 5/5 repaired, 5 total model attempts, 3,964 model tokens.
+- live Z.ai Coding Plan `glm-5.3-flash` baseline: 5/5 repaired with 5 total model attempts.
 
 Exit criteria:
 - repair cannot expand scope beyond the accepted ModSpec without replanning;
@@ -96,22 +96,27 @@ Exit criteria:
 - loops terminate deterministically after at most two model attempts.
 
 ## M5 — Local end-to-end prototype
-Status: next.
+Status: complete.
 
 Goal: prompt -> validated ZIP through one local interface.
 
-Scope:
-- simple CLI or minimal local web UI;
-- generation status/progress;
-- artifact download/path;
-- user feedback capture.
+Completed slices:
+- reusable `packages/agent-core` orchestration for Planner -> generation -> Factorio -> bounded Repair -> ZIP;
+- `pnpm prompt:build` user-facing CLI with structured progress and terminal JSON;
+- git-ignored `.runs/<generation-id>.json` reports with prompt, ModSpec, attempts, token/cost metadata, duration, validation state, and artifact/error;
+- `pnpm prompt:feedback` local feedback capture;
+- real-Factorio prompt-to-ZIP integration test;
+- live Z.ai Coding Plan `glm-5.3-flash` smoke producing a validated ZIP in about 5.4 seconds.
 
 Exit criteria:
 - another person can use the flow without editing source code;
-- end-to-end success/failure is understandable;
-- local telemetry captures duration, attempts, and cost.
+- end-to-end success/failure and unsupported scope are machine-readable;
+- local telemetry captures duration, attempts, token usage/optional configured cost, and validation metadata;
+- ZIP is exposed only after real Factorio + semantic validation succeeds.
 
 ## M6 — Private beta service
+Status: next.
+
 Goal: validate product usefulness with real Factorio players.
 
 Scope:

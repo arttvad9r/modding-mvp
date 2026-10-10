@@ -60,7 +60,7 @@ Malformed or registry-invalid model output receives at most one correction retry
 
 Golden Planner evals live under `evals/planner/`. The initial gate is >=90% supported/unsupported classification accuracy and >=80% exact semantic change accuracy on supported cases. These thresholds are development gates, not product KPI claims. The Planner schema prompt explicitly enumerates the exact JSON shape for each capability-specific change so model quality is measured against a fully specified typed contract rather than implicit TypeScript knowledge.
 
-Recorded M3 live baseline on 2026-10-11: Ollama Cloud `deepseek-v4.1-flash:cloud` passed 24/24 classification cases and 12/12 supported semantic ModSpec cases, using 54,824 input tokens and 1,575 output tokens (56,399 total). An attempted Z.ai `glm-5.3-flash` run returned HTTP 429 / provider code 1113 (`Insufficient balance or no resource package`) for every case and is therefore not treated as model-quality evidence.
+Recorded M3 live baselines on 2026-10-11: Ollama Cloud `deepseek-v4.1-flash:cloud` passed 24/24 classification and 12/12 supported semantic ModSpec cases. Z.ai Coding Plan `glm-5.3-flash` also passed 24/24 and 12/12 (53,822 total tokens) when routed to `https://api.z.ai/api/coding/paas/v4`. The earlier Z.ai HTTP 429/code 1113 result came from sending a Coding Plan key to the general endpoint, whose quota is separate.
 
 For M3 development/evaluation, provider presets use `glm-5.3-flash` on Z.ai and `deepseek-v4.1-flash:cloud` on Ollama Cloud by default. These are dev/eval defaults only; provider/model selection remains runtime configuration and is not a production architecture commitment.
 
@@ -150,7 +150,22 @@ Every candidate is validated by real Factorio using the original semantic assert
 
 Maximum automatic Repair model attempts: **2 hard cap**. Attempt history captures outcome, provider/model when available, token/cost metadata, duration, normalized validation error, and terminal reason. Non-repairable validation errors terminate immediately rather than consuming a second model attempt. See ADR-0010.
 
-Repair regression evals live under `evals/repair/`. `pnpm repair:eval` injects known load/semantic failures into deterministic artifacts, then runs `failure -> Repair -> real Factorio -> original semantic assertions`. Initial development gate: >=80% repaired cases. Recorded M4 live baseline on 2026-10-11 with Ollama Cloud `deepseek-v4.1-flash:cloud`: 5/5 repaired (100%), 5 total model attempts, 3,483 input + 481 output tokens = 3,964 total.
+Repair regression evals live under `evals/repair/`. `pnpm repair:eval` injects known load/semantic failures into deterministic artifacts, then runs `failure -> Repair -> real Factorio -> original semantic assertions`. Initial development gate: >=80% repaired cases. Z.ai Coding Plan `glm-5.3-flash` passes 5/5 Repair cases with 5 total attempts; Ollama Cloud remains an alternate tested provider.
+
+## Local end-to-end prototype
+`packages/agent-core` exposes `runLocalFactorioGeneration`, which composes existing bounded components rather than replacing them. The flow is:
+1. Planner classifies/derives a validated ModSpec;
+2. deterministic generator creates the bounded manifest and original semantic assertions;
+3. real Factorio validates the candidate;
+4. only a `factorio_load_failed` or `semantic_assertion_failed` result may enter the hard-capped Repair loop;
+5. the repaired candidate, if any, must pass real Factorio with the original assertions;
+6. only then is the installable ZIP written.
+
+`pnpm prompt:build -- "<request>"` is the M5 local user interface. It emits a bounded sequence of structured progress events (`planning`, `generating`, `validating`, optional `repairing`, `packaging`, terminal state), returns one structured terminal result, and uses root `dist/` and `.runs/` by default. Unsupported requests do not generate files. Expected pipeline failures are returned with the shared serialized error contract.
+
+Each run gets a generation ID and a git-ignored `.runs/<generation-id>.json` report containing the original prompt, accepted ModSpec when present, progress, Planner/Repair attempt metadata, aggregate token/optional configured cost metadata, total duration, validation metadata, final ZIP path or terminal typed failure, and optional user feedback. `pnpm prompt:feedback -- <generation-id> <up|down> [note]` updates only the matching bounded report. These local JSON reports are prototype telemetry and must not be treated as the M6 production persistence model.
+
+Recorded M5 live smoke on 2026-10-11 using Z.ai Coding Plan `glm-5.3-flash`: direct supported prompt completed in 5,401 ms, one Planner attempt, 2,215 tokens, 1,540 ms Factorio validation, no Repair, and a validated ZIP under root `dist/`.
 
 ## Package boundaries
 Planned repository boundaries:

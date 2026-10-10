@@ -130,7 +130,7 @@ Before starting M2:
 - [x] Real-model golden eval exceeds both development gates.
 - [x] Deterministic target/assertion derivation and registry checks remain authoritative.
 - [x] Provider/model/usage metadata is captured.
-- [x] Z.ai quota failure is classified as provider/process failure and is not counted as model-quality evidence.
+- [x] Verify Z.ai Coding Plan routing separately from general quota; `glm-5.3-flash` reaches 24/24 classification and 12/12 supported ModSpec on the coding endpoint.
 
 ## M4 — complete
 - [x] Define typed Repair input/output contract around original ModSpec, prior manifest, and runtime-validated normalized error.
@@ -141,7 +141,7 @@ Before starting M2:
 - [x] Add fake-provider tests for success, retry, exhaustion, schema rejection, scope expansion, and infrastructure failure.
 - [x] Add real-Factorio integration proving load and semantic failures are repaired under the original assertions.
 - [x] Add 5-case Repair golden corpus across all four capability families.
-- [x] Run live Ollama Cloud Repair eval: 5/5 repaired, 5 total attempts, 3,964 model tokens.
+- [x] Run live Repair evals; Z.ai Coding Plan `glm-5.3-flash` repairs 5/5 cases with 5 total attempts.
 - [x] Add ADR-0010 for the bounded data.lua-only Repair boundary.
 
 ## M4 exit review
@@ -151,11 +151,28 @@ Before starting M2:
 - [x] Attempt history and usage metadata are observable and persistence-ready.
 - [x] Live Repair golden eval exceeds the initial 80% development gate (100% / 5 of 5).
 
-## M5 — next
-- [ ] Build one local `prompt -> Planner -> generation -> validation/Repair -> ZIP` command/interface.
-- [ ] Surface bounded progress/status and terminal typed failure.
-- [ ] Aggregate Planner + Repair attempts, token usage, duration, and validation metadata.
-- [ ] Return the final installable ZIP path only after real Factorio validation passes.
+## M5 — complete
+- [x] Build reusable `runLocalFactorioGeneration` orchestration in `packages/agent-core`.
+- [x] Add `pnpm prompt:build -- "<request>"` for prompt -> Planner -> generation -> Factorio -> optional Repair -> ZIP.
+- [x] Surface bounded structured progress and terminal supported/unsupported/typed-failure states.
+- [x] Aggregate Planner + Repair attempts, token/cost metadata, total duration, and validation metadata.
+- [x] Return/write the installable ZIP only after real Factorio validation passes.
+- [x] Persist git-ignored local run reports under `.runs/<generation-id>.json`.
+- [x] Add `pnpm prompt:feedback` to attach bounded up/down feedback and a note to a run report.
+- [x] Add unit coverage for direct success, unsupported, Repair path, typed infrastructure failure, report persistence, and feedback safety.
+- [x] Add real-Factorio prompt-to-ZIP integration coverage.
+- [x] Run live Z.ai `glm-5.3-flash` smoke: validated ZIP in 5.4 s, one Planner attempt, 2,215 tokens.
+
+## M5 exit review
+- [x] Another person can run the supported flow without editing source code.
+- [x] Progress, unsupported scope, typed failures, and final artifact path are machine-readable.
+- [x] Local telemetry captures duration, Planner/Repair attempts, token usage, optional configured cost, and validation metadata.
+- [x] Feedback is locally capturable by generation ID.
+- [x] ZIP publication remains downstream of real Factorio + semantic validation.
+
+## M6 — next
+- [ ] Define service/API/worker boundary from observed M5 contracts before adding infrastructure.
+- [ ] Decide persistence/queue/storage technologies with ADRs when implementation starts.
 
 ## Agent task template
 A task sent to Codex/Claude should include:

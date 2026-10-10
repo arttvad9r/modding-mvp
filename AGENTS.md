@@ -18,9 +18,9 @@ Before making a non-trivial change, read the relevant repository documentation:
 If code and documentation disagree, do not guess. Report the conflict and make the smallest change needed to restore a single source of truth.
 
 ## Current milestone
-M5: Local end-to-end prototype (next).
+M6: Private beta service (next).
 
-M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, M2 deterministic capability expansion, M3 Natural-language Planner, and M4 bounded Repair are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. M4 permits the model to replace `data.lua` only, has a hard two-attempt cap, and requires the original semantic assertions to pass in real Factorio; its live golden corpus repaired 5/5 injected failures.
+M0 through M5 are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. M5 composes Planner, deterministic generation, real Factorio validation, bounded Repair, ZIP packaging, local run telemetry, and feedback through `pnpm prompt:build`; ZIP success still requires the original semantic assertions to pass in real Factorio.
 
 ## Current scope
 - Factorio stable 2.0.x only.
@@ -63,6 +63,8 @@ Small refactors, implementation details, and patch dependency upgrades normally 
 - `pnpm prompt:plan -- "<request>"`
 - `pnpm planner:eval`
 - `pnpm repair:eval`
+- `pnpm prompt:build -- "<request>"`
+- `pnpm prompt:feedback -- <generation-id> <up|down> [note]`
 
 ## Definition of done
 A task is done only when:

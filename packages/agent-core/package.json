@@ -7,11 +7,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run test/planner.test.ts test/eval.test.ts test/repair.test.ts",
-    "test:integration": "vitest run test/repair.integration.test.ts",
+    "test": "vitest run test/planner.test.ts test/eval.test.ts test/repair.test.ts test/pipeline.test.ts test/feedback.test.ts",
+    "test:integration": "vitest run test/repair.integration.test.ts && vitest run test/pipeline.integration.test.ts",
     "cli": "tsx src/cli.ts",
     "eval": "tsx src/eval-cli.ts",
-    "repair:eval": "tsx src/repair-eval-cli.ts"
+    "repair:eval": "tsx src/repair-eval-cli.ts",
+    "pipeline": "tsx src/pipeline-cli.ts",
+    "feedback": "tsx src/feedback-cli.ts"
   },
   "dependencies": {
     "@project/domain": "workspace:*",
