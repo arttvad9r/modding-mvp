@@ -6,6 +6,9 @@ import { serializeProjectError } from "@project/domain";
 import { createConfiguredLlmProvider } from "@project/llm";
 
 import { PlannerEvalCasesSchema, runPlannerEval } from "./eval.js";
+import { loadLocalEnvFile } from "./load-local-env.js";
+
+loadLocalEnvFile();
 
 function optionalNumber(value: string | undefined): number | undefined {
   if (value === undefined || value.trim() === "") return undefined;

@@ -89,6 +89,8 @@ For a Z.ai Coding Plan API key, additionally set `ZAI_API_MODE=coding`; the proj
 
 The dev/eval defaults are `deepseek-v4.1-flash:cloud` for Ollama Cloud and `glm-5.3-flash` for Z.ai. Override either with `LLM_MODEL` (or the provider-specific model variable).
 
+`prompt:plan` and `planner:eval` automatically load a git-ignored `.env.local` from the repository root when it exists. This is the preferred local-key workflow; copy `.env.example` to `.env.local`, add only local credentials, and never commit the file.
+
 The same provider configuration runs the golden Planner corpus:
 
 ```bash

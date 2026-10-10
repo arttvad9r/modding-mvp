@@ -2,7 +2,10 @@
 import { serializeProjectError } from "@project/domain";
 import { createConfiguredLlmProvider } from "@project/llm";
 
+import { loadLocalEnvFile } from "./load-local-env.js";
 import { planFactorioPrompt } from "./planner.js";
+
+loadLocalEnvFile();
 
 const args = process.argv.slice(2).filter((arg) => arg !== "--");
 const prompt = args.join(" ").trim();
