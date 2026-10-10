@@ -187,7 +187,8 @@ Before starting M2:
 - [x] Implement pg-boss generation queue using the same PostgreSQL deployment.
 - [x] Make PostgreSQL submit persist+enqueue atomic through Drizzle transaction + pg-boss `fromDrizzle`.
 - [x] Add checksum-pinned PostgreSQL 18.6 dev runtime plus real migration/repository/queue/rollback integration tests.
-- [ ] Implement private S3-compatible artifact store and authorized download flow.
+- [x] Implement private S3-compatible artifact store and bounded presigned download flow through AWS SDK v3.
+- [ ] Run storage smoke against the actual private-beta S3-compatible provider before deployment.
 
 ### Worker/API
 - [x] Adapt M5 `runLocalFactorioGeneration` into the service `GenerationExecutor` without exposing local `.runs` persistence.

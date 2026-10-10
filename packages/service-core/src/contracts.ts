@@ -73,13 +73,15 @@ export const GenerationTelemetrySchema = z.strictObject({
     .optional(),
 });
 
+export const ArtifactKeySchema = z
+  .string()
+  .min(1)
+  .max(512)
+  .regex(safeArtifactKey)
+  .refine((value) => !value.includes("..") && !value.includes("\\"), "Unsafe artifact key");
+
 export const ArtifactRefSchema = z.strictObject({
-  key: z
-    .string()
-    .min(1)
-    .max(512)
-    .regex(safeArtifactKey)
-    .refine((value) => !value.includes("..") && !value.includes("\\"), "Unsafe artifact key"),
+  key: ArtifactKeySchema,
   fileName: ArtifactFileNameSchema,
   contentType: z.literal("application/zip"),
   sizeBytes: z.number().int().nonnegative(),

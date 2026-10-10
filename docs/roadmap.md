@@ -127,12 +127,13 @@ Completed first slice:
 - real-Factorio integration coverage for the service executor adapter;
 - `packages/service-postgres` with Drizzle migration, revision-CAS repository, pg-boss queue, and atomic record+job submission;
 - checksum-pinned PostgreSQL 18.6 local integration runtime proving migration/CAS/queue/transaction rollback;
+- `packages/service-s3` private ZIP artifact adapter with safe key/name validation and 30–900 second presigned GET URLs;
+- AWS SDK HTTP integration smoke proving PutObject + signed GetObject byte round-trip;
 - initial HTTP/service contract in `docs/service-contract.md`;
 - ADR-0011 asynchronous service/worker boundary;
 - ADR-0012 PostgreSQL + Drizzle/node-postgres + pg-boss + S3-compatible storage default.
 
 Remaining scope:
-- S3-compatible artifact adapter and authorized download path;
 - worker adapter from M5 pipeline to `GenerationExecutor`;
 - HTTP API/web surface;
 - basic authentication and rate limiting;

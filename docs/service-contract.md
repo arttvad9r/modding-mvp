@@ -51,7 +51,7 @@ Feedback is accepted only for terminal generations. Notes are bounded to 2,000 c
 
 ### Artifact download
 
-A successful generation stores a private object reference such as `generations/<generation-id>/<file>.zip`. The public API must authorize access and return/redirect to a short-lived download URL or stream the object. Raw bucket credentials or permanently public object URLs are not part of the generation record.
+A successful generation stores a private object reference such as `generations/<generation-id>/<file>.zip`. The public API must authorize access and return/redirect to a short-lived download URL or stream the object. `packages/service-s3` implements 30–900 second presigned GetObject URLs; raw bucket credentials or permanently public object URLs are not part of the generation record.
 
 ## Service ports
 

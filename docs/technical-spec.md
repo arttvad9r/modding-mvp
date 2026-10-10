@@ -193,7 +193,7 @@ Private-beta adapter defaults from ADR-0012:
 - pg-boss for asynchronous jobs in the same PostgreSQL deployment;
 - private S3-compatible object storage via AWS SDK v3 semantics for validated ZIP artifacts.
 
-Production migrations are versioned Drizzle migrations; schema push at application startup is not the production migration policy. `packages/service-postgres` stores the runtime-validated record JSON alongside indexed id/status/revision/timestamps and performs optimistic updates by revision. API submission can use `PostgresGenerationSubmissionStore`, which inserts the queued row and calls pg-boss `send()` through `fromDrizzle(tx, sql)` inside one transaction. The integration test proves a queue failure rolls the row back. A checksum-pinned PostgreSQL 18.6 source build under `.tools/` is used only for reproducible local integration tests. Object keys are persisted, while download authorization/signing stays in the API/storage adapter. Redis is not part of the initial beta architecture.
+Production migrations are versioned Drizzle migrations; schema push at application startup is not the production migration policy. `packages/service-postgres` stores the runtime-validated record JSON alongside indexed id/status/revision/timestamps and performs optimistic updates by revision. API submission can use `PostgresGenerationSubmissionStore`, which inserts the queued row and calls pg-boss `send()` through `fromDrizzle(tx, sql)` inside one transaction. The integration test proves a queue failure rolls the row back. A checksum-pinned PostgreSQL 18.6 source build under `.tools/` is used only for reproducible local integration tests. `packages/service-s3` uploads only runtime-validated ZIP keys/names through AWS SDK v3 PutObject. Generation records persist only private object metadata; downloads are generated on demand as 30–900 second presigned GetObject URLs with attachment filename/content type. Object keys are persisted, while authorization to request a signed URL remains in the API layer. Redis is not part of the initial beta architecture.
 
 ## Package boundaries
 Planned repository boundaries:
@@ -206,7 +206,7 @@ Planned repository boundaries:
 - `packages/service-core`: generation lifecycle, API/worker contracts, and infrastructure ports;
 - `packages/factorio-service-executor`: M5/Factorio adapter for `GenerationExecutor`;
 - `packages/service-postgres`: Drizzle/node-postgres persistence and pg-boss queue adapters;
-- future storage adapter: S3-compatible implementation;
+- `packages/service-s3`: AWS SDK v3 S3-compatible ArtifactStore and presigned-download adapter;
 - `apps/worker`: queued generation execution;
 - `apps/web`: UI and API.
 
