@@ -1,0 +1,18 @@
+{
+  "name": "@project/factorio-service-executor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run test/executor.test.ts",
+    "test:integration": "vitest run test/executor.integration.test.ts"
+  },
+  "dependencies": {
+    "@project/agent-core": "workspace:*",
+    "@project/llm": "workspace:*",
+    "@project/service-core": "workspace:*"
+  }
+}

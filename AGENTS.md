@@ -18,9 +18,9 @@ Before making a non-trivial change, read the relevant repository documentation:
 If code and documentation disagree, do not guess. Report the conflict and make the smallest change needed to restore a single source of truth.
 
 ## Current milestone
-M6: Private beta service (next).
+M6: Private beta service (in progress).
 
-M0 through M5 are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. M5 composes Planner, deterministic generation, real Factorio validation, bounded Repair, ZIP packaging, local run telemetry, and feedback through `pnpm prompt:build`; ZIP success still requires the original semantic assertions to pass in real Factorio.
+M0 through M5 are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. M6 has started with `packages/service-core`: API submission persists `queued` state and enqueues only a generation ID; workers claim `queued -> running`, execute through a `GenerationExecutor`, publish successful artifacts through `ArtifactStore`, and persist one terminal state. `packages/factorio-service-executor` is the real Factorio implementation of that executor port and must preserve M5 validation/Repair guarantees. ADR-0011 and ADR-0012 are accepted defaults.
 
 ## Current scope
 - Factorio stable 2.0.x only.
@@ -29,6 +29,9 @@ M0 through M5 are complete and should be treated as stable boundaries unless a t
 
 ## Architecture rules
 - Keep Factorio-specific behavior inside `packages/factorio-*` packages.
+- HTTP/API handlers must not run Planner, Factorio, or Repair inline; use the service queue/worker boundary from ADR-0011.
+- Service queue payloads contain only the versioned generation ID; persisted generation state is authoritative.
+- Private-beta infrastructure defaults to PostgreSQL + Drizzle/node-postgres + pg-boss and private S3-compatible artifact storage per ADR-0012.
 - Planner-supported Factorio scope must come from `@project/factorio-knowledge`; do not duplicate a separate capability list in prompts.
 - Planner LLM output is limited to classification plus typed changes; target/assertions/Lua/files are application-owned.
 - Planner/Repair control flow must branch on typed `ProjectError.code`, not parse human error-message text.

@@ -170,9 +170,35 @@ Before starting M2:
 - [x] Feedback is locally capturable by generation ID.
 - [x] ZIP publication remains downstream of real Factorio + semantic validation.
 
-## M6 — next
-- [ ] Define service/API/worker boundary from observed M5 contracts before adding infrastructure.
-- [ ] Decide persistence/queue/storage technologies with ADRs when implementation starts.
+## M6 — in progress
+
+### Service boundary
+- [x] Add `packages/service-core` with runtime generation/job/telemetry/artifact contracts.
+- [x] Define `queued -> running -> succeeded | unsupported | failed` lifecycle.
+- [x] Keep queue payload versioned and limited to `generationId`.
+- [x] Add revision-based repository compare-and-set claiming/updates plus duplicate terminal delivery idempotency.
+- [x] Add bounded terminal feedback contract.
+- [x] Document initial HTTP/API shape in `docs/service-contract.md`.
+- [x] Add ADR-0011 for the asynchronous API/worker boundary.
+
+### Persistence, queue, artifacts
+- [x] Choose PostgreSQL + Drizzle/node-postgres + pg-boss and S3-compatible object storage; record ADR-0012.
+- [ ] Implement PostgreSQL generation repository and versioned migrations.
+- [ ] Implement pg-boss generation queue using the same PostgreSQL deployment.
+- [ ] Make submit persist+enqueue atomic where the adapters support a shared transaction.
+- [ ] Add a real PostgreSQL integration environment/test; do not mark adapters ready from mocks alone.
+- [ ] Implement private S3-compatible artifact store and authorized download flow.
+
+### Worker/API
+- [x] Adapt M5 `runLocalFactorioGeneration` into the service `GenerationExecutor` without exposing local `.runs` persistence.
+- [ ] Add worker process consuming generation jobs and preserving typed terminal outcomes/telemetry.
+- [ ] Add `POST /v1/generations`, `GET /v1/generations/:id`, and terminal feedback endpoint.
+- [ ] Add basic authentication and per-user/IP rate limits for private beta.
+- [ ] Add stale-running/retry/recovery policy before deployment.
+
+### Private deployment/beta
+- [ ] Deploy API, worker, PostgreSQL, and private object storage.
+- [ ] Instrument product KPIs and recruit 30+ testers.
 
 ## Agent task template
 A task sent to Codex/Claude should include:

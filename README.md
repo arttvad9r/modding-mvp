@@ -14,9 +14,9 @@ The project deliberately starts with prototype-stage modifications and one game.
 - M3 — Natural-language Planner: complete.
 - M4 — Repair loop: complete.
 - M5 — Local end-to-end prototype: complete.
-- M6 — Private beta service: next.
+- M6 — Private beta service: in progress.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 private-beta service infrastructure is next.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 is in progress: `packages/service-core` defines the asynchronous API/worker lifecycle and infrastructure ports, and `packages/factorio-service-executor` connects workers to the validated M5 pipeline without retaining local run files. PostgreSQL/pg-boss/S3 adapters are next.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -28,6 +28,7 @@ Key documents:
 - [`docs/roadmap.md`](docs/roadmap.md) — milestone plan;
 - [`docs/backlog.md`](docs/backlog.md) — actionable engineering backlog;
 - [`docs/capabilities.md`](docs/capabilities.md) — Factorio capability registry;
+- [`docs/service-contract.md`](docs/service-contract.md) — private-beta API/worker contract;
 - [`docs/adr/README.md`](docs/adr/README.md) — architecture decision records.
 
 AI coding agents must also follow [`AGENTS.md`](AGENTS.md).

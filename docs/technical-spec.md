@@ -167,6 +167,34 @@ Each run gets a generation ID and a git-ignored `.runs/<generation-id>.json` rep
 
 Recorded M5 live smoke on 2026-10-11 using Z.ai Coding Plan `glm-5.3-flash`: direct supported prompt completed in 5,401 ms, one Planner attempt, 2,215 tokens, 1,540 ms Factorio validation, no Repair, and a validated ZIP under root `dist/`.
 
+
+## Private-beta service boundary
+`packages/service-core` converts the local M5 flow into an asynchronous service contract without moving Factorio or LLM work into HTTP handlers. The persisted lifecycle is `queued -> running -> succeeded | unsupported | failed`.
+
+Submission rules:
+1. validate a bounded prompt;
+2. persist a queued generation;
+3. enqueue only `{ schemaVersion, generationId }`;
+4. return before Planner/Factorio execution.
+
+Worker rules:
+1. load the persisted generation by ID;
+2. atomically claim `queued -> running` using a monotonically increasing record `revision` and repository compare-and-set semantics;
+3. execute through a `GenerationExecutor` adapter;
+4. on success, validate a bounded safe ZIP filename/size (currently max 10 MiB), publish bytes through `ArtifactStore`, verify returned key/name/size metadata, and persist the private object reference;
+5. otherwise persist `unsupported` or a normalized typed `failed` result;
+6. treat terminal redelivery as idempotent and do not execute already-running work again.
+
+The service record retains prompt, accepted ModSpec when applicable, Planner/Repair attempt metadata, aggregate usage/cost, validation state, typed failures, artifact metadata, and bounded user feedback. `packages/factorio-service-executor` implements the service executor port by running M5 under a fresh temporary root, returning validated ZIP bytes plus mapped service telemetry, and deleting temporary M5 reports/artifacts before returning. See `docs/service-contract.md` and ADR-0011.
+
+Private-beta adapter defaults from ADR-0012:
+- PostgreSQL for durable service state;
+- Drizzle ORM with node-postgres for schema/query/migrations;
+- pg-boss for asynchronous jobs in the same PostgreSQL deployment;
+- private S3-compatible object storage via AWS SDK v3 semantics for validated ZIP artifacts.
+
+Production migrations must be versioned; schema push at application startup is not the production migration policy. Object keys are persisted, while download authorization/signing stays in the API/storage adapter. Redis is not part of the initial beta architecture.
+
 ## Package boundaries
 Planned repository boundaries:
 - `packages/domain`: ModSpec, state machine, shared typed errors;
@@ -175,13 +203,16 @@ Planned repository boundaries:
 - `packages/factorio-knowledge`: versioned Factorio support targets/baselines and Planner-facing capability registry;
 - `packages/llm`: provider abstraction;
 - `packages/agent-core`: Planner/Generator/Repair orchestration;
+- `packages/service-core`: generation lifecycle, API/worker contracts, and infrastructure ports;
+- `packages/factorio-service-executor`: M5/Factorio adapter for `GenerationExecutor`;
+- persistence/storage adapters: PostgreSQL/pg-boss/S3-compatible implementations;
 - `apps/worker`: queued generation execution;
 - `apps/web`: UI and API.
 
 Factorio-specific logic must not leak into generic orchestration contracts.
 
-## Persistence planned for service stage
-Minimum entities:
+## Persistence for service stage
+PostgreSQL is the accepted private-beta persistence default. Minimum entities:
 - users;
 - generations;
 - generation attempts;

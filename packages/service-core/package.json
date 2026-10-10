@@ -1,0 +1,16 @@
+{
+  "name": "@project/service-core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@project/domain": "workspace:*",
+    "zod": "^4.1.12"
+  }
+}

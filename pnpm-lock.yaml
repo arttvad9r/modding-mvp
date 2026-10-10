@@ -72,11 +72,32 @@ importers:
         specifier: workspace:*
         version: link:../domain
 
+  packages/factorio-service-executor:
+    dependencies:
+      '@project/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
+      '@project/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@project/service-core':
+        specifier: workspace:*
+        version: link:../service-core
+
   packages/llm:
     dependencies:
       '@project/domain':
         specifier: workspace:*
         version: link:../domain
+
+  packages/service-core:
+    dependencies:
+      '@project/domain':
+        specifier: workspace:*
+        version: link:../domain
+      zod:
+        specifier: ^4.1.12
+        version: 4.6.5
 
 packages:
 

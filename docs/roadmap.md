@@ -115,17 +115,27 @@ Exit criteria:
 - ZIP is exposed only after real Factorio + semantic validation succeeds.
 
 ## M6 — Private beta service
-Status: next.
+Status: in progress.
 
 Goal: validate product usefulness with real Factorio players.
 
-Scope:
-- web/API and worker separation if needed by observed usage;
-- PostgreSQL persistence;
-- queueing;
-- object storage;
-- basic authentication/rate limiting;
-- private deployment;
+Completed first slice:
+- `packages/service-core` runtime schemas for generation records/jobs/telemetry/artifact refs;
+- asynchronous API/worker lifecycle with compare-and-set claiming and terminal redelivery idempotency;
+- infrastructure ports for repository, queue, artifact store, and generation executor;
+- `packages/factorio-service-executor` adapter that runs M5 in an isolated temp root, returns validated ZIP bytes/service telemetry, and removes local run files;
+- real-Factorio integration coverage for the service executor adapter;
+- initial HTTP/service contract in `docs/service-contract.md`;
+- ADR-0011 asynchronous service/worker boundary;
+- ADR-0012 PostgreSQL + Drizzle/node-postgres + pg-boss + S3-compatible storage default.
+
+Remaining scope:
+- real PostgreSQL repository and pg-boss queue adapters with integration coverage;
+- S3-compatible artifact adapter and authorized download path;
+- worker adapter from M5 pipeline to `GenerationExecutor`;
+- HTTP API/web surface;
+- basic authentication and rate limiting;
+- private deployment and operational recovery policy;
 - 30+ testers target.
 
 Exit criteria are the product hypotheses in `product-spec.md`, especially success rate, false-success rate, repeat usage, and willingness to pay.

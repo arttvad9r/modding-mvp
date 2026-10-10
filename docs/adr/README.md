@@ -43,3 +43,5 @@ Do not create an ADR merely for:
 - [ADR-0008: Typed cross-pipeline error taxonomy](0008-typed-error-taxonomy.md)
 - [ADR-0009: Constrained Planner behind a provider-agnostic JSON boundary](0009-constrained-planner-provider-boundary.md)
 - [ADR-0010: Bounded data.lua-only Repair preserves accepted ModSpec](0010-bounded-data-lua-repair.md)
+- [ADR-0011: Private-beta generation uses an asynchronous API/worker boundary](0011-async-service-worker-boundary.md)
+- [ADR-0012: Private beta uses PostgreSQL + pg-boss + Drizzle and S3-compatible artifact storage](0012-private-beta-postgres-queue-storage.md)
