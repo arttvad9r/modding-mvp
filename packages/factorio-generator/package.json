@@ -8,8 +8,8 @@
     "cli": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run test/generator.test.ts test/artifact.test.ts test/technology-cost.test.ts",
-    "test:integration": "vitest run test/generated.integration.test.ts && vitest run test/technology-cost.integration.test.ts"
+    "test": "vitest run test/generator.test.ts test/artifact.test.ts test/technology-cost.test.ts test/technology-prerequisite.test.ts",
+    "test:integration": "vitest run test/generated.integration.test.ts && vitest run test/technology-cost.integration.test.ts && vitest run test/technology-prerequisite.integration.test.ts"
   },
   "dependencies": {
     "@project/domain": "workspace:*",

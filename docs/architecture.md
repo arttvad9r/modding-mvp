@@ -28,7 +28,7 @@ See ADR-0003 for why real Factorio is the validation authority.
 ## Implemented deterministic artifact boundary
 The current deterministic core provides:
 - `packages/domain` for typed ModSpec and generated-file manifest contracts;
-- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation on base-game furnace `crafting_speed`, allow-listed recipe item ingredient amounts, and allow-listed finite technology research costs;
+- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation on base-game furnace `crafting_speed`, allow-listed recipe item ingredient amounts, and allow-listed finite technology research costs, and reviewed technology prerequisite edges;
 - semantic assertion Lua generated separately from the user artifact;
 - `packages/factorio-harness` temporary companion validator mod and structured semantic failure classification;
 - temporary-only manifest materialization;

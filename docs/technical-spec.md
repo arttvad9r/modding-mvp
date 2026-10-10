@@ -93,7 +93,8 @@ For the current deterministic capabilities, the generator returns semantic asser
 Reference deterministic inputs:
 - `examples/faster-steel-furnace.json` — M1 `prototype_property`;
 - `examples/cheaper-iron-gears.json` — M2 `recipe_ingredient`;
-- `examples/double-automation-research-cost.json` — M2 `technology_cost`.
+- `examples/double-automation-research-cost.json` — M2 `technology_cost`;
+- `examples/remove-steel-prerequisite.json` — M2 `technology_prerequisite`.
 
 ## Repair loop
 A Repair step receives:

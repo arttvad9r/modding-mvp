@@ -1,0 +1,26 @@
+{
+  "title": "Automation 2 without steel prerequisite",
+  "slug": "automation-two-without-steel",
+  "target": {
+    "game": "factorio",
+    "channel": "stable",
+    "versionLine": "2.0"
+  },
+  "capability": "technology_prerequisite",
+  "changes": [
+    {
+      "type": "technology_prerequisite",
+      "technologyName": "automation-2",
+      "prerequisiteName": "steel-processing",
+      "operation": { "type": "remove" }
+    }
+  ],
+  "assertions": [
+    {
+      "type": "technology_prerequisite_matches",
+      "technologyName": "automation-2",
+      "prerequisiteName": "steel-processing",
+      "expectation": { "type": "remove" }
+    }
+  ]
+}

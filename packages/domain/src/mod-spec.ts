@@ -85,6 +85,28 @@ export const TechnologyCostAssertionSchema = z.strictObject({
   expectation: ScalarOperationSchema,
 });
 
+export const PrerequisiteOperationSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("add") }),
+  z.strictObject({ type: z.literal("remove") }),
+]);
+
+const technologyPrerequisiteAddressFields = {
+  technologyName: z.string().min(1).max(160).regex(factorioIdentifier),
+  prerequisiteName: z.string().min(1).max(160).regex(factorioIdentifier),
+} as const;
+
+export const TechnologyPrerequisiteChangeSchema = z.strictObject({
+  type: z.literal("technology_prerequisite"),
+  ...technologyPrerequisiteAddressFields,
+  operation: PrerequisiteOperationSchema,
+});
+
+export const TechnologyPrerequisiteAssertionSchema = z.strictObject({
+  type: z.literal("technology_prerequisite_matches"),
+  ...technologyPrerequisiteAddressFields,
+  expectation: PrerequisiteOperationSchema,
+});
+
 function operationKey(operation: z.infer<typeof ScalarOperationSchema>) {
   return operation.type === "set"
     ? `set:${operation.value}`
@@ -205,10 +227,66 @@ export const TechnologyCostModSpecSchema = z
     );
   });
 
+export const TechnologyPrerequisiteModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("technology_prerequisite"),
+    changes: z.array(TechnologyPrerequisiteChangeSchema).min(1).max(16),
+    assertions: z.array(TechnologyPrerequisiteAssertionSchema).min(1).max(16),
+  })
+  .superRefine((spec, ctx) => {
+    const changeAddresses = new Set<string>();
+    const expectedSemantics = new Set<string>();
+    for (const [index, change] of spec.changes.entries()) {
+      const address = `${change.technologyName}\u0000${change.prerequisiteName}`;
+      if (changeAddresses.has(address)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["changes", index],
+          message: "Duplicate technology prerequisite change",
+        });
+      }
+      changeAddresses.add(address);
+      expectedSemantics.add(`${address}\u0000${change.operation.type}`);
+    }
+
+    const seenAssertions = new Set<string>();
+    for (const [index, assertion] of spec.assertions.entries()) {
+      const key = `${assertion.technologyName}\u0000${assertion.prerequisiteName}\u0000${assertion.expectation.type}`;
+      if (seenAssertions.has(key)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["assertions", index],
+          message: "Duplicate semantic assertion",
+        });
+      }
+      seenAssertions.add(key);
+      if (!expectedSemantics.has(key)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["assertions", index],
+          message: "Assertion does not match a requested change",
+        });
+      }
+    }
+
+    for (const [index, change] of spec.changes.entries()) {
+      const expected = `${change.technologyName}\u0000${change.prerequisiteName}\u0000${change.operation.type}`;
+      if (!seenAssertions.has(expected)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["assertions"],
+          message: `Missing matching assertion for change ${index}`,
+        });
+      }
+    }
+  });
+
 export const ModSpecSchema = z.union([
   PrototypePropertyModSpecSchema,
   RecipeIngredientModSpecSchema,
   TechnologyCostModSpecSchema,
+  TechnologyPrerequisiteModSpecSchema,
 ]);
 
 export type GameTarget = z.infer<typeof GameTargetSchema>;
@@ -219,7 +297,11 @@ export type RecipeIngredientChange = z.infer<typeof RecipeIngredientChangeSchema
 export type RecipeIngredientAssertion = z.infer<typeof RecipeIngredientAssertionSchema>;
 export type TechnologyCostChange = z.infer<typeof TechnologyCostChangeSchema>;
 export type TechnologyCostAssertion = z.infer<typeof TechnologyCostAssertionSchema>;
+export type PrerequisiteOperation = z.infer<typeof PrerequisiteOperationSchema>;
+export type TechnologyPrerequisiteChange = z.infer<typeof TechnologyPrerequisiteChangeSchema>;
+export type TechnologyPrerequisiteAssertion = z.infer<typeof TechnologyPrerequisiteAssertionSchema>;
 export type PrototypePropertyModSpec = z.infer<typeof PrototypePropertyModSpecSchema>;
 export type RecipeIngredientModSpec = z.infer<typeof RecipeIngredientModSpecSchema>;
 export type TechnologyCostModSpec = z.infer<typeof TechnologyCostModSpecSchema>;
+export type TechnologyPrerequisiteModSpec = z.infer<typeof TechnologyPrerequisiteModSpecSchema>;
 export type ModSpec = z.infer<typeof ModSpecSchema>;

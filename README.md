@@ -59,6 +59,7 @@ A successful run prints structured `PASS`; a Factorio load failure prints struct
 pnpm mod:build -- examples/faster-steel-furnace.json dist
 pnpm mod:build -- examples/cheaper-iron-gears.json dist
 pnpm mod:build -- examples/double-automation-research-cost.json dist
+pnpm mod:build -- examples/remove-steel-prerequisite.json dist
 ```
 
 The examples cover a prototype scalar property, an existing recipe item ingredient amount, and a finite technology research-unit count. The command validates the ModSpec, generates only allow-listed files in a temporary build directory, runs Factorio plus semantic assertions, and writes an installable ZIP only after validation passes.

@@ -10,15 +10,19 @@ import {
   type ScalarOperation,
   type TechnologyCostAssertion,
   type TechnologyCostChange,
+  type TechnologyPrerequisiteAssertion,
+  type TechnologyPrerequisiteChange,
 } from "@project/domain";
 
 import {
   assertSupportedPrototypeProperty,
   assertSupportedRecipeIngredient,
   assertSupportedTechnologyCost,
+  assertSupportedTechnologyPrerequisite,
   getSupportedPrototypeProperty,
   getSupportedRecipeIngredient,
   getSupportedTechnologyCost,
+  getSupportedTechnologyPrerequisite,
 } from "./supported.js";
 
 const GENERATED_VERSION = "0.1.0";
@@ -225,6 +229,85 @@ function renderRecipeIngredientAssertion(assertion: RecipeIngredientAssertion): 
   ].join("\n");
 }
 
+function renderTechnologyPrerequisiteChange(change: TechnologyPrerequisiteChange): string {
+  getSupportedTechnologyPrerequisite(change);
+  const technologyName = quoteLuaIdentifier(change.technologyName, "identifier");
+  const prerequisiteName = quoteLuaIdentifier(change.prerequisiteName, "identifier");
+  const missingTechnology = quoteLuaText(`Missing technology ${change.technologyName}`);
+  const missingPrerequisiteTechnology = quoteLuaText(`Missing technology ${change.prerequisiteName}`);
+
+  if (change.operation.type === "add") {
+    const alreadyPresent = quoteLuaText(
+      `Prerequisite ${change.prerequisiteName} already exists on ${change.technologyName}`,
+    );
+    return [
+      "do",
+      `  local technology = data.raw[\"technology\"] and data.raw[\"technology\"][${technologyName}]`,
+      `  local prerequisite = data.raw[\"technology\"] and data.raw[\"technology\"][${prerequisiteName}]`,
+      `  assert(technology, ${missingTechnology})`,
+      `  assert(prerequisite, ${missingPrerequisiteTechnology})`,
+      "  local prerequisites = technology.prerequisites or {}",
+      "  local present = false",
+      "  for _, candidate in ipairs(prerequisites) do",
+      `    if candidate == ${prerequisiteName} then present = true break end`,
+      "  end",
+      `  assert(not present, ${alreadyPresent})`,
+      `  table.insert(prerequisites, ${prerequisiteName})`,
+      "  technology.prerequisites = prerequisites",
+      "end",
+    ].join("\n");
+  }
+
+  const missingPrerequisite = quoteLuaText(
+    `Missing prerequisite ${change.prerequisiteName} on ${change.technologyName}`,
+  );
+  return [
+    "do",
+    `  local technology = data.raw[\"technology\"] and data.raw[\"technology\"][${technologyName}]`,
+    `  assert(technology, ${missingTechnology})`,
+    "  local prerequisites = technology.prerequisites or {}",
+    "  local index = nil",
+    "  for i, candidate in ipairs(prerequisites) do",
+    `    if candidate == ${prerequisiteName} then index = i break end`,
+    "  end",
+    `  assert(index, ${missingPrerequisite})`,
+    "  table.remove(prerequisites, index)",
+    "  technology.prerequisites = prerequisites",
+    "end",
+  ].join("\n");
+}
+
+function renderTechnologyPrerequisiteAssertion(assertion: TechnologyPrerequisiteAssertion): string {
+  getSupportedTechnologyPrerequisite({
+    type: "technology_prerequisite",
+    technologyName: assertion.technologyName,
+    prerequisiteName: assertion.prerequisiteName,
+    operation: assertion.expectation,
+  });
+  const technologyName = quoteLuaIdentifier(assertion.technologyName, "identifier");
+  const prerequisiteName = quoteLuaIdentifier(assertion.prerequisiteName, "identifier");
+  const expected = assertion.expectation.type === "add";
+  const markerPrefix = quoteLuaText(
+    `${SEMANTIC_MARKER}|technology.${assertion.technologyName}.prerequisite.${assertion.prerequisiteName}|expected=${expected}|actual=`,
+  );
+
+  return [
+    "do",
+    `  local technology = data.raw[\"technology\"] and data.raw[\"technology\"][${technologyName}]`,
+    "  local actual = false",
+    "  if technology then",
+    "    for _, candidate in ipairs(technology.prerequisites or {}) do",
+    `      if candidate == ${prerequisiteName} then actual = true break end`,
+    "    end",
+    "  end",
+    `  local expected = ${expected ? "true" : "false"}`,
+    "  if actual ~= expected then",
+    `    error(${markerPrefix} .. tostring(actual), 0)`,
+    "  end",
+    "end",
+  ].join("\n");
+}
+
 function renderTechnologyCostAssertion(assertion: TechnologyCostAssertion): string {
   const supported = getSupportedTechnologyCost({
     type: "technology_cost",
@@ -270,6 +353,11 @@ export function generateFactorioMod(input: ModSpec): GeneratedFactorioMod {
       for (const change of spec.changes) assertSupportedTechnologyCost(change);
       dataLua = `${spec.changes.map(renderTechnologyCostChange).join("\n\n")}\n`;
       semanticAssertionLua = `${spec.assertions.map(renderTechnologyCostAssertion).join("\n\n")}\n`;
+      break;
+    case "technology_prerequisite":
+      for (const change of spec.changes) assertSupportedTechnologyPrerequisite(change);
+      dataLua = `${spec.changes.map(renderTechnologyPrerequisiteChange).join("\n\n")}\n`;
+      semanticAssertionLua = `${spec.assertions.map(renderTechnologyPrerequisiteAssertion).join("\n\n")}\n`;
       break;
   }
 

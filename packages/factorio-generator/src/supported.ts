@@ -2,6 +2,7 @@ import type {
   PrototypePropertyChange,
   RecipeIngredientChange,
   TechnologyCostChange,
+  TechnologyPrerequisiteChange,
 } from "@project/domain";
 
 export interface SupportedPrototypeProperty {
@@ -21,6 +22,13 @@ export interface SupportedRecipeIngredient {
 export interface SupportedTechnologyCost {
   readonly technologyName: string;
   readonly baseCount: number;
+}
+
+export interface SupportedTechnologyPrerequisite {
+  readonly technologyName: string;
+  readonly prerequisiteName: string;
+  readonly basePresent: boolean;
+  readonly allowedOperation: "add" | "remove";
 }
 
 const supportedPrototypeProperties = new Map<string, SupportedPrototypeProperty>([
@@ -71,6 +79,29 @@ const supportedTechnologyCosts = new Map<string, SupportedTechnologyCost>([
   ["logistics", { technologyName: "logistics", baseCount: 20 }],
   ["steel-processing", { technologyName: "steel-processing", baseCount: 50 }],
   ["logistic-science-pack", { technologyName: "logistic-science-pack", baseCount: 75 }],
+]);
+
+const supportedTechnologyPrerequisites = new Map<string, SupportedTechnologyPrerequisite>([
+  [
+    "automation-2\u0000steel-processing",
+    { technologyName: "automation-2", prerequisiteName: "steel-processing", basePresent: true, allowedOperation: "remove" },
+  ],
+  [
+    "logistics-2\u0000logistics",
+    { technologyName: "logistics-2", prerequisiteName: "logistics", basePresent: true, allowedOperation: "remove" },
+  ],
+  [
+    "advanced-material-processing\u0000logistic-science-pack",
+    { technologyName: "advanced-material-processing", prerequisiteName: "logistic-science-pack", basePresent: true, allowedOperation: "remove" },
+  ],
+  [
+    "automation-2\u0000logistics",
+    { technologyName: "automation-2", prerequisiteName: "logistics", basePresent: false, allowedOperation: "add" },
+  ],
+  [
+    "advanced-material-processing\u0000logistics",
+    { technologyName: "advanced-material-processing", prerequisiteName: "logistics", basePresent: false, allowedOperation: "add" },
+  ],
 ]);
 
 function prototypeSupportKey(change: PrototypePropertyChange) {
@@ -125,4 +156,23 @@ export function getSupportedTechnologyCost(
 
 export function assertSupportedTechnologyCost(change: TechnologyCostChange): void {
   getSupportedTechnologyCost(change);
+}
+
+export function getSupportedTechnologyPrerequisite(
+  change: TechnologyPrerequisiteChange,
+): SupportedTechnologyPrerequisite {
+  const key = `${change.technologyName}\u0000${change.prerequisiteName}`;
+  const supported = supportedTechnologyPrerequisites.get(key);
+  if (!supported || supported.allowedOperation !== change.operation.type) {
+    throw new Error(
+      `Unsupported technology prerequisite change: ${change.technologyName}.${change.operation.type}.${change.prerequisiteName}`,
+    );
+  }
+  return supported;
+}
+
+export function assertSupportedTechnologyPrerequisite(
+  change: TechnologyPrerequisiteChange,
+): void {
+  getSupportedTechnologyPrerequisite(change);
 }

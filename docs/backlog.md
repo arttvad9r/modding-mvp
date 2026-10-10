@@ -76,10 +76,10 @@ Before starting M2:
 - [x] Pass five technology fixtures through real Factorio and ZIP packaging.
 
 ### Remaining M2 candidates
-- [ ] Technology prerequisite capability.
+- [x] Technology prerequisite capability.
 - [ ] Richer Factorio error taxonomy.
 - [ ] Capability registry/metadata for Planner discovery.
-- [ ] Expand deterministic eval corpus to >=20 fixtures.
+- [x] Expand deterministic eval corpus to >=20 fixtures.
 
 ## Agent task template
 A task sent to Codex/Claude should include:
