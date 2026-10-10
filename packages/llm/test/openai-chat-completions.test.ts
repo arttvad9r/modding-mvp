@@ -32,6 +32,7 @@ describe("OpenAIChatCompletionsProvider", () => {
       model: "test-model",
       baseUrl: "https://ollama.com/v1/",
       jsonMode: "response_format",
+      reasoningEffort: "none",
       fetchImpl,
       inputUsdPerMillionTokens: 0.05,
       outputUsdPerMillionTokens: 0.25,
@@ -55,6 +56,7 @@ describe("OpenAIChatCompletionsProvider", () => {
       response_format: { type: "json_object" },
       max_tokens: 500,
       temperature: 0,
+      reasoning_effort: "none",
     });
     expect(body.messages[0].role).toBe("system");
     expect(body.messages[0].content).toContain("system rules");

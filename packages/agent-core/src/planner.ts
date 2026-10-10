@@ -114,9 +114,14 @@ export interface PlanFactorioPromptOptions {
 const DEFAULT_MAX_ATTEMPTS = 2;
 const DEFAULT_MAX_PROMPT_CHARS = 4_000;
 const PLANNER_SCHEMA_DESCRIPTION = `Return exactly one JSON object in one of these shapes:
-1. Supported: {"status":"supported","title":string,"slug":kebab-case string,"capability":one registry capability id,"changes":[typed changes for that capability]}
-2. Unsupported: {"status":"unsupported","reason":string}
-Do not include target, assertions, Lua, files, markdown, or additional keys.`;
+1. Supported root: {"status":"supported","title":string,"slug":kebab-case string,"capability":one registry capability id,"changes":[...]}
+2. Unsupported root: {"status":"unsupported","reason":string}
+For supported roots, every change must use exactly the shape for its capability:
+- prototype_property: {"type":"prototype_property","prototypeType":string,"prototypeName":string,"property":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
+- recipe_ingredient: {"type":"recipe_ingredient","recipeName":string,"ingredientType":"item","ingredientName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
+- technology_cost: {"type":"technology_cost","technologyName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
+- technology_prerequisite: {"type":"technology_prerequisite","technologyName":string,"prerequisiteName":string,"operation":{"type":"add"}|{"type":"remove"}}
+Use identifiers exactly as listed in the capability registry. Do not include target, assertions, Lua, files, markdown, or additional keys.`;
 
 function plannerRegistryContext(): string {
   return JSON.stringify(

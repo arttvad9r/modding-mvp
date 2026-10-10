@@ -11,9 +11,10 @@ The project deliberately starts with prototype-stage modifications and one game.
 - M0 — Factorio Mod Test Harness: complete.
 - M1 — Deterministic ModSpec engine: complete.
 - M2 — Expand deterministic capabilities: complete.
-- M3 — Natural-language Planner: in progress.
+- M3 — Natural-language Planner: complete.
+- M4 — Repair loop: next.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 now has a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus; live model eval is pending locally configured API keys.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. The recorded Ollama Cloud baseline with `deepseek-v4.1-flash:cloud` passes all 24 classification cases and all 12 supported ModSpec cases. M4 Repair is next.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -98,4 +99,4 @@ LLM_PROVIDER=ollama-cloud OLLAMA_API_KEY=... pnpm planner:eval
 LLM_PROVIDER=zai ZAI_API_KEY=... pnpm planner:eval
 ```
 
-The default eval gates are 90% classification accuracy and 80% exact supported-ModSpec semantic accuracy. No live eval result is recorded until a real key/model run is performed.
+The default eval gates are 90% classification accuracy and 80% exact supported-ModSpec semantic accuracy. Recorded M3 baseline: Ollama Cloud `deepseek-v4.1-flash:cloud` = 100% classification (24/24) and 100% supported ModSpec accuracy (12/12), 56,399 total tokens. The Z.ai `glm-5.3-flash` run was not scored because the provider returned HTTP 429 / code 1113 (insufficient balance/resource package) for every request.

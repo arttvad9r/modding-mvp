@@ -10,6 +10,7 @@ export interface OpenAIChatCompletionsProviderOptions {
   readonly model: string;
   readonly baseUrl: string;
   readonly jsonMode?: OpenAIChatJsonMode;
+  readonly reasoningEffort?: string;
   readonly fetchImpl?: typeof fetch;
   readonly inputUsdPerMillionTokens?: number;
   readonly outputUsdPerMillionTokens?: number;
@@ -138,6 +139,9 @@ export class OpenAIChatCompletionsProvider implements LlmProvider {
             ? {}
             : { max_tokens: request.maxOutputTokens }),
           ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
+          ...(this.options.reasoningEffort === undefined
+            ? {}
+            : { reasoning_effort: this.options.reasoningEffort }),
         }),
       });
     } catch (error) {

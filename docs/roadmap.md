@@ -52,24 +52,22 @@ Exit criteria:
 - errors identify whether failure is schema, generation, Factorio-load, or semantic assertion.
 
 ## M3 — Natural-language Planner
-Status: in progress.
+Status: complete.
 
 Goal: map a user prompt to a supported ModSpec.
 
-Implemented first slice:
+Completed slices:
 - provider-agnostic `LlmProvider` JSON contract in `packages/llm`;
-- OpenAI Responses API adapter with provider/model/token/cost metadata;
+- OpenAI Responses and OpenAI-compatible Chat Completions transports with provider/model/token/cost metadata;
 - constrained Planner in `packages/agent-core`;
 - Planner scope built from `factorioCapabilityRegistry`;
 - deterministic target/assertion derivation followed by `ModSpecSchema` validation;
 - explicit supported/unsupported classification;
 - two-attempt bounded correction for malformed/invalid structured output;
-- 24-case golden prompt corpus plus reusable eval runner.
+- 24-case golden prompt corpus plus reusable eval runner;
+- live Ollama Cloud `deepseek-v4.1-flash:cloud` baseline: 24/24 classification and 12/12 supported ModSpec cases (100% / 100%).
 
-Remaining before M3 exit:
-- run the golden corpus against at least one real configured model;
-- inspect failures and tune prompt/contract without weakening deterministic scope;
-- meet the initial eval gates: classification accuracy >= 90% and supported ModSpec accuracy >= 80%.
+The first Ollama run exposed a reasoning/JSON transport issue plus an underspecified typed-change prompt contract. After disabling thinking for the JSON planner transport and documenting exact change shapes, the complete corpus passed. A Z.ai `glm-5.3-flash` attempt returned provider quota errors and was not scored as model quality.
 
 Exit criteria:
 - Planner never writes files directly;
@@ -78,6 +76,8 @@ Exit criteria:
 - deterministic downstream pipeline remains unchanged.
 
 ## M4 — Repair loop
+Status: next.
+
 Goal: automatically fix bounded generation/validation failures.
 
 Scope:

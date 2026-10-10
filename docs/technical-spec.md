@@ -49,7 +49,7 @@ Implemented transports/presets:
 - OpenAI-compatible Chat Completions for Ollama Cloud at `https://ollama.com/v1`;
 - OpenAI-compatible Chat Completions for Z.ai, using `https://api.z.ai/api/paas/v4` for general/prepaid usage or `https://api.z.ai/api/coding/paas/v4` for Coding Plan keys.
 
-Ollama Cloud uses JSON mode plus application-side Zod validation/retry; strict provider-native structured outputs are not assumed. Z.ai defaults to prompt-only JSON plus the same application validation so Planner correctness does not depend on undocumented response-format behavior. API keys are read only from environment/runtime configuration and are never persisted in prompts or repository files.
+Ollama Cloud uses JSON mode plus application-side Zod validation/retry; strict provider-native structured outputs are not assumed. For reasoning-capable Ollama models used by the Planner, the preset requests `reasoning_effort: none` so the JSON answer remains in assistant content instead of being split into reasoning output. Z.ai defaults to prompt-only JSON plus the same application validation so Planner correctness does not depend on undocumented response-format behavior. API keys are read only from environment/runtime configuration and are never persisted in prompts or repository files.
 
 ### Planner contract
 `packages/agent-core` owns natural-language planning. It consumes the machine-readable Factorio registry and a provider-agnostic `LlmProvider` from `packages/llm`. The model must not emit Lua, file manifests, target metadata, or semantic assertions.
@@ -58,7 +58,9 @@ A supported model response contains only title, kebab-case slug, one capability 
 
 Malformed or registry-invalid model output receives at most one correction retry by default. Planner calls retain provider, model, token, duration, and optional estimated-cost metadata. The first provider adapter uses the OpenAI Responses API JSON response format through native `fetch`; provider/model choice is configuration. See ADR-0009.
 
-Golden Planner evals live under `evals/planner/`. The initial gate is >=90% supported/unsupported classification accuracy and >=80% exact semantic change accuracy on supported cases. These thresholds are development gates, not product KPI claims.
+Golden Planner evals live under `evals/planner/`. The initial gate is >=90% supported/unsupported classification accuracy and >=80% exact semantic change accuracy on supported cases. These thresholds are development gates, not product KPI claims. The Planner schema prompt explicitly enumerates the exact JSON shape for each capability-specific change so model quality is measured against a fully specified typed contract rather than implicit TypeScript knowledge.
+
+Recorded M3 live baseline on 2026-10-11: Ollama Cloud `deepseek-v4.1-flash:cloud` passed 24/24 classification cases and 12/12 supported semantic ModSpec cases, using 54,824 input tokens and 1,575 output tokens (56,399 total). An attempted Z.ai `glm-5.3-flash` run returned HTTP 429 / provider code 1113 (`Insufficient balance or no resource package`) for every case and is therefore not treated as model-quality evidence.
 
 For M3 development/evaluation, provider presets use `glm-5.3-flash` on Z.ai and `deepseek-v4.1-flash:cloud` on Ollama Cloud by default. These are dev/eval defaults only; provider/model selection remains runtime configuration and is not a production architecture commitment.
 

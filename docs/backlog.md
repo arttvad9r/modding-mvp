@@ -104,7 +104,7 @@ Before starting M2:
 - [x] Repository typecheck, unit tests, integration tests, build, and diff checks pass.
 - [x] ADRs/specs updated for durable M2 decisions.
 
-## M3 — in progress
+## M3 — complete
 - [x] Add LLM provider abstraction.
 - [x] Add first provider adapter (OpenAI Responses API) behind the generic boundary.
 - [x] Add reusable OpenAI-compatible Chat Completions transport.
@@ -119,10 +119,26 @@ Before starting M2:
 - [x] Add reusable eval runner and `pnpm planner:eval`.
 - [x] Set dev/eval provider defaults: Z.ai `glm-5.3-flash`, Ollama Cloud `deepseek-v4.1-flash:cloud`.
 - [x] Add ADR-0009 for the constrained Planner/provider boundary.
-- [ ] Configure Ollama Cloud and/or Z.ai runtime API keys locally and run the golden eval corpus.
-- [ ] Reach classification accuracy >= 90%.
-- [ ] Reach supported ModSpec accuracy >= 80%.
-- [ ] Review failed golden cases before declaring M3 complete.
+- [x] Configure a real runtime API key locally and run the golden eval corpus.
+- [x] Reach classification accuracy >= 90% (Ollama Cloud baseline: 24/24 = 100%).
+- [x] Reach supported ModSpec accuracy >= 80% (Ollama Cloud baseline: 12/12 = 100%).
+- [x] Review initial failed cases and fix the Planner contract/Ollama reasoning transport issue without weakening deterministic scope.
+
+## M3 exit review
+- [x] Planner never writes files or Lua directly.
+- [x] Invalid structured output is rejected/retried with a bounded two-attempt default.
+- [x] Real-model golden eval exceeds both development gates.
+- [x] Deterministic target/assertion derivation and registry checks remain authoritative.
+- [x] Provider/model/usage metadata is captured.
+- [x] Z.ai quota failure is classified as provider/process failure and is not counted as model-quality evidence.
+
+## M4 — next
+- [ ] Define typed Repair input/output contract around original ModSpec, prior manifest, and normalized error.
+- [ ] Enforce maximum 2 repair attempts.
+- [ ] Prevent Repair from expanding scope beyond the accepted ModSpec.
+- [ ] Track repair attempt history, provider/model/token/cost metadata, and terminal reason.
+- [ ] Add deterministic/fake-provider Repair tests before live-model evals.
+- [ ] Add regression eval cases for known generation/validation failure modes.
 
 ## Agent task template
 A task sent to Codex/Claude should include:

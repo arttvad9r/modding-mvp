@@ -18,9 +18,9 @@ Before making a non-trivial change, read the relevant repository documentation:
 If code and documentation disagree, do not guess. Report the conflict and make the smallest change needed to restore a single source of truth.
 
 ## Current milestone
-M3: Natural-language Planner (in progress).
+M4: Repair loop (next).
 
-M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, and M2 deterministic capability expansion are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. The first M3 Planner/provider/eval slice is implemented, including Ollama Cloud and Z.ai runtime presets; live model eval is still required before M3 can close.
+M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, M2 deterministic capability expansion, and M3 Natural-language Planner are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. The M3 golden corpus passed on Ollama Cloud `deepseek-v4.1-flash:cloud` at 100% classification and 100% supported ModSpec accuracy.
 
 ## Current scope
 - Factorio stable 2.0.x only.
