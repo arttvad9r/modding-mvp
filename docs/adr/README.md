@@ -40,3 +40,4 @@ Do not create an ADR merely for:
 - [ADR-0005: Prototype-stage changes before runtime scripting](0005-prototype-stage-first.md)
 - [ADR-0006: Semantic validation via a temporary companion mod](0006-semantic-validation-companion-mod.md)
 - [ADR-0007: Machine-readable Factorio capability registry is the Planner scope source](0007-capability-registry-source-of-truth.md)
+- [ADR-0008: Typed cross-pipeline error taxonomy](0008-typed-error-taxonomy.md)

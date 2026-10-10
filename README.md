@@ -10,9 +10,10 @@ The project deliberately starts with prototype-stage modifications and one game.
 ## Current status
 - M0 — Factorio Mod Test Harness: complete.
 - M1 — Deterministic ModSpec engine: complete.
-- M2 — Expand deterministic capabilities: in progress.
+- M2 — Expand deterministic capabilities: complete.
+- M3 — Natural-language Planner: next.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 now has four deterministic capability families plus a machine-readable Planner-facing registry in `packages/factorio-knowledge`.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 will map natural-language requests into supported typed ModSpecs without changing the deterministic downstream pipeline.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).

@@ -1,6 +1,8 @@
 import {
   GeneratedFileManifestSchema,
   ModSpecSchema,
+  ProjectError,
+  normalizeProjectError,
   type GeneratedFileManifest,
   type ModSpec,
   type PrototypePropertyAssertion,
@@ -332,7 +334,7 @@ function renderTechnologyCostAssertion(assertion: TechnologyCostAssertion): stri
   ].join("\n");
 }
 
-export function generateFactorioMod(input: ModSpec): GeneratedFactorioMod {
+function generateFactorioModInternal(input: ModSpec): GeneratedFactorioMod {
   const spec = ModSpecSchema.parse(input);
 
   let dataLua: string;
@@ -369,12 +371,22 @@ export function generateFactorioMod(input: ModSpec): GeneratedFactorioMod {
     factorio_version: spec.target.versionLine,
     dependencies: [`base >= ${spec.target.versionLine}`],
   };
-  const manifest = GeneratedFileManifestSchema.parse({
-    files: [
-      { path: "info.json", content: `${JSON.stringify(info, null, 2)}\n`, role: "metadata" },
-      { path: "data.lua", content: dataLua, role: "data_stage" },
-    ],
-  });
+  let manifest: GeneratedFileManifest;
+  try {
+    manifest = GeneratedFileManifestSchema.parse({
+      files: [
+        { path: "info.json", content: `${JSON.stringify(info, null, 2)}\n`, role: "metadata" },
+        { path: "data.lua", content: dataLua, role: "data_stage" },
+      ],
+    });
+  } catch (error) {
+    throw new ProjectError({
+      code: "generation_error",
+      stage: "generation",
+      message: "Generator produced an invalid file manifest",
+      cause: error,
+    });
+  }
 
   return {
     name: spec.slug,
@@ -383,4 +395,16 @@ export function generateFactorioMod(input: ModSpec): GeneratedFactorioMod {
     manifest,
     semanticAssertionLua,
   };
+}
+
+export function generateFactorioMod(input: ModSpec): GeneratedFactorioMod {
+  try {
+    return generateFactorioModInternal(input);
+  } catch (error) {
+    throw normalizeProjectError(error, {
+      code: "generation_error",
+      stage: "generation",
+      message: "Factorio generation failed",
+    });
+  }
 }

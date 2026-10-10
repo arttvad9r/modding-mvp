@@ -1,11 +1,23 @@
-import type {
-  PrototypePropertyModSpec,
+import {
+  ProjectError,
+  type ModSpec,
+  type PrototypePropertyModSpec,
   RecipeIngredientModSpec,
   ScalarOperation,
 } from "@project/domain";
 import { describe, expect, it } from "vitest";
 
 import { generateFactorioMod } from "../src/index.js";
+
+function captureProjectError(run: () => unknown): ProjectError {
+  try {
+    run();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ProjectError);
+    return error as ProjectError;
+  }
+  throw new Error("Expected ProjectError");
+}
 
 function makePrototypeSpec(
   operation: ScalarOperation = { type: "multiply", factor: 2 },
@@ -119,6 +131,10 @@ describe("generateFactorioMod prototype_property", () => {
     expect(() => generateFactorioMod(spec)).toThrow(
       "Unsupported prototype property: assembling-machine.steel-furnace.crafting_speed",
     );
+
+    const error = captureProjectError(() => generateFactorioMod(spec));
+    expect(error.code).toBe("unsupported_capability");
+    expect(error.stage).toBe("generation");
   });
 
   it("preserves deterministic ordering for multiple changes", () => {
@@ -166,5 +182,21 @@ describe("generateFactorioMod recipe_ingredient", () => {
     expect(() => generateFactorioMod(makeRecipeSpec({ type: "multiply", factor: 0.75 }))).toThrow(
       "Item ingredient amount must be an integer in range 1..65535",
     );
+
+    const error = captureProjectError(() =>
+      generateFactorioMod(makeRecipeSpec({ type: "set", value: 0 })),
+    );
+    expect(error.code).toBe("generation_error");
+    expect(error.stage).toBe("generation");
+  });
+});
+
+
+describe("generateFactorioMod error taxonomy", () => {
+  it("classifies invalid ModSpec shape as schema_error", () => {
+    const invalid = { ...makePrototypeSpec(), slug: "../../unsafe" } as unknown as ModSpec;
+    const error = captureProjectError(() => generateFactorioMod(invalid));
+    expect(error.code).toBe("schema_error");
+    expect(error.stage).toBe("input");
   });
 });

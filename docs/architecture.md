@@ -1,9 +1,9 @@
-# Architecture v0.5
+# Architecture v0.6
 
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 is complete. M2 — expand deterministic capabilities — is in progress; four deterministic capability families and the Planner-facing Factorio capability registry are implemented.
+M1 and M2 are complete. The deterministic core now has four capability families, a Planner-facing Factorio capability registry, 20 real-runtime E2E fixtures, and a typed cross-pipeline error taxonomy. The next milestone is M3 — natural-language Planner.
 
 ## Target product pipeline
 
@@ -27,7 +27,7 @@ See ADR-0003 for why real Factorio is the validation authority.
 
 ## Implemented deterministic artifact boundary
 The current deterministic core provides:
-- `packages/domain` for typed ModSpec and generated-file manifest contracts;
+- `packages/domain` for typed ModSpec, generated-file manifest, and shared `ProjectError` contracts;
 - `packages/factorio-knowledge` for versioned Factorio allow-lists/baselines plus machine-readable Planner capability metadata;
 - `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation across prototype property, recipe ingredient, technology cost, and reviewed technology prerequisite changes;
 - semantic assertion Lua generated separately from the user artifact;

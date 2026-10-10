@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { classifyHarnessError, extractErrorSummary } from '../src/harness.js';
+import { ProjectError } from '@project/domain';
+import { classifyHarnessError, extractErrorSummary, runFactorioModTest } from '../src/harness.js';
 
 describe('extractErrorSummary', () => {
   it('prefers semantic assertion marker lines', () => {
@@ -44,5 +45,22 @@ describe('classifyHarnessError', () => {
     expect(classifyHarnessError('Error Failed to load mod', '')).toBe(
       'factorio_load_failed',
     );
+  });
+});
+
+
+describe('harness preflight taxonomy', () => {
+  it('uses process_error when the Factorio binary is unavailable', async () => {
+    try {
+      await runFactorioModTest({
+        modPath: '/definitely/not/used',
+        factorioBin: '/definitely/missing/factorio',
+      });
+      throw new Error('Expected runFactorioModTest to fail');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ProjectError);
+      expect((error as ProjectError).code).toBe('process_error');
+      expect((error as ProjectError).stage).toBe('process');
+    }
   });
 });

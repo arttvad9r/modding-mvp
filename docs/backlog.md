@@ -54,7 +54,7 @@ Before starting M2:
 - [x] Add/update ADRs for any architecture decision made during M1.
 - [x] Confirm at least five ModSpec fixtures pass through the real Factorio runtime.
 
-## M2 — in progress
+## M2 — complete
 
 ### Recipe ingredient capability
 - [x] Add `recipe_ingredient` ModSpec capability.
@@ -82,11 +82,36 @@ Before starting M2:
 - [x] Derive registry targets from the same allow-lists used by generation.
 - [x] Add ADR-0007 for registry-driven Planner scope.
 
-### Remaining M2 candidates
-- [x] Technology prerequisite capability.
-- [ ] Richer Factorio error taxonomy.
-- [x] Capability registry/metadata for Planner discovery.
-- [x] Expand deterministic eval corpus to >=20 fixtures.
+### Technology prerequisite capability
+- [x] Add `technology_prerequisite` ModSpec capability.
+- [x] Restrict add/remove operations to reviewed baseline-aware edges.
+- [x] Generate deterministic prerequisite mutation Lua and semantic assertions.
+- [x] Pass five prerequisite fixtures through real Factorio and ZIP packaging.
+
+### Error taxonomy
+- [x] Add shared `ProjectError` contract in `packages/domain`.
+- [x] Distinguish input/schema/unsupported/generation/packaging/runtime/semantic/process errors.
+- [x] Preserve typed errors across package boundaries.
+- [x] Serialize structured CLI errors without exposing stack/cause.
+- [x] Add ADR-0008 for the cross-pipeline error contract.
+
+## M2 exit review
+- [x] Four deterministic capability families implemented.
+- [x] Machine-readable Planner capability registry implemented.
+- [x] Deterministic corpus contains 20 real Factorio E2E fixtures.
+- [x] No generated-code path has arbitrary shell access.
+- [x] Errors distinguish schema, unsupported scope, generation, packaging, Factorio load, semantic assertion, and process failures.
+- [x] Repository typecheck, unit tests, integration tests, build, and diff checks pass.
+- [x] ADRs/specs updated for durable M2 decisions.
+
+## M3 — next
+- [ ] Add LLM provider abstraction.
+- [ ] Build Planner input from `factorioCapabilityRegistry`.
+- [ ] Produce structured Planner output validated by `ModSpecSchema`.
+- [ ] Add supported/unsupported classification.
+- [ ] Add bounded retry for malformed structured Planner output.
+- [ ] Track provider/model/token/cost metadata.
+- [ ] Create golden natural-language prompt eval set.
 
 ## Agent task template
 A task sent to Codex/Claude should include:

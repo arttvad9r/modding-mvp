@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import path from 'node:path';
+import { serializeProjectError } from '@project/domain';
 import { runFactorioModTest } from './harness.js';
 
 const args = process.argv.slice(2).filter((arg) => arg !== '--');
@@ -43,7 +44,11 @@ if (!rawModPath) {
       JSON.stringify(
         {
           status: 'ERROR',
-          message: error instanceof Error ? error.message : String(error),
+          error: serializeProjectError(error, {
+            code: 'process_error',
+            stage: 'process',
+            message: 'Factorio harness failed before validation completed',
+          }),
         },
         null,
         2,

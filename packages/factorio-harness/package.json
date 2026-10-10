@@ -10,5 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run test/harness.test.ts",
     "test:integration": "vitest run test/harness.integration.test.ts"
+  },
+  "dependencies": {
+    "@project/domain": "workspace:*"
   }
 }

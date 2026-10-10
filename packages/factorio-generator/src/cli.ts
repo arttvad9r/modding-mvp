@@ -2,7 +2,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ModSpecSchema } from "@project/domain";
+import {
+  ModSpecSchema,
+  ProjectError,
+  normalizeProjectError,
+  serializeProjectError,
+} from "@project/domain";
 
 import { buildValidatedFactorioArtifact } from "./artifact.js";
 
@@ -19,8 +24,41 @@ if (!rawSpecPath) {
   const outputDirectory = path.resolve(invocationDirectory, rawOutputDirectory);
 
   try {
-    const raw = JSON.parse(await readFile(specPath, "utf8"));
-    const spec = ModSpecSchema.parse(raw);
+    let source: string;
+    try {
+      source = await readFile(specPath, "utf8");
+    } catch (error) {
+      throw new ProjectError({
+        code: "input_error",
+        stage: "input",
+        message: `Cannot read ModSpec file: ${specPath}`,
+        cause: error,
+      });
+    }
+
+    let raw: unknown;
+    try {
+      raw = JSON.parse(source);
+    } catch (error) {
+      throw new ProjectError({
+        code: "schema_error",
+        stage: "input",
+        message: `ModSpec file is not valid JSON: ${specPath}`,
+        cause: error,
+      });
+    }
+
+    let spec;
+    try {
+      spec = ModSpecSchema.parse(raw);
+    } catch (error) {
+      throw normalizeProjectError(error, {
+        code: "schema_error",
+        stage: "input",
+        message: "Invalid ModSpec",
+      });
+    }
+
     const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
 
     console.log(
@@ -40,7 +78,7 @@ if (!rawSpecPath) {
       JSON.stringify(
         {
           status: "ERROR",
-          message: error instanceof Error ? error.message : String(error),
+          error: serializeProjectError(error),
         },
         null,
         2,

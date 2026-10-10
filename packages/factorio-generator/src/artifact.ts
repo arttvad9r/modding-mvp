@@ -4,14 +4,16 @@ import path from "node:path";
 
 import {
   GeneratedFileManifestSchema,
+  ProjectError,
+  normalizeProjectError,
   type GeneratedFileManifest,
   type GeneratedTextFile,
+  type ModSpec,
 } from "@project/domain";
 import { runFactorioModTest, type HarnessResult } from "@project/factorio-harness";
 import { strToU8, zipSync } from "fflate";
 
 import { generateFactorioMod } from "./generator.js";
-import type { ModSpec } from "@project/domain";
 
 const allowedFiles = new Map<string, GeneratedTextFile["role"]>([
   ["info.json", "metadata"],
@@ -31,24 +33,39 @@ export interface BuildFactorioArtifactResult {
   readonly validation: HarnessResult;
 }
 
+function packagingError(message: string, cause?: unknown): ProjectError {
+  return new ProjectError({
+    code: "packaging_error",
+    stage: "packaging",
+    message,
+    ...(cause === undefined ? {} : { cause }),
+  });
+}
+
 export function validateFactorioManifest(input: GeneratedFileManifest): GeneratedFileManifest {
-  const manifest = GeneratedFileManifestSchema.parse(input);
+  let manifest: GeneratedFileManifest;
+  try {
+    manifest = GeneratedFileManifestSchema.parse(input);
+  } catch (error) {
+    throw packagingError("Generated Factorio manifest is invalid", error);
+  }
+
   const seen = new Set<string>();
 
   for (const file of manifest.files) {
     const expectedRole = allowedFiles.get(file.path);
     if (expectedRole === undefined) {
-      throw new Error(`Unsupported Factorio artifact file: ${file.path}`);
+      throw packagingError(`Unsupported Factorio artifact file: ${file.path}`);
     }
     if (file.role !== expectedRole) {
-      throw new Error(`Unexpected role for ${file.path}: ${file.role ?? "missing"}`);
+      throw packagingError(`Unexpected role for ${file.path}: ${file.role ?? "missing"}`);
     }
     seen.add(file.path);
   }
 
   for (const requiredPath of allowedFiles.keys()) {
     if (!seen.has(requiredPath)) {
-      throw new Error(`Missing required Factorio artifact file: ${requiredPath}`);
+      throw packagingError(`Missing required Factorio artifact file: ${requiredPath}`);
     }
   }
 
@@ -61,20 +78,27 @@ async function materializeManifest(
   directoryName: string,
 ): Promise<string> {
   if (!safeDirectoryName.test(directoryName)) {
-    throw new Error(`Unsafe Factorio artifact directory name: ${directoryName}`);
+    throw packagingError(`Unsafe Factorio artifact directory name: ${directoryName}`);
   }
 
   const validated = validateFactorioManifest(manifest);
   const modPath = path.join(buildRoot, directoryName);
-  await mkdir(modPath, { recursive: false });
 
-  for (const file of validated.files) {
-    const target = path.join(modPath, ...file.path.split("/"));
-    await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, file.content, { encoding: "utf8", flag: "wx" });
+  try {
+    await mkdir(modPath, { recursive: false });
+    for (const file of validated.files) {
+      const target = path.join(modPath, ...file.path.split("/"));
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, file.content, { encoding: "utf8", flag: "wx" });
+    }
+    return modPath;
+  } catch (error) {
+    throw normalizeProjectError(error, {
+      code: "packaging_error",
+      stage: "packaging",
+      message: "Failed to materialize generated Factorio files",
+    });
   }
-
-  return modPath;
 }
 
 export function createFactorioZip(
@@ -82,7 +106,7 @@ export function createFactorioZip(
   directoryName: string,
 ): Uint8Array {
   if (!safeDirectoryName.test(directoryName)) {
-    throw new Error(`Unsafe Factorio artifact directory name: ${directoryName}`);
+    throw packagingError(`Unsafe Factorio artifact directory name: ${directoryName}`);
   }
 
   const validated = validateFactorioManifest(manifest);
@@ -90,14 +114,33 @@ export function createFactorioZip(
   for (const file of validated.files) {
     entries[`${directoryName}/${file.path}`] = strToU8(file.content);
   }
-  return zipSync(entries, { level: 9 });
+
+  try {
+    return zipSync(entries, { level: 9 });
+  } catch (error) {
+    throw normalizeProjectError(error, {
+      code: "packaging_error",
+      stage: "packaging",
+      message: "Failed to create Factorio ZIP",
+    });
+  }
 }
 
 export async function buildValidatedFactorioArtifact(
   options: BuildFactorioArtifactOptions,
 ): Promise<BuildFactorioArtifactResult> {
   const generated = generateFactorioMod(options.spec);
-  const buildRoot = await mkdtemp(path.join(tmpdir(), "factorio-artifact-build-"));
+
+  let buildRoot: string;
+  try {
+    buildRoot = await mkdtemp(path.join(tmpdir(), "factorio-artifact-build-"));
+  } catch (error) {
+    throw normalizeProjectError(error, {
+      code: "packaging_error",
+      stage: "packaging",
+      message: "Failed to create temporary artifact directory",
+    });
+  }
 
   try {
     const modPath = await materializeManifest(
@@ -105,30 +148,58 @@ export async function buildValidatedFactorioArtifact(
       buildRoot,
       generated.directoryName,
     );
-    const validation = await runFactorioModTest({
-      modPath,
-      semanticAssertionLua: generated.semanticAssertionLua,
-      ...(options.factorioBin ? { factorioBin: options.factorioBin } : {}),
-    });
 
-    if (!validation.ok) {
-      throw new Error(
-        `Factorio validation failed (${validation.errorType ?? "unknown"}): ${validation.summary ?? "no summary"}`,
-      );
+    let validation: HarnessResult;
+    try {
+      validation = await runFactorioModTest({
+        modPath,
+        semanticAssertionLua: generated.semanticAssertionLua,
+        ...(options.factorioBin ? { factorioBin: options.factorioBin } : {}),
+      });
+    } catch (error) {
+      throw normalizeProjectError(error, {
+        code: "process_error",
+        stage: "process",
+        message: "Factorio validation process failed",
+        retryable: true,
+      });
     }
 
-    const outputDirectory = path.resolve(options.outputDirectory);
-    await mkdir(outputDirectory, { recursive: true });
-    const zipPath = path.join(outputDirectory, `${generated.directoryName}.zip`);
-    const zipBytes = createFactorioZip(generated.manifest, generated.directoryName);
-    await writeFile(zipPath, zipBytes, { flag: "w" });
+    if (!validation.ok) {
+      const code = validation.errorType ?? "process_error";
+      throw new ProjectError({
+        code,
+        stage: code === "process_error" ? "process" : "validation",
+        message: validation.summary ?? "Factorio validation failed",
+        retryable: code === "process_error",
+        details: {
+          exitCode: validation.exitCode,
+          signal: validation.signal,
+          durationMs: validation.durationMs,
+        },
+      });
+    }
 
-    return {
-      zipPath,
-      directoryName: generated.directoryName,
-      validation,
-    };
+    try {
+      const outputDirectory = path.resolve(options.outputDirectory);
+      await mkdir(outputDirectory, { recursive: true });
+      const zipPath = path.join(outputDirectory, `${generated.directoryName}.zip`);
+      const zipBytes = createFactorioZip(generated.manifest, generated.directoryName);
+      await writeFile(zipPath, zipBytes, { flag: "w" });
+
+      return {
+        zipPath,
+        directoryName: generated.directoryName,
+        validation,
+      };
+    } catch (error) {
+      throw normalizeProjectError(error, {
+        code: "packaging_error",
+        stage: "packaging",
+        message: "Failed to write validated Factorio artifact",
+      });
+    }
   } finally {
-    await rm(buildRoot, { recursive: true, force: true });
+    await rm(buildRoot, { recursive: true, force: true }).catch(() => undefined);
   }
 }

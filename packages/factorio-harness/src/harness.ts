@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ProjectError, type ProjectErrorCode } from '@project/domain';
+
 export interface HarnessOptions {
   modPath: string;
   factorioBin?: string;
@@ -12,10 +14,10 @@ export interface HarnessOptions {
   semanticAssertionLua?: string;
 }
 
-export type HarnessErrorType =
-  | 'semantic_assertion_failed'
-  | 'factorio_load_failed'
-  | 'process_error';
+export type HarnessErrorType = Extract<
+  ProjectErrorCode,
+  'semantic_assertion_failed' | 'factorio_load_failed' | 'process_error'
+>;
 
 export interface HarnessResult {
   ok: boolean;
@@ -49,7 +51,12 @@ async function requireFile(filePath: string, label: string): Promise<void> {
   try {
     await access(filePath);
   } catch {
-    throw new Error(`${label} not found: ${filePath}`);
+    throw new ProjectError({
+      code: 'process_error',
+      stage: 'process',
+      message: `${label} not found: ${filePath}`,
+      retryable: false,
+    });
   }
 }
 
@@ -60,7 +67,12 @@ async function readModInfo(modPath: string): Promise<ModInfo> {
   try {
     parsed = JSON.parse(await readFile(infoPath, 'utf8'));
   } catch (error) {
-    throw new Error(`Cannot read valid info.json from ${modPath}: ${String(error)}`);
+    throw new ProjectError({
+      code: 'factorio_load_failed',
+      stage: 'validation',
+      message: `Cannot read valid info.json from ${modPath}: ${String(error)}`,
+      cause: error,
+    });
   }
 
   if (
@@ -73,7 +85,11 @@ async function readModInfo(modPath: string): Promise<ModInfo> {
     parsed.name.length === 0 ||
     parsed.version.length === 0
   ) {
-    throw new Error('info.json must contain non-empty string fields "name" and "version"');
+    throw new ProjectError({
+      code: 'factorio_load_failed',
+      stage: 'validation',
+      message: 'info.json must contain non-empty string fields \"name\" and \"version\"',
+    });
   }
 
   return { name: parsed.name, version: parsed.version };
@@ -142,7 +158,11 @@ export async function runFactorioModTest(options: HarnessOptions): Promise<Harne
 
     if (options.semanticAssertionLua !== undefined) {
       if (modInfo.name === VALIDATOR_MOD_NAME) {
-        throw new Error(`Candidate mod name is reserved: ${VALIDATOR_MOD_NAME}`);
+        throw new ProjectError({
+          code: 'factorio_load_failed',
+          stage: 'validation',
+          message: `Candidate mod name is reserved: ${VALIDATOR_MOD_NAME}`,
+        });
       }
 
       const validatorPath = path.join(

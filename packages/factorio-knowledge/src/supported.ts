@@ -1,5 +1,6 @@
-import type {
-  PrototypePropertyChange,
+import {
+  ProjectError,
+  type PrototypePropertyChange,
   RecipeIngredientChange,
   TechnologyCostChange,
   TechnologyPrerequisiteChange,
@@ -117,9 +118,12 @@ export function getSupportedPrototypeProperty(
 ): SupportedPrototypeProperty {
   const supported = supportedPrototypeProperties.get(prototypeSupportKey(change));
   if (!supported) {
-    throw new Error(
-      `Unsupported prototype property: ${change.prototypeType}.${change.prototypeName}.${change.property}`,
-    );
+    throw new ProjectError({
+      code: "unsupported_capability",
+      stage: "generation",
+      message: `Unsupported prototype property: ${change.prototypeType}.${change.prototypeName}.${change.property}`,
+      details: { capability: "prototype_property" },
+    });
   }
   return supported;
 }
@@ -133,9 +137,12 @@ export function getSupportedRecipeIngredient(
 ): SupportedRecipeIngredient {
   const supported = supportedRecipeIngredients.get(recipeSupportKey(change));
   if (!supported) {
-    throw new Error(
-      `Unsupported recipe ingredient: ${change.recipeName}.${change.ingredientType}.${change.ingredientName}`,
-    );
+    throw new ProjectError({
+      code: "unsupported_capability",
+      stage: "generation",
+      message: `Unsupported recipe ingredient: ${change.recipeName}.${change.ingredientType}.${change.ingredientName}`,
+      details: { capability: "recipe_ingredient" },
+    });
   }
   return supported;
 }
@@ -149,7 +156,12 @@ export function getSupportedTechnologyCost(
 ): SupportedTechnologyCost {
   const supported = supportedTechnologyCosts.get(change.technologyName);
   if (!supported) {
-    throw new Error(`Unsupported technology cost: ${change.technologyName}`);
+    throw new ProjectError({
+      code: "unsupported_capability",
+      stage: "generation",
+      message: `Unsupported technology cost: ${change.technologyName}`,
+      details: { capability: "technology_cost" },
+    });
   }
   return supported;
 }
@@ -164,9 +176,12 @@ export function getSupportedTechnologyPrerequisite(
   const key = `${change.technologyName}\u0000${change.prerequisiteName}`;
   const supported = supportedTechnologyPrerequisites.get(key);
   if (!supported || supported.allowedOperation !== change.operation.type) {
-    throw new Error(
-      `Unsupported technology prerequisite change: ${change.technologyName}.${change.operation.type}.${change.prerequisiteName}`,
-    );
+    throw new ProjectError({
+      code: "unsupported_capability",
+      stage: "generation",
+      message: `Unsupported technology prerequisite change: ${change.technologyName}.${change.operation.type}.${change.prerequisiteName}`,
+      details: { capability: "technology_prerequisite" },
+    });
   }
   return supported;
 }

@@ -42,7 +42,11 @@ importers:
         specifier: ^0.8.2
         version: 0.8.3
 
-  packages/factorio-harness: {}
+  packages/factorio-harness:
+    dependencies:
+      '@project/domain':
+        specifier: workspace:*
+        version: link:../domain
 
   packages/factorio-knowledge:
     dependencies:

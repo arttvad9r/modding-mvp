@@ -51,14 +51,24 @@ The generic manifest contract rejects absolute paths, traversal segments, backsl
 
 Materialization occurs only inside a fresh temporary build directory. The candidate is validated there, then packaging creates a ZIP with a single top-level `<mod-name>_<version>/` folder. Validation-only companion mod files never enter the ZIP.
 
+### Error taxonomy
+Public pipeline failures use `ProjectError` from `packages/domain`. Control flow must use stable `code` and `stage` values rather than parsing message text. Serialized errors expose `code`, `stage`, `message`, `retryable`, and optional bounded `details`; stack traces and raw causes are not part of the public contract.
+
+Initial codes:
+- `input_error`;
+- `schema_error`;
+- `unsupported_capability`;
+- `generation_error`;
+- `packaging_error`;
+- `factorio_load_failed`;
+- `semantic_assertion_failed`;
+- `process_error`;
+- `internal_error` only as an unexpected fallback.
+
+Stages are `input`, `planning`, `generation`, `packaging`, `validation`, `process`, and `internal`. Existing typed errors pass through package boundaries without reclassification. See ADR-0008.
+
 ### Validation result
-All validation layers return structured results with:
-- status;
-- stage;
-- normalized error type;
-- concise error summary;
-- bounded raw logs where useful;
-- duration.
+Factorio validation returns structured results with status, normalized runtime error type, concise summary, bounded logs, duration, and process metadata. The artifact boundary converts failed validation results into the shared `ProjectError` taxonomy before they cross into orchestration.
 
 ## Factorio validation
 The existing `factorio-harness` is the authority for real-runtime validation.
@@ -85,7 +95,7 @@ Examples:
 
 For the current deterministic capabilities, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment.
 
-`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
+`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
 
 ## Deterministic local build command
 `pnpm mod:build -- <mod-spec.json> [output-directory]` performs:

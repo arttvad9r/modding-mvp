@@ -1,3 +1,4 @@
+import { ProjectError } from "@project/domain";
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 
@@ -16,14 +17,21 @@ describe("Factorio artifact manifest", () => {
   });
 
   it("rejects unexpected files even when the path is otherwise safe", () => {
-    expect(() =>
+    const run = () =>
       validateFactorioManifest({
         files: [
           ...validManifest.files,
           { path: "control.lua", content: "", role: "data_stage" },
         ],
-      }),
-    ).toThrow("Unsupported Factorio artifact file: control.lua");
+      });
+    expect(run).toThrow("Unsupported Factorio artifact file: control.lua");
+    try {
+      run();
+    } catch (error) {
+      expect(error).toBeInstanceOf(ProjectError);
+      expect((error as ProjectError).code).toBe("packaging_error");
+      expect((error as ProjectError).stage).toBe("packaging");
+    }
   });
 
   it("rejects missing files and role mismatches", () => {

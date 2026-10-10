@@ -34,7 +34,7 @@ Exit criteria:
 - one command executes ModSpec -> generation -> Factorio/semantic validation -> ZIP.
 
 ## M2 — Expand deterministic capabilities
-Status: in progress.
+Status: complete.
 
 Goal: establish enough safe primitives for a useful first Planner.
 
@@ -43,11 +43,8 @@ Completed slices:
 - `technology_cost`: set/multiply finite research `unit.count` for allow-listed base-game technologies, with semantic validation and validated ZIP output;
 - `technology_prerequisite`: add/remove one reviewed prerequisite edge with baseline-aware semantic validation;
 - deterministic E2E corpus: 20 real Factorio fixtures across four capability families;
-- `packages/factorio-knowledge` plus machine-readable capability registry for future Planner discovery.
-
-Remaining scope:
-- richer normalized Factorio errors;
-- final M2 exit review.
+- `packages/factorio-knowledge` plus machine-readable capability registry for future Planner discovery;
+- typed cross-pipeline error taxonomy with schema/unsupported/generation/packaging/Factorio/semantic/process distinctions.
 
 Exit criteria:
 - >= 20 deterministic ModSpec fixtures across capability families;
@@ -55,6 +52,8 @@ Exit criteria:
 - errors identify whether failure is schema, generation, Factorio-load, or semantic assertion.
 
 ## M3 — Natural-language Planner
+Status: next.
+
 Goal: map a user prompt to a supported ModSpec.
 
 Scope:
