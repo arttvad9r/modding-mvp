@@ -1,0 +1,191 @@
+import { ProjectError } from "@project/domain";
+import type { LlmJsonRequest, LlmJsonResponse, LlmProvider } from "@project/llm";
+import { describe, expect, it } from "vitest";
+
+import { buildPlannerSystemPrompt, planFactorioPrompt } from "../src/index.js";
+
+class SequenceProvider implements LlmProvider {
+  readonly requests: LlmJsonRequest[] = [];
+  private index = 0;
+
+  constructor(private readonly responses: readonly (LlmJsonResponse | Error)[]) {}
+
+  async generateJson(request: LlmJsonRequest): Promise<LlmJsonResponse> {
+    this.requests.push(request);
+    const response = this.responses[this.index];
+    this.index += 1;
+    if (!response) throw new Error("No fake response configured");
+    if (response instanceof Error) throw response;
+    return response;
+  }
+}
+
+function response(value: unknown, inputTokens = 20, outputTokens = 10): LlmJsonResponse {
+  return {
+    value,
+    provider: "fake",
+    model: "fake-model",
+    usage: {
+      inputTokens,
+      outputTokens,
+      totalTokens: inputTokens + outputTokens,
+      estimatedCostUsd: 0.001,
+    },
+    durationMs: 5,
+  };
+}
+
+function fasterSteelDraft() {
+  return {
+    status: "supported",
+    title: "Faster steel furnaces",
+    slug: "faster-steel-furnaces",
+    capability: "prototype_property",
+    changes: [
+      {
+        type: "prototype_property",
+        prototypeType: "furnace",
+        prototypeName: "steel-furnace",
+        property: "crafting_speed",
+        operation: { type: "multiply", factor: 2 },
+      },
+    ],
+  } as const;
+}
+
+describe("Planner prompt contract", () => {
+  it("builds supported scope from the Factorio capability registry", () => {
+    const prompt = buildPlannerSystemPrompt();
+    expect(prompt).toContain("prototype_property");
+    expect(prompt).toContain("recipe_ingredient");
+    expect(prompt).toContain("technology_cost");
+    expect(prompt).toContain("technology_prerequisite");
+    expect(prompt).toContain("steel-furnace");
+    expect(prompt).toContain("Do not approximate");
+  });
+});
+
+describe("planFactorioPrompt", () => {
+  it("turns a supported structured draft into a fully validated ModSpec", async () => {
+    const provider = new SequenceProvider([response(fasterSteelDraft())]);
+    const result = await planFactorioPrompt({
+      provider,
+      prompt: "Make steel furnaces twice as fast",
+    });
+
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported result");
+    expect(result.modSpec.target).toEqual({ game: "factorio", channel: "stable", versionLine: "2.0" });
+    expect(result.modSpec.assertions).toEqual([
+      {
+        type: "prototype_property_matches",
+        prototypeType: "furnace",
+        prototypeName: "steel-furnace",
+        property: "crafting_speed",
+        expectation: { type: "multiply", factor: 2 },
+      },
+    ]);
+    expect(result.attempts).toHaveLength(1);
+    expect(result.usage.totalTokens).toBe(30);
+  });
+
+  it("returns an explicit unsupported decision without inventing a ModSpec", async () => {
+    const provider = new SequenceProvider([
+      response({ status: "unsupported", reason: "Adding a new ore is outside the current registry." }),
+    ]);
+    const result = await planFactorioPrompt({ provider, prompt: "Add a new uranium-like ore" });
+
+    expect(result).toMatchObject({
+      status: "unsupported",
+      reason: "Adding a new ore is outside the current registry.",
+    });
+  });
+
+  it("retries malformed structured output once and aggregates usage", async () => {
+    const provider = new SequenceProvider([
+      response({ status: "supported" }, 11, 3),
+      response(fasterSteelDraft(), 17, 5),
+    ]);
+    const result = await planFactorioPrompt({
+      provider,
+      prompt: "Make steel furnaces twice as fast",
+    });
+
+    expect(result.status).toBe("supported");
+    expect(result.attempts).toHaveLength(2);
+    expect(result.usage).toEqual({
+      inputTokens: 28,
+      outputTokens: 8,
+      totalTokens: 36,
+      estimatedCostUsd: 0.002,
+    });
+    expect(provider.requests[1]?.messages.at(-1)?.content).toContain("rejected by the application");
+  });
+
+  it("retries when the model invents a target outside the capability registry", async () => {
+    const invalidTarget = {
+      ...fasterSteelDraft(),
+      changes: [
+        {
+          ...fasterSteelDraft().changes[0],
+          prototypeName: "mystery-furnace",
+        },
+      ],
+    };
+    const provider = new SequenceProvider([response(invalidTarget), response(fasterSteelDraft())]);
+    const result = await planFactorioPrompt({
+      provider,
+      prompt: "Make steel furnaces twice as fast",
+    });
+
+    expect(result.status).toBe("supported");
+    expect(result.attempts).toHaveLength(2);
+    expect(provider.requests[1]?.messages.at(-1)?.content).toContain("unsupported_capability");
+  });
+
+
+  it("retries a retryable provider schema error", async () => {
+    const providerError = new ProjectError({
+      code: "schema_error",
+      stage: "planning",
+      message: "provider JSON parse failed",
+      retryable: true,
+    });
+    const provider = new SequenceProvider([providerError, response(fasterSteelDraft())]);
+    const result = await planFactorioPrompt({
+      provider,
+      prompt: "Make steel furnaces twice as fast",
+    });
+
+    expect(result.status).toBe("supported");
+    expect(provider.requests).toHaveLength(2);
+    expect(provider.requests[1]?.messages.at(-1)?.content).toContain("could not be parsed");
+  });
+
+  it("fails with a planning schema_error after the bounded attempts are exhausted", async () => {
+    const provider = new SequenceProvider([
+      response({ status: "supported" }),
+      response({ status: "supported", title: "Still invalid" }),
+    ]);
+
+    await expect(
+      planFactorioPrompt({ provider, prompt: "Make steel furnaces twice as fast" }),
+    ).rejects.toMatchObject({
+      code: "schema_error",
+      stage: "planning",
+      retryable: false,
+    } satisfies Partial<ProjectError>);
+    expect(provider.requests).toHaveLength(2);
+  });
+
+  it("rejects empty and oversized prompts before calling a provider", async () => {
+    const provider = new SequenceProvider([response(fasterSteelDraft())]);
+    await expect(planFactorioPrompt({ provider, prompt: "   " })).rejects.toMatchObject({
+      code: "input_error",
+    });
+    await expect(
+      planFactorioPrompt({ provider, prompt: "123456", maxPromptChars: 5 }),
+    ).rejects.toMatchObject({ code: "input_error" });
+    expect(provider.requests).toHaveLength(0);
+  });
+});

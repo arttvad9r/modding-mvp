@@ -41,3 +41,4 @@ Do not create an ADR merely for:
 - [ADR-0006: Semantic validation via a temporary companion mod](0006-semantic-validation-companion-mod.md)
 - [ADR-0007: Machine-readable Factorio capability registry is the Planner scope source](0007-capability-registry-source-of-truth.md)
 - [ADR-0008: Typed cross-pipeline error taxonomy](0008-typed-error-taxonomy.md)
+- [ADR-0009: Constrained Planner behind a provider-agnostic JSON boundary](0009-constrained-planner-provider-boundary.md)

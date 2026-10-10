@@ -104,14 +104,22 @@ Before starting M2:
 - [x] Repository typecheck, unit tests, integration tests, build, and diff checks pass.
 - [x] ADRs/specs updated for durable M2 decisions.
 
-## M3 — next
-- [ ] Add LLM provider abstraction.
-- [ ] Build Planner input from `factorioCapabilityRegistry`.
-- [ ] Produce structured Planner output validated by `ModSpecSchema`.
-- [ ] Add supported/unsupported classification.
-- [ ] Add bounded retry for malformed structured Planner output.
-- [ ] Track provider/model/token/cost metadata.
-- [ ] Create golden natural-language prompt eval set.
+## M3 — in progress
+- [x] Add LLM provider abstraction.
+- [x] Add first provider adapter (OpenAI Responses API) behind the generic boundary.
+- [x] Build Planner input from `factorioCapabilityRegistry`.
+- [x] Produce structured Planner output and validate derived output through `ModSpecSchema`.
+- [x] Derive Factorio target and semantic assertions deterministically rather than asking the model to duplicate them.
+- [x] Add supported/unsupported classification.
+- [x] Add bounded retry for malformed/invalid structured Planner output.
+- [x] Track provider/model/token/cost metadata.
+- [x] Create 24-case golden natural-language prompt eval set.
+- [x] Add reusable eval runner and `pnpm planner:eval`.
+- [x] Add ADR-0009 for the constrained Planner/provider boundary.
+- [ ] Configure a real runtime API key locally and run the golden eval corpus.
+- [ ] Reach classification accuracy >= 90%.
+- [ ] Reach supported ModSpec accuracy >= 80%.
+- [ ] Review failed golden cases before declaring M3 complete.
 
 ## Agent task template
 A task sent to Codex/Claude should include:

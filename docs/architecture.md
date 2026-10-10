@@ -1,9 +1,9 @@
-# Architecture v0.6
+# Architecture v0.7
 
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 and M2 are complete. The deterministic core now has four capability families, a Planner-facing Factorio capability registry, 20 real-runtime E2E fixtures, and a typed cross-pipeline error taxonomy. The next milestone is M3 — natural-language Planner.
+M1 and M2 are complete. The deterministic core has four capability families, a Planner-facing Factorio capability registry, 20 real-runtime E2E fixtures, and a typed cross-pipeline error taxonomy. M3 — natural-language Planner — is now in progress: the generic LLM boundary, OpenAI adapter, constrained Planner, bounded structured-output retry, and golden eval runner are implemented; a live model eval is still pending.
 
 ## Target product pipeline
 
@@ -37,6 +37,17 @@ The current deterministic core provides:
 - `pnpm mod:build -- <spec.json> [output-dir]` for ModSpec -> validation -> installable ZIP.
 
 No LLM is required for the deterministic core. Generator correctness and the Factorio contract are established independently before natural-language planning is introduced.
+
+
+## Implemented Planner boundary
+- `packages/llm` defines a provider-agnostic `generateJson` contract and usage metadata.
+- `OpenAIResponsesProvider` is the first adapter and uses the Responses API without leaking provider HTTP shapes into orchestration.
+- `packages/agent-core` builds Planner scope from `factorioCapabilityRegistry`.
+- The LLM returns only supported/unsupported plus title/slug/capability/typed changes.
+- Fixed target metadata and semantic assertions are derived deterministically before `ModSpecSchema` validation.
+- Unsupported/invented registry targets are rejected before deterministic generation.
+- Planner structured-output correction is bounded to two attempts by default.
+- `evals/planner/golden.json` and `pnpm planner:eval` provide repeatable model evaluation.
 
 ## Planned package/application boundaries
 - `packages/domain`: ModSpec, generation states, shared typed errors.

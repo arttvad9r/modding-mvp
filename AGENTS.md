@@ -18,9 +18,9 @@ Before making a non-trivial change, read the relevant repository documentation:
 If code and documentation disagree, do not guess. Report the conflict and make the smallest change needed to restore a single source of truth.
 
 ## Current milestone
-M3: Natural-language Planner.
+M3: Natural-language Planner (in progress).
 
-M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, and M2 deterministic capability expansion are complete and should be treated as stable boundaries unless a task explicitly changes their contracts.
+M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, and M2 deterministic capability expansion are complete and should be treated as stable boundaries unless a task explicitly changes their contracts. The first M3 Planner/provider/eval slice is implemented; live model eval is still required before M3 can close.
 
 ## Current scope
 - Factorio stable 2.0.x only.
@@ -30,6 +30,7 @@ M0 Factorio Mod Test Harness, M1 Deterministic ModSpec engine, and M2 determinis
 ## Architecture rules
 - Keep Factorio-specific behavior inside `packages/factorio-*` packages.
 - Planner-supported Factorio scope must come from `@project/factorio-knowledge`; do not duplicate a separate capability list in prompts.
+- Planner LLM output is limited to classification plus typed changes; target/assertions/Lua/files are application-owned.
 - Planner/Repair control flow must branch on typed `ProjectError.code`, not parse human error-message text.
 - Prefer typed data contracts over free-form text between components.
 - User prompt must not be passed directly to an unconstrained filesystem/shell-writing agent.
@@ -57,6 +58,8 @@ Small refactors, implementation details, and patch dependency upgrades normally 
 - `pnpm test:integration`
 - `pnpm build`
 - `pnpm factorio:test -- <mod-path>`
+- `pnpm prompt:plan -- "<request>"`
+- `pnpm planner:eval`
 
 ## Definition of done
 A task is done only when:

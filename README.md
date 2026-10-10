@@ -11,9 +11,9 @@ The project deliberately starts with prototype-stage modifications and one game.
 - M0 — Factorio Mod Test Harness: complete.
 - M1 — Deterministic ModSpec engine: complete.
 - M2 — Expand deterministic capabilities: complete.
-- M3 — Natural-language Planner: next.
+- M3 — Natural-language Planner: in progress.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 will map natural-language requests into supported typed ModSpecs without changing the deterministic downstream pipeline.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 now has a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses adapter, bounded structured-output retry, and a 24-case golden eval corpus; live model eval is pending a locally configured API key.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -65,3 +65,18 @@ pnpm mod:build -- examples/remove-steel-prerequisite.json dist
 ```
 
 The examples cover a prototype scalar property, an existing recipe item ingredient amount, a finite technology research-unit count, and a reviewed technology prerequisite edit. The command validates the ModSpec, generates only allow-listed files in a temporary build directory, runs Factorio plus semantic assertions, and writes an installable ZIP only after validation passes.
+## Plan a natural-language request
+
+The first runtime adapter uses the OpenAI Responses API. Keep API keys in the environment, never in repository files.
+
+```bash
+OPENAI_API_KEY=... pnpm prompt:plan -- "Make steel furnaces twice as fast"
+```
+
+`OPENAI_MODEL` can override the default model. Run the golden Planner corpus with:
+
+```bash
+OPENAI_API_KEY=... pnpm planner:eval
+```
+
+The default eval gates are 90% classification accuracy and 80% exact supported-ModSpec semantic accuracy. No live eval result is recorded until a real key/model run is performed.

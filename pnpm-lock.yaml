@@ -21,6 +21,21 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@24.19.2)(tsx@4.23.15)
 
+  packages/agent-core:
+    dependencies:
+      '@project/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@project/factorio-knowledge':
+        specifier: workspace:*
+        version: link:../factorio-knowledge
+      '@project/llm':
+        specifier: workspace:*
+        version: link:../llm
+      zod:
+        specifier: ^4.1.12
+        version: 4.6.5
+
   packages/domain:
     dependencies:
       zod:
@@ -49,6 +64,12 @@ importers:
         version: link:../domain
 
   packages/factorio-knowledge:
+    dependencies:
+      '@project/domain':
+        specifier: workspace:*
+        version: link:../domain
+
+  packages/llm:
     dependencies:
       '@project/domain':
         specifier: workspace:*

@@ -52,16 +52,24 @@ Exit criteria:
 - errors identify whether failure is schema, generation, Factorio-load, or semantic assertion.
 
 ## M3 — Natural-language Planner
-Status: next.
+Status: in progress.
 
 Goal: map a user prompt to a supported ModSpec.
 
-Scope:
-- provider abstraction for LLMs;
-- structured Planner output;
-- supported/unsupported classifier as part of planning;
-- cost/token accounting;
-- golden prompt eval set.
+Implemented first slice:
+- provider-agnostic `LlmProvider` JSON contract in `packages/llm`;
+- OpenAI Responses API adapter with provider/model/token/cost metadata;
+- constrained Planner in `packages/agent-core`;
+- Planner scope built from `factorioCapabilityRegistry`;
+- deterministic target/assertion derivation followed by `ModSpecSchema` validation;
+- explicit supported/unsupported classification;
+- two-attempt bounded correction for malformed/invalid structured output;
+- 24-case golden prompt corpus plus reusable eval runner.
+
+Remaining before M3 exit:
+- run the golden corpus against at least one real configured model;
+- inspect failures and tune prompt/contract without weakening deterministic scope;
+- meet the initial eval gates: classification accuracy >= 90% and supported ModSpec accuracy >= 80%.
 
 Exit criteria:
 - Planner never writes files directly;

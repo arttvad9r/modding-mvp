@@ -41,6 +41,15 @@ Official prototype references: `RecipePrototype::ingredients`, `ItemIngredientPr
 
 The future Planner must derive supported scope from this registry instead of maintaining an independent capability list in prompt text. Registry targets are generated from the same allow-lists used by generator lookup functions. See `docs/capabilities.md` and ADR-0007.
 
+### Planner contract
+`packages/agent-core` owns natural-language planning. It consumes the machine-readable Factorio registry and a provider-agnostic `LlmProvider` from `packages/llm`. The model must not emit Lua, file manifests, target metadata, or semantic assertions.
+
+A supported model response contains only title, kebab-case slug, one capability family, and typed changes. An unsupported response contains a reason. The application derives the fixed Factorio stable 2.0 target and matching semantic assertions, validates the result through `ModSpecSchema`, then verifies every change against `packages/factorio-knowledge`.
+
+Malformed or registry-invalid model output receives at most one correction retry by default. Planner calls retain provider, model, token, duration, and optional estimated-cost metadata. The first provider adapter uses the OpenAI Responses API JSON response format through native `fetch`; provider/model choice is configuration. See ADR-0009.
+
+Golden Planner evals live under `evals/planner/`. The initial gate is >=90% supported/unsupported classification accuracy and >=80% exact semantic change accuracy on supported cases. These thresholds are development gates, not product KPI claims.
+
 ### Generated file manifest
 The Generator returns a bounded manifest rather than direct filesystem or shell operations:
 - relative path;
@@ -95,7 +104,7 @@ Examples:
 
 For the current deterministic capabilities, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment.
 
-`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
+`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
 
 ## Deterministic local build command
 `pnpm mod:build -- <mod-spec.json> [output-directory]` performs:
