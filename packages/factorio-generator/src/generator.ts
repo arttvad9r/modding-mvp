@@ -1,5 +1,7 @@
 import {
+  GeneratedFileManifestSchema,
   ModSpecSchema,
+  type GeneratedFileManifest,
   type ModSpec,
   type PrototypePropertyAssertion,
   type PrototypePropertyChange,
@@ -22,8 +24,7 @@ export interface GeneratedFactorioMod {
   readonly name: string;
   readonly version: string;
   readonly directoryName: string;
-  readonly infoJson: string;
-  readonly dataLua: string;
+  readonly manifest: GeneratedFileManifest;
   readonly semanticAssertionLua: string;
 }
 
@@ -55,12 +56,8 @@ function renderOperation(operation: ScalarOperation, propertyExpression: string)
     : `${propertyExpression} * ${luaNumber(operation.factor)}`;
 }
 
-function expectedValue(
-  operation: ScalarOperation,
-  baseValue: number,
-): number {
-  const value =
-    operation.type === "set" ? operation.value : baseValue * operation.factor;
+function expectedValue(operation: ScalarOperation, baseValue: number): number {
+  const value = operation.type === "set" ? operation.value : baseValue * operation.factor;
   if (!Number.isFinite(value)) {
     throw new Error("Semantic expectation must be finite");
   }
@@ -133,13 +130,20 @@ export function generateFactorioMod(input: ModSpec): GeneratedFactorioMod {
     factorio_version: spec.target.versionLine,
     dependencies: [`base >= ${spec.target.versionLine}`],
   };
+  const infoJson = `${JSON.stringify(info, null, 2)}\n`;
+  const dataLua = `${spec.changes.map(renderChange).join("\n\n")}\n`;
+  const manifest = GeneratedFileManifestSchema.parse({
+    files: [
+      { path: "info.json", content: infoJson, role: "metadata" },
+      { path: "data.lua", content: dataLua, role: "data_stage" },
+    ],
+  });
 
   return {
     name: spec.slug,
     version: GENERATED_VERSION,
     directoryName: `${spec.slug}_${GENERATED_VERSION}`,
-    infoJson: `${JSON.stringify(info, null, 2)}\n`,
-    dataLua: `${spec.changes.map(renderChange).join("\n\n")}\n`,
+    manifest,
     semanticAssertionLua: `${spec.assertions.map(renderAssertion).join("\n\n")}\n`,
   };
 }

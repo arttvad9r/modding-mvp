@@ -15,6 +15,8 @@ Exit criteria:
 - unit, integration, typecheck, and build checks pass.
 
 ## M1 — Deterministic ModSpec engine
+Status: complete.
+
 Goal: produce working Factorio mods from typed JSON without any LLM involvement.
 
 Scope:
@@ -29,9 +31,11 @@ Exit criteria:
 - at least 5 deterministic ModSpec fixtures produce expected mods;
 - invalid/unsupported ModSpecs fail before Factorio execution;
 - generated mods pass semantic assertions in Factorio;
-- one command executes ModSpec -> ZIP -> validation.
+- one command executes ModSpec -> generation -> Factorio/semantic validation -> ZIP.
 
 ## M2 — Expand deterministic capabilities
+Status: next.
+
 Goal: establish enough safe primitives for a useful first Planner.
 
 Scope:

@@ -18,10 +18,12 @@ Minimum fields planned for M1:
 - expected assertions/tests;
 - capability identifier.
 
-Initial change types:
-- `prototype_property`;
-- `recipe_change`;
-- `technology_change`.
+Current M1 change type:
+- `prototype_property`.
+
+Planned M2 extensions:
+- recipe changes;
+- technology cost/prerequisite changes.
 
 Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned.
 
@@ -33,7 +35,9 @@ The Generator returns a bounded manifest rather than direct filesystem or shell 
 - textual content;
 - optional role/type metadata.
 
-Only allow-listed file names/extensions may be materialized by the application.
+The generic manifest contract rejects absolute paths, traversal segments, backslashes, empty path segments, duplicate paths, excessive file counts, and oversized text content. The M1 Factorio artifact layer is stricter still: the installable manifest must contain exactly `info.json` (`metadata`) and `data.lua` (`data_stage`). Files such as `control.lua` or validation-only `data-final-fixes.lua` are rejected.
+
+Materialization occurs only inside a fresh temporary build directory. The candidate is validated there, then packaging creates a ZIP with a single top-level `<mod-name>_<version>/` folder. Validation-only companion mod files never enter the ZIP.
 
 ### Validation result
 All validation layers return structured results with:
@@ -68,6 +72,16 @@ Examples:
 - expected technology prerequisites/cost match the specification.
 
 For the current `prototype_property` capability, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
+
+## Deterministic local build command
+`pnpm mod:build -- <mod-spec.json> [output-directory]` performs:
+1. JSON parse and ModSpec validation;
+2. deterministic generation of a bounded manifest and separate semantic assertions;
+3. temporary materialization of the candidate;
+4. real Factorio load plus semantic validation;
+5. ZIP creation only after validation succeeds.
+
+The included `examples/faster-steel-furnace.json` is the reference M1 input.
 
 ## Repair loop
 A Repair step receives:

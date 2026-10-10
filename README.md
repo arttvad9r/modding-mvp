@@ -9,9 +9,10 @@ The project deliberately starts with prototype-stage modifications and one game.
 
 ## Current status
 - M0 — Factorio Mod Test Harness: complete.
-- M1 — Deterministic ModSpec engine: current milestone.
+- M1 — Deterministic ModSpec engine: complete.
+- M2 — Expand deterministic capabilities: next milestone.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -51,3 +52,11 @@ pnpm factorio:test -- /absolute/or/relative/path/to/mod
 ```
 
 A successful run prints structured `PASS`; a Factorio load failure prints structured `FAIL` with a normalized error summary.
+
+## Build a deterministic mod
+
+```bash
+pnpm mod:build -- examples/faster-steel-furnace.json dist
+```
+
+The command validates the ModSpec, generates only allow-listed files in a temporary build directory, runs Factorio plus semantic assertions, and writes an installable ZIP only after validation passes.

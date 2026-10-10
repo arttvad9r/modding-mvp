@@ -12,11 +12,7 @@ function makeSpec(
   return {
     title: "Faster steel furnaces",
     slug: "faster-steel-furnaces",
-    target: {
-      game: "factorio",
-      channel: "stable",
-      versionLine: "2.0",
-    },
+    target: { game: "factorio", channel: "stable", versionLine: "2.0" },
     capability: "prototype_property",
     changes: [
       {
@@ -37,6 +33,12 @@ function makeSpec(
       },
     ],
   };
+}
+
+function generatedContent(path: string, spec = makeSpec()): string {
+  const file = generateFactorioMod(spec).manifest.files.find((entry) => entry.path === path);
+  if (!file) throw new Error(`Missing generated file: ${path}`);
+  return file.content;
 }
 
 const expectedInfo = `{
@@ -70,24 +72,30 @@ end
 `;
 
 describe("generateFactorioMod", () => {
-  it("generates deterministic metadata, mutation Lua, and semantic assertion Lua", () => {
+  it("generates a deterministic bounded manifest plus separate semantic assertions", () => {
     const generated = generateFactorioMod(makeSpec());
 
     expect(generated).toEqual({
       name: "faster-steel-furnaces",
       version: "0.1.0",
       directoryName: "faster-steel-furnaces_0.1.0",
-      infoJson: expectedInfo,
-      dataLua: expectedMultiplyLua,
+      manifest: {
+        files: [
+          { path: "info.json", content: expectedInfo, role: "metadata" },
+          { path: "data.lua", content: expectedMultiplyLua, role: "data_stage" },
+        ],
+      },
       semanticAssertionLua: expectedMultiplyAssertionLua,
     });
   });
 
   it("renders set operations and derives an absolute semantic expectation", () => {
-    const generated = generateFactorioMod(makeSpec({ type: "set", value: 4 }));
+    const spec = makeSpec({ type: "set", value: 4 });
+    const generated = generateFactorioMod(spec);
+    const dataLua = generatedContent("data.lua", spec);
 
-    expect(generated.dataLua).toContain('prototype["crafting_speed"] = 4');
-    expect(generated.dataLua).not.toContain('prototype["crafting_speed"] * 4');
+    expect(dataLua).toContain('prototype["crafting_speed"] = 4');
+    expect(dataLua).not.toContain('prototype["crafting_speed"] * 4');
     expect(generated.semanticAssertionLua).toContain("local expected = 4");
   });
 
@@ -95,15 +103,8 @@ describe("generateFactorioMod", () => {
     const spec = makeSpec();
     const firstChange = spec.changes[0]!;
     const firstAssertion = spec.assertions[0]!;
-
-    spec.changes[0] = {
-      ...firstChange,
-      prototypeType: "assembling-machine",
-    };
-    spec.assertions[0] = {
-      ...firstAssertion,
-      prototypeType: "assembling-machine",
-    };
+    spec.changes[0] = { ...firstChange, prototypeType: "assembling-machine" };
+    spec.assertions[0] = { ...firstAssertion, prototypeType: "assembling-machine" };
 
     expect(() => generateFactorioMod(spec)).toThrow(
       "Unsupported prototype property: assembling-machine.steel-furnace.crafting_speed",
@@ -114,12 +115,8 @@ describe("generateFactorioMod", () => {
     const spec = makeSpec();
     const firstChange = spec.changes[0]!;
     const firstAssertion = spec.assertions[0]!;
-
     spec.changes[0] = { ...firstChange, prototypeName: "mystery-furnace" };
-    spec.assertions[0] = {
-      ...firstAssertion,
-      prototypeName: "mystery-furnace",
-    };
+    spec.assertions[0] = { ...firstAssertion, prototypeName: "mystery-furnace" };
 
     expect(() => generateFactorioMod(spec)).toThrow(
       "Unsupported prototype property: furnace.mystery-furnace.crafting_speed",
@@ -127,11 +124,7 @@ describe("generateFactorioMod", () => {
   });
 
   it("validates the ModSpec boundary before rendering Lua", () => {
-    const invalid = {
-      ...makeSpec(),
-      slug: "../../unsafe",
-    } as ModSpec;
-
+    const invalid = { ...makeSpec(), slug: "../../unsafe" } as ModSpec;
     expect(() => generateFactorioMod(invalid)).toThrow();
   });
 
@@ -139,21 +132,12 @@ describe("generateFactorioMod", () => {
     const spec = makeSpec();
     const firstChange = spec.changes[0]!;
     const firstAssertion = spec.assertions[0]!;
-    const secondChange = {
-      ...firstChange,
-      prototypeName: "stone-furnace",
-    };
-    const secondAssertion = {
-      ...firstAssertion,
-      prototypeName: "stone-furnace",
-    };
-    spec.changes.push(secondChange);
-    spec.assertions.push(secondAssertion);
+    spec.changes.push({ ...firstChange, prototypeName: "stone-furnace" });
+    spec.assertions.push({ ...firstAssertion, prototypeName: "stone-furnace" });
 
     const generated = generateFactorioMod(spec);
-    expect(generated.dataLua.indexOf("steel-furnace")).toBeLessThan(
-      generated.dataLua.indexOf("stone-furnace"),
-    );
+    const dataLua = generatedContent("data.lua", spec);
+    expect(dataLua.indexOf("steel-furnace")).toBeLessThan(dataLua.indexOf("stone-furnace"));
     expect(generated.semanticAssertionLua.indexOf("steel-furnace")).toBeLessThan(
       generated.semanticAssertionLua.indexOf("stone-furnace"),
     );

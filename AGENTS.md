@@ -17,9 +17,9 @@ Before making a non-trivial change, read the relevant repository documentation:
 If code and documentation disagree, do not guess. Report the conflict and make the smallest change needed to restore a single source of truth.
 
 ## Current milestone
-M1: Deterministic ModSpec engine.
+M2: Expand deterministic Factorio capabilities.
 
-M0 Factorio Mod Test Harness is complete and should be treated as a stable validation boundary unless a task explicitly changes its contract.
+M0 Factorio Mod Test Harness and M1 Deterministic ModSpec engine are complete and should be treated as stable boundaries unless a task explicitly changes their contracts.
 
 ## Current scope
 - Factorio stable 2.0.x only.

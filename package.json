@@ -9,7 +9,8 @@
     "test": "pnpm -r test",
     "test:integration": "pnpm -r --if-present test:integration",
     "factorio:setup": "bash scripts/setup-factorio.sh",
-    "factorio:test": "pnpm --filter @project/factorio-harness cli --"
+    "factorio:test": "pnpm --filter @project/factorio-harness cli --",
+    "mod:build": "pnpm --filter @project/factorio-generator cli --"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -1,9 +1,9 @@
-# Architecture v0.2
+# Architecture v0.3
 
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-Current development milestone: M1 — deterministic ModSpec engine.
+M1 is complete. Next development milestone: M2 — expand deterministic capabilities.
 
 ## Target product pipeline
 
@@ -25,16 +25,15 @@ Every run creates a fresh temporary directory containing a dedicated `mods/` dir
 
 See ADR-0003 for why real Factorio is the validation authority.
 
-## Current M1 boundary: deterministic ModSpec engine
-Implemented:
-- `packages/domain` for typed ModSpec contracts;
+## Implemented deterministic artifact boundary
+M1 provides:
+- `packages/domain` for typed ModSpec and generated-file manifest contracts;
 - `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation on base-game furnace `crafting_speed`;
 - semantic assertion Lua generated separately from the user artifact;
-- `packages/factorio-harness` temporary companion validator mod and structured semantic failure classification.
-
-Remaining M1 scope:
-- safe generated-file manifest and ZIP packaging;
-- an end-to-end local command for ModSpec -> generated mod -> Factorio validation -> ZIP.
+- `packages/factorio-harness` temporary companion validator mod and structured semantic failure classification;
+- temporary-only manifest materialization;
+- allow-listed Factorio artifact packaging with only `info.json` and `data.lua`;
+- `pnpm mod:build -- <spec.json> [output-dir]` for ModSpec -> validation -> installable ZIP.
 
 No LLM is required for M1. This allows generator correctness and the Factorio contract to be established before natural-language planning is introduced.
 

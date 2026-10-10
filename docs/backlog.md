@@ -11,7 +11,7 @@ This file tracks milestone-level tasks suitable for human or AI-agent execution.
 - [x] Add valid and invalid fixture mods.
 - [x] Add real Factorio integration tests.
 
-## M1 — in progress
+## M1 — complete
 
 ### Domain contract
 - [x] Create `packages/domain`.
@@ -38,24 +38,24 @@ This file tracks milestone-level tasks suitable for human or AI-agent execution.
 - [x] Add fixture proving load-success but semantic-failure is detected.
 
 ### Packaging and command flow
-- [ ] Add safe generated file manifest contract.
-- [ ] Materialize manifest only under a temporary build directory.
-- [ ] Package installable Factorio ZIP with correct top-level folder.
-- [ ] Add a local command for `ModSpec JSON -> validated ZIP`.
-- [ ] Add end-to-end deterministic integration tests.
+- [x] Add safe generated file manifest contract.
+- [x] Materialize manifest only under a temporary build directory.
+- [x] Package installable Factorio ZIP with correct top-level folder.
+- [x] Add a local command for `ModSpec JSON -> validated ZIP`.
+- [x] Add end-to-end deterministic integration tests.
 
 ## M1 exit review
 Before starting M2:
-- [ ] Run `pnpm typecheck`.
-- [ ] Run `pnpm test`.
-- [ ] Run `pnpm test:integration`.
-- [ ] Run `pnpm build`.
-- [ ] Review package boundaries against `technical-spec.md`.
-- [ ] Add/update ADRs for any architecture decision made during M1.
+- [x] Run `pnpm typecheck`.
+- [x] Run `pnpm test`.
+- [x] Run `pnpm test:integration`.
+- [x] Run `pnpm build`.
+- [x] Review package boundaries against `technical-spec.md`.
+- [x] Add/update ADRs for any architecture decision made during M1.
 - [x] Confirm at least five ModSpec fixtures pass through the real Factorio runtime.
 
-## M2 candidates
-Do not start these until M1 exit criteria are met unless explicitly reprioritized:
+## M2 — next
+Candidate tasks:
 - recipe mutation capability;
 - technology cost capability;
 - technology prerequisite capability;

@@ -1,12 +1,12 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import type { ModSpec } from "@project/domain";
-import { runFactorioModTest } from "@project/factorio-harness";
+import { unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 
-import { generateFactorioMod } from "../src/index.js";
+import { buildValidatedFactorioArtifact } from "../src/index.js";
 
 interface Fixture {
   readonly name: string;
@@ -17,7 +17,7 @@ interface Fixture {
 const fixtures: readonly Fixture[] = [
   { name: "steel-double", prototypeName: "steel-furnace", operation: { type: "multiply", factor: 2 } },
   { name: "stone-double", prototypeName: "stone-furnace", operation: { type: "multiply", factor: 2 } },
-  { name: "electric-half-again", prototypeName: "electric-furnace", operation: { type: "multiply", factor: 1.5 } },
+  { name: "electric-one-half", prototypeName: "electric-furnace", operation: { type: "multiply", factor: 1.5 } },
   { name: "steel-set-three", prototypeName: "steel-furnace", operation: { type: "set", value: 3 } },
   { name: "stone-set-half", prototypeName: "stone-furnace", operation: { type: "set", value: 0.5 } },
 ];
@@ -49,37 +49,33 @@ function makeSpec(fixture: Fixture): ModSpec {
   };
 }
 
-async function materialize(spec: ModSpec, root: string): Promise<string> {
-  const generated = generateFactorioMod(spec);
-  const modPath = path.join(root, generated.directoryName);
-  await mkdir(modPath, { recursive: true });
-  await writeFile(path.join(modPath, "info.json"), generated.infoJson, "utf8");
-  await writeFile(path.join(modPath, "data.lua"), generated.dataLua, "utf8");
-  return modPath;
-}
-
-describe("generated Factorio mods", () => {
+describe("deterministic ModSpec to validated ZIP", () => {
   it(
-    "passes five deterministic ModSpec fixtures through real Factorio",
+    "builds five installable artifacts through real Factorio",
     async () => {
-      const root = await mkdtemp(path.join(tmpdir(), "factorio-generated-integration-"));
+      const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-artifact-output-"));
 
       try {
         for (const fixture of fixtures) {
-          const modPath = await materialize(makeSpec(fixture), root);
-          const generated = generateFactorioMod(makeSpec(fixture));
-        const result = await runFactorioModTest({
-          modPath,
-          semanticAssertionLua: generated.semanticAssertionLua,
-        });
-          expect(
-            result.ok,
-            `${fixture.name}: ${result.summary ?? "unknown failure"}`,
-          ).toBe(true);
-          expect(result.errorType).toBeNull();
+          const result = await buildValidatedFactorioArtifact({
+            spec: makeSpec(fixture),
+            outputDirectory,
+          });
+
+          expect(result.validation.ok, `${fixture.name}: ${result.validation.summary ?? "unknown failure"}`).toBe(true);
+          expect(result.validation.errorType).toBeNull();
+
+          const zipBytes = await readFile(result.zipPath);
+          const entries = Object.keys(unzipSync(zipBytes)).sort();
+          expect(entries).toEqual([
+            `${result.directoryName}/data.lua`,
+            `${result.directoryName}/info.json`,
+          ]);
+          expect(entries.some((name) => name.includes("validator"))).toBe(false);
+          expect(entries.some((name) => name.endsWith("data-final-fixes.lua"))).toBe(false);
         }
       } finally {
-        await rm(root, { recursive: true, force: true });
+        await rm(outputDirectory, { recursive: true, force: true });
       }
     },
     30_000,

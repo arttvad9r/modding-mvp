@@ -1,0 +1,34 @@
+{
+  "title": "Faster steel furnaces",
+  "slug": "faster-steel-furnaces",
+  "target": {
+    "game": "factorio",
+    "channel": "stable",
+    "versionLine": "2.0"
+  },
+  "capability": "prototype_property",
+  "changes": [
+    {
+      "type": "prototype_property",
+      "prototypeType": "furnace",
+      "prototypeName": "steel-furnace",
+      "property": "crafting_speed",
+      "operation": {
+        "type": "multiply",
+        "factor": 2
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "type": "prototype_property_matches",
+      "prototypeType": "furnace",
+      "prototypeName": "steel-furnace",
+      "property": "crafting_speed",
+      "expectation": {
+        "type": "multiply",
+        "factor": 2
+      }
+    }
+  ]
+}

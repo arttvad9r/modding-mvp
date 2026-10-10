@@ -5,15 +5,15 @@
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
+    "cli": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run test/generator.test.ts",
+    "test": "vitest run test/generator.test.ts test/artifact.test.ts",
     "test:integration": "vitest run test/generated.integration.test.ts"
   },
   "dependencies": {
-    "@project/domain": "workspace:*"
-  },
-  "devDependencies": {
-    "@project/factorio-harness": "workspace:*"
+    "@project/domain": "workspace:*",
+    "@project/factorio-harness": "workspace:*",
+    "fflate": "^0.8.2"
   }
 }
