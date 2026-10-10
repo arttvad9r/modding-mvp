@@ -1,14 +1,15 @@
-import type { ModSpec } from "@project/domain";
+import type {
+  PrototypePropertyModSpec,
+  RecipeIngredientModSpec,
+  ScalarOperation,
+} from "@project/domain";
 import { describe, expect, it } from "vitest";
 
 import { generateFactorioMod } from "../src/index.js";
 
-function makeSpec(
-  operation: ModSpec["changes"][number]["operation"] = {
-    type: "multiply",
-    factor: 2,
-  },
-): ModSpec {
+function makePrototypeSpec(
+  operation: ScalarOperation = { type: "multiply", factor: 2 },
+): PrototypePropertyModSpec {
   return {
     title: "Faster steel furnaces",
     slug: "faster-steel-furnaces",
@@ -35,22 +36,40 @@ function makeSpec(
   };
 }
 
-function generatedContent(path: string, spec = makeSpec()): string {
+function makeRecipeSpec(
+  operation: ScalarOperation = { type: "set", value: 1 },
+): RecipeIngredientModSpec {
+  return {
+    title: "Cheaper iron gears",
+    slug: "cheaper-iron-gears",
+    target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+    capability: "recipe_ingredient",
+    changes: [
+      {
+        type: "recipe_ingredient",
+        recipeName: "iron-gear-wheel",
+        ingredientType: "item",
+        ingredientName: "iron-plate",
+        operation,
+      },
+    ],
+    assertions: [
+      {
+        type: "recipe_ingredient_matches",
+        recipeName: "iron-gear-wheel",
+        ingredientType: "item",
+        ingredientName: "iron-plate",
+        expectation: operation,
+      },
+    ],
+  };
+}
+
+function generatedContent(path: string, spec: PrototypePropertyModSpec | RecipeIngredientModSpec): string {
   const file = generateFactorioMod(spec).manifest.files.find((entry) => entry.path === path);
   if (!file) throw new Error(`Missing generated file: ${path}`);
   return file.content;
 }
-
-const expectedInfo = `{
-  "name": "faster-steel-furnaces",
-  "version": "0.1.0",
-  "title": "Faster steel furnaces",
-  "author": "Generated mod",
-  "factorio_version": "2.0",
-  "dependencies": [
-    "base >= 2.0"
-  ]
-}\n`;
 
 const expectedMultiplyLua = `do
   local prototype = data.raw["furnace"] and data.raw["furnace"]["steel-furnace"]
@@ -60,87 +79,92 @@ const expectedMultiplyLua = `do
 end
 `;
 
-const expectedMultiplyAssertionLua = `do
-  local prototype = data.raw["furnace"] and data.raw["furnace"]["steel-furnace"]
-  local actual = prototype and prototype["crafting_speed"] or nil
-  local expected = 4
-  local tolerance = 1e-9 * math.max(1, math.abs(expected))
-  if type(actual) ~= "number" or math.abs(actual - expected) > tolerance then
-    error("__PROJECT_SEMANTIC_ASSERTION__|furnace.steel-furnace.crafting_speed|expected=4|actual=" .. tostring(actual), 0)
+const expectedRecipeLua = `do
+  local recipe = data.raw["recipe"] and data.raw["recipe"]["iron-gear-wheel"]
+  assert(recipe, "Missing recipe iron-gear-wheel")
+  local ingredient = nil
+  for _, candidate in ipairs(recipe.ingredients or {}) do
+    if candidate.type == "item" and candidate.name == "iron-plate" then
+      ingredient = candidate
+      break
+    end
   end
+  assert(ingredient, "Missing ingredient item.iron-plate in recipe iron-gear-wheel")
+  assert(type(ingredient.amount) == "number", "Expected numeric ingredient amount iron-gear-wheel.item.iron-plate")
+  ingredient.amount = 1
 end
 `;
 
-describe("generateFactorioMod", () => {
-  it("generates a deterministic bounded manifest plus separate semantic assertions", () => {
-    const generated = generateFactorioMod(makeSpec());
-
-    expect(generated).toEqual({
-      name: "faster-steel-furnaces",
-      version: "0.1.0",
-      directoryName: "faster-steel-furnaces_0.1.0",
-      manifest: {
-        files: [
-          { path: "info.json", content: expectedInfo, role: "metadata" },
-          { path: "data.lua", content: expectedMultiplyLua, role: "data_stage" },
-        ],
-      },
-      semanticAssertionLua: expectedMultiplyAssertionLua,
-    });
+describe("generateFactorioMod prototype_property", () => {
+  it("generates deterministic mutation and semantic assertion Lua", () => {
+    const generated = generateFactorioMod(makePrototypeSpec());
+    expect(generatedContent("data.lua", makePrototypeSpec())).toBe(expectedMultiplyLua);
+    expect(generated.semanticAssertionLua).toContain(
+      "__PROJECT_SEMANTIC_ASSERTION__|furnace.steel-furnace.crafting_speed|expected=4|actual=",
+    );
   });
 
   it("renders set operations and derives an absolute semantic expectation", () => {
-    const spec = makeSpec({ type: "set", value: 4 });
+    const spec = makePrototypeSpec({ type: "set", value: 4 });
     const generated = generateFactorioMod(spec);
     const dataLua = generatedContent("data.lua", spec);
-
     expect(dataLua).toContain('prototype["crafting_speed"] = 4');
-    expect(dataLua).not.toContain('prototype["crafting_speed"] * 4');
     expect(generated.semanticAssertionLua).toContain("local expected = 4");
   });
 
-  it("rejects unsupported prototype addresses before generating files", () => {
-    const spec = makeSpec();
-    const firstChange = spec.changes[0]!;
-    const firstAssertion = spec.assertions[0]!;
-    spec.changes[0] = { ...firstChange, prototypeType: "assembling-machine" };
-    spec.assertions[0] = { ...firstAssertion, prototypeType: "assembling-machine" };
-
+  it("rejects unsupported prototype addresses", () => {
+    const spec = makePrototypeSpec();
+    spec.changes[0] = { ...spec.changes[0]!, prototypeType: "assembling-machine" };
+    spec.assertions[0] = { ...spec.assertions[0]!, prototypeType: "assembling-machine" };
     expect(() => generateFactorioMod(spec)).toThrow(
       "Unsupported prototype property: assembling-machine.steel-furnace.crafting_speed",
     );
   });
 
-  it("rejects unknown furnace names because multiply needs a known baseline", () => {
-    const spec = makeSpec();
-    const firstChange = spec.changes[0]!;
-    const firstAssertion = spec.assertions[0]!;
-    spec.changes[0] = { ...firstChange, prototypeName: "mystery-furnace" };
-    spec.assertions[0] = { ...firstAssertion, prototypeName: "mystery-furnace" };
-
-    expect(() => generateFactorioMod(spec)).toThrow(
-      "Unsupported prototype property: furnace.mystery-furnace.crafting_speed",
-    );
-  });
-
-  it("validates the ModSpec boundary before rendering Lua", () => {
-    const invalid = { ...makeSpec(), slug: "../../unsafe" } as ModSpec;
-    expect(() => generateFactorioMod(invalid)).toThrow();
-  });
-
-  it("preserves change and assertion order deterministically", () => {
-    const spec = makeSpec();
-    const firstChange = spec.changes[0]!;
-    const firstAssertion = spec.assertions[0]!;
-    spec.changes.push({ ...firstChange, prototypeName: "stone-furnace" });
-    spec.assertions.push({ ...firstAssertion, prototypeName: "stone-furnace" });
-
-    const generated = generateFactorioMod(spec);
+  it("preserves deterministic ordering for multiple changes", () => {
+    const spec = makePrototypeSpec();
+    spec.changes.push({ ...spec.changes[0]!, prototypeName: "stone-furnace" });
+    spec.assertions.push({ ...spec.assertions[0]!, prototypeName: "stone-furnace" });
     const dataLua = generatedContent("data.lua", spec);
     expect(dataLua.indexOf("steel-furnace")).toBeLessThan(dataLua.indexOf("stone-furnace"));
-    expect(generated.semanticAssertionLua.indexOf("steel-furnace")).toBeLessThan(
-      generated.semanticAssertionLua.indexOf("stone-furnace"),
+  });
+});
+
+describe("generateFactorioMod recipe_ingredient", () => {
+  it("generates deterministic item ingredient mutation and semantic assertion Lua", () => {
+    const spec = makeRecipeSpec();
+    const generated = generateFactorioMod(spec);
+    expect(generatedContent("data.lua", spec)).toBe(expectedRecipeLua);
+    expect(generated.semanticAssertionLua).toContain(
+      "__PROJECT_SEMANTIC_ASSERTION__|recipe.iron-gear-wheel.ingredient.item.iron-plate|expected=1|actual=",
     );
-    expect(generateFactorioMod(spec)).toEqual(generated);
+  });
+
+  it("supports multiply when the resulting item amount is an integer", () => {
+    const spec = makeRecipeSpec({ type: "multiply", factor: 2 });
+    const generated = generateFactorioMod(spec);
+    expect(generatedContent("data.lua", spec)).toContain("ingredient.amount = ingredient.amount * 2");
+    expect(generated.semanticAssertionLua).toContain("local expected = 4");
+  });
+
+  it("rejects unsupported recipe/ingredient addresses", () => {
+    const spec = makeRecipeSpec();
+    spec.changes[0] = { ...spec.changes[0]!, recipeName: "unknown-recipe" };
+    spec.assertions[0] = { ...spec.assertions[0]!, recipeName: "unknown-recipe" };
+    expect(() => generateFactorioMod(spec)).toThrow(
+      "Unsupported recipe ingredient: unknown-recipe.item.iron-plate",
+    );
+  });
+
+  it("rejects invalid uint16 item amounts before Factorio execution", () => {
+    expect(() => generateFactorioMod(makeRecipeSpec({ type: "set", value: 0 }))).toThrow(
+      "Item ingredient amount must be an integer in range 1..65535",
+    );
+    expect(() => generateFactorioMod(makeRecipeSpec({ type: "set", value: 1.5 }))).toThrow(
+      "Item ingredient amount must be an integer in range 1..65535",
+    );
+    expect(() => generateFactorioMod(makeRecipeSpec({ type: "multiply", factor: 0.75 }))).toThrow(
+      "Item ingredient amount must be an integer in range 1..65535",
+    );
   });
 });

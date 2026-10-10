@@ -54,14 +54,24 @@ Before starting M2:
 - [x] Add/update ADRs for any architecture decision made during M1.
 - [x] Confirm at least five ModSpec fixtures pass through the real Factorio runtime.
 
-## M2 — next
-Candidate tasks:
-- recipe mutation capability;
-- technology cost capability;
-- technology prerequisite capability;
-- richer Factorio error taxonomy;
-- capability registry/metadata;
-- larger deterministic eval corpus.
+## M2 — in progress
+
+### Recipe ingredient capability
+- [x] Add `recipe_ingredient` ModSpec capability.
+- [x] Support existing base-game item ingredients only.
+- [x] Support `set` and `multiply` amount operations.
+- [x] Reject invalid item amounts before Factorio execution.
+- [x] Add versioned allow-list/baselines for initial recipes.
+- [x] Generate deterministic recipe mutation Lua.
+- [x] Generate semantic recipe ingredient assertions.
+- [x] Pass at least five recipe fixtures through real Factorio and ZIP packaging.
+
+### Remaining M2 candidates
+- [ ] Technology cost capability.
+- [ ] Technology prerequisite capability.
+- [ ] Richer Factorio error taxonomy.
+- [ ] Capability registry/metadata for Planner discovery.
+- [ ] Expand deterministic eval corpus to >=20 fixtures.
 
 ## Agent task template
 A task sent to Codex/Claude should include:

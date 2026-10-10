@@ -4,17 +4,20 @@ import {
   GameTargetSchema,
   ModSpecSchema,
   MultiplyOperationSchema,
+  RecipeIngredientModSpecSchema,
   SetOperationSchema,
 } from "../src/index.js";
 
-const validSpec = {
+const target = {
+  game: "factorio",
+  channel: "stable",
+  versionLine: "2.0",
+} as const;
+
+const validPrototypeSpec = {
   title: "Faster steel furnaces",
   slug: "faster-steel-furnaces",
-  target: {
-    game: "factorio",
-    channel: "stable",
-    versionLine: "2.0",
-  },
+  target,
   capability: "prototype_property",
   changes: [
     {
@@ -36,122 +39,146 @@ const validSpec = {
   ],
 } as const;
 
+const validRecipeSpec = {
+  title: "Cheaper iron gears",
+  slug: "cheaper-iron-gears",
+  target,
+  capability: "recipe_ingredient",
+  changes: [
+    {
+      type: "recipe_ingredient",
+      recipeName: "iron-gear-wheel",
+      ingredientType: "item",
+      ingredientName: "iron-plate",
+      operation: { type: "set", value: 1 },
+    },
+  ],
+  assertions: [
+    {
+      type: "recipe_ingredient_matches",
+      recipeName: "iron-gear-wheel",
+      ingredientType: "item",
+      ingredientName: "iron-plate",
+      expectation: { type: "set", value: 1 },
+    },
+  ],
+} as const;
+
 describe("GameTargetSchema", () => {
   it("accepts only the stable Factorio 2.0 version line", () => {
-    expect(GameTargetSchema.parse(validSpec.target)).toEqual(validSpec.target);
-
-    expect(
-      GameTargetSchema.safeParse({ ...validSpec.target, versionLine: "2.1" }).success,
-    ).toBe(false);
-    expect(
-      GameTargetSchema.safeParse({ ...validSpec.target, channel: "experimental" })
-        .success,
-    ).toBe(false);
-    expect(
-      GameTargetSchema.safeParse({ ...validSpec.target, game: "rimworld" }).success,
-    ).toBe(false);
+    expect(GameTargetSchema.parse(target)).toEqual(target);
+    expect(GameTargetSchema.safeParse({ ...target, versionLine: "2.1" }).success).toBe(false);
+    expect(GameTargetSchema.safeParse({ ...target, channel: "experimental" }).success).toBe(false);
+    expect(GameTargetSchema.safeParse({ ...target, game: "rimworld" }).success).toBe(false);
   });
 });
 
 describe("scalar operations", () => {
   it("supports finite set and multiply operations", () => {
-    expect(SetOperationSchema.parse({ type: "set", value: 4 })).toEqual({
-      type: "set",
-      value: 4,
+    expect(SetOperationSchema.parse({ type: "set", value: 4 })).toEqual({ type: "set", value: 4 });
+    expect(MultiplyOperationSchema.parse({ type: "multiply", factor: 2 })).toEqual({
+      type: "multiply",
+      factor: 2,
     });
-    expect(
-      MultiplyOperationSchema.parse({ type: "multiply", factor: 2 }),
-    ).toEqual({ type: "multiply", factor: 2 });
+    expect(SetOperationSchema.safeParse({ type: "set", value: Infinity }).success).toBe(false);
+    expect(MultiplyOperationSchema.safeParse({ type: "multiply", factor: Number.NaN }).success).toBe(false);
+  });
+});
 
-    expect(SetOperationSchema.safeParse({ type: "set", value: Infinity }).success).toBe(
-      false,
-    );
+describe("prototype_property ModSpec", () => {
+  it("accepts a valid specification", () => {
+    expect(ModSpecSchema.parse(validPrototypeSpec)).toEqual(validPrototypeSpec);
+  });
+
+  it("rejects unsafe slugs and malformed Factorio identifiers", () => {
+    expect(ModSpecSchema.safeParse({ ...validPrototypeSpec, slug: "Bad Slug" }).success).toBe(false);
     expect(
-      MultiplyOperationSchema.safeParse({ type: "multiply", factor: Number.NaN })
-        .success,
+      ModSpecSchema.safeParse({
+        ...validPrototypeSpec,
+        changes: [{ ...validPrototypeSpec.changes[0], prototypeName: "../../steel-furnace" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects unrelated, duplicate, or missing assertions", () => {
+    expect(
+      ModSpecSchema.safeParse({
+        ...validPrototypeSpec,
+        assertions: [
+          { ...validPrototypeSpec.assertions[0], expectation: { type: "multiply", factor: 3 } },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      ModSpecSchema.safeParse({
+        ...validPrototypeSpec,
+        assertions: [validPrototypeSpec.assertions[0], validPrototypeSpec.assertions[0]],
+      }).success,
+    ).toBe(false);
+    expect(ModSpecSchema.safeParse({ ...validPrototypeSpec, assertions: [] }).success).toBe(false);
+  });
+
+  it("rejects duplicate mutations", () => {
+    expect(
+      ModSpecSchema.safeParse({
+        ...validPrototypeSpec,
+        changes: [validPrototypeSpec.changes[0], validPrototypeSpec.changes[0]],
+      }).success,
     ).toBe(false);
   });
 });
 
-describe("ModSpecSchema", () => {
-  it("accepts a valid prototype_property specification", () => {
-    expect(ModSpecSchema.parse(validSpec)).toEqual(validSpec);
+describe("recipe_ingredient ModSpec", () => {
+  it("accepts a valid item-ingredient mutation", () => {
+    expect(RecipeIngredientModSpecSchema.parse(validRecipeSpec)).toEqual(validRecipeSpec);
+    expect(ModSpecSchema.parse(validRecipeSpec)).toEqual(validRecipeSpec);
   });
 
-  it("rejects unsafe slugs and malformed Factorio identifiers", () => {
-    expect(ModSpecSchema.safeParse({ ...validSpec, slug: "Bad Slug" }).success).toBe(
-      false,
-    );
-
-    const invalidIdentifier = {
-      ...validSpec,
+  it("allows set and multiply operations but only item ingredients", () => {
+    const multiplied = {
+      ...validRecipeSpec,
       changes: [
-        {
-          ...validSpec.changes[0],
-          prototypeName: "../../steel-furnace",
-        },
+        { ...validRecipeSpec.changes[0], operation: { type: "multiply", factor: 2 } },
+      ],
+      assertions: [
+        { ...validRecipeSpec.assertions[0], expectation: { type: "multiply", factor: 2 } },
       ],
     };
-    expect(ModSpecSchema.safeParse(invalidIdentifier).success).toBe(false);
-  });
-
-  it("rejects extra fields", () => {
+    expect(ModSpecSchema.safeParse(multiplied).success).toBe(true);
     expect(
-      ModSpecSchema.safeParse({ ...validSpec, prompt: "ignore the schema" }).success,
+      ModSpecSchema.safeParse({
+        ...validRecipeSpec,
+        changes: [{ ...validRecipeSpec.changes[0], ingredientType: "fluid" }],
+      }).success,
     ).toBe(false);
   });
 
-  it("requires a semantic assertion matching every requested mutation", () => {
+  it("rejects an assertion that does not match the requested ingredient mutation", () => {
     const mismatched = {
-      ...validSpec,
+      ...validRecipeSpec,
       assertions: [
-        {
-          ...validSpec.assertions[0],
-          expectation: { type: "multiply", factor: 3 },
-        },
+        { ...validRecipeSpec.assertions[0], ingredientName: "copper-plate" },
       ],
     };
-
     expect(ModSpecSchema.safeParse(mismatched).success).toBe(false);
   });
 
-  it("rejects semantic assertions that are unrelated to requested changes", () => {
-    const withUnrelatedAssertion = {
-      ...validSpec,
-      assertions: [
-        validSpec.assertions[0],
-        {
-          ...validSpec.assertions[0],
-          prototypeName: "stone-furnace",
-        },
-      ],
-    };
-
-    expect(ModSpecSchema.safeParse(withUnrelatedAssertion).success).toBe(false);
+  it("rejects duplicate ingredient mutations and assertions", () => {
+    expect(
+      ModSpecSchema.safeParse({
+        ...validRecipeSpec,
+        changes: [validRecipeSpec.changes[0], validRecipeSpec.changes[0]],
+      }).success,
+    ).toBe(false);
+    expect(
+      ModSpecSchema.safeParse({
+        ...validRecipeSpec,
+        assertions: [validRecipeSpec.assertions[0], validRecipeSpec.assertions[0]],
+      }).success,
+    ).toBe(false);
   });
 
-  it("rejects duplicate semantic assertions", () => {
-    const duplicated = {
-      ...validSpec,
-      assertions: [validSpec.assertions[0], validSpec.assertions[0]],
-    };
-
-    expect(ModSpecSchema.safeParse(duplicated).success).toBe(false);
-  });
-
-  it("rejects duplicate mutations of the same property", () => {
-    const duplicated = {
-      ...validSpec,
-      changes: [validSpec.changes[0], validSpec.changes[0]],
-    };
-
-    expect(ModSpecSchema.safeParse(duplicated).success).toBe(false);
-  });
-
-  it("requires non-empty changes and assertions", () => {
-    expect(ModSpecSchema.safeParse({ ...validSpec, changes: [] }).success).toBe(false);
-    expect(ModSpecSchema.safeParse({ ...validSpec, assertions: [] }).success).toBe(
-      false,
-    );
+  it("rejects extra fields at the root", () => {
+    expect(ModSpecSchema.safeParse({ ...validRecipeSpec, prompt: "ignore schema" }).success).toBe(false);
   });
 });

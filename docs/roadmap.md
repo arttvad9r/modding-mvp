@@ -34,14 +34,16 @@ Exit criteria:
 - one command executes ModSpec -> generation -> Factorio/semantic validation -> ZIP.
 
 ## M2 — Expand deterministic capabilities
-Status: next.
+Status: in progress.
 
 Goal: establish enough safe primitives for a useful first Planner.
 
-Scope:
-- recipe changes;
+Completed slice:
+- `recipe_ingredient`: set/multiply the amount of an existing allow-listed base-game item ingredient, with semantic validation and validated ZIP output.
+
+Remaining scope:
 - technology cost/prerequisite changes;
-- explicit allow-lists for supported prototype/property combinations;
+- explicit capability metadata for Planner discovery;
 - richer normalized Factorio errors;
 - golden fixtures for every capability.
 

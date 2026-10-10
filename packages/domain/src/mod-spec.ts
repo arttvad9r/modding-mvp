@@ -27,6 +27,12 @@ export const ScalarOperationSchema = z.discriminatedUnion("type", [
   MultiplyOperationSchema,
 ]);
 
+const baseSpecFields = {
+  title: z.string().trim().min(1).max(120),
+  slug: z.string().min(1).max(80).regex(safeSlug),
+  target: GameTargetSchema,
+} as const;
+
 const prototypeAddressFields = {
   prototypeType: z.string().min(1).max(80).regex(factorioIdentifier),
   prototypeName: z.string().min(1).max(160).regex(factorioIdentifier),
@@ -45,13 +51,23 @@ export const PrototypePropertyAssertionSchema = z.strictObject({
   expectation: ScalarOperationSchema,
 });
 
-function mutationKey(value: {
-  prototypeType: string;
-  prototypeName: string;
-  property: string;
-}) {
-  return `${value.prototypeType}\u0000${value.prototypeName}\u0000${value.property}`;
-}
+const recipeIngredientAddressFields = {
+  recipeName: z.string().min(1).max(160).regex(factorioIdentifier),
+  ingredientType: z.literal("item"),
+  ingredientName: z.string().min(1).max(160).regex(factorioIdentifier),
+} as const;
+
+export const RecipeIngredientChangeSchema = z.strictObject({
+  type: z.literal("recipe_ingredient"),
+  ...recipeIngredientAddressFields,
+  operation: ScalarOperationSchema,
+});
+
+export const RecipeIngredientAssertionSchema = z.strictObject({
+  type: z.literal("recipe_ingredient_matches"),
+  ...recipeIngredientAddressFields,
+  expectation: ScalarOperationSchema,
+});
 
 function operationKey(operation: z.infer<typeof ScalarOperationSchema>) {
   return operation.type === "set"
@@ -59,80 +75,111 @@ function operationKey(operation: z.infer<typeof ScalarOperationSchema>) {
     : `multiply:${operation.factor}`;
 }
 
-function semanticKey(
-  address: {
-    prototypeType: string;
-    prototypeName: string;
-    property: string;
-  },
-  operation: z.infer<typeof ScalarOperationSchema>,
-) {
-  return `${mutationKey(address)}\u0000${operationKey(operation)}`;
+function addSemanticIssues<TChange, TAssertion>(
+  changes: readonly TChange[],
+  assertions: readonly TAssertion[],
+  changeAddress: (value: TChange) => string,
+  assertionAddress: (value: TAssertion) => string,
+  changeOperation: (value: TChange) => z.infer<typeof ScalarOperationSchema>,
+  assertionOperation: (value: TAssertion) => z.infer<typeof ScalarOperationSchema>,
+  ctx: z.RefinementCtx,
+  duplicateMessage: string,
+): void {
+  const changeAddresses = new Set<string>();
+  const expectedSemantics = new Set<string>();
+
+  for (const [index, change] of changes.entries()) {
+    const address = changeAddress(change);
+    if (changeAddresses.has(address)) {
+      ctx.addIssue({ code: "custom", path: ["changes", index], message: duplicateMessage });
+    }
+    changeAddresses.add(address);
+    expectedSemantics.add(`${address}\u0000${operationKey(changeOperation(change))}`);
+  }
+
+  const seenAssertions = new Set<string>();
+  for (const [index, assertion] of assertions.entries()) {
+    const key = `${assertionAddress(assertion)}\u0000${operationKey(assertionOperation(assertion))}`;
+    if (seenAssertions.has(key)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["assertions", index],
+        message: "Duplicate semantic assertion",
+      });
+    }
+    seenAssertions.add(key);
+    if (!expectedSemantics.has(key)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["assertions", index],
+        message: "Assertion does not match a requested change",
+      });
+    }
+  }
+
+  for (const [index, change] of changes.entries()) {
+    const expected = `${changeAddress(change)}\u0000${operationKey(changeOperation(change))}`;
+    if (!seenAssertions.has(expected)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["assertions"],
+        message: `Missing matching assertion for change ${index}`,
+      });
+    }
+  }
 }
 
-export const ModSpecSchema = z
+export const PrototypePropertyModSpecSchema = z
   .strictObject({
-    title: z.string().trim().min(1).max(120),
-    slug: z.string().min(1).max(80).regex(safeSlug),
-    target: GameTargetSchema,
+    ...baseSpecFields,
     capability: z.literal("prototype_property"),
     changes: z.array(PrototypePropertyChangeSchema).min(1).max(16),
     assertions: z.array(PrototypePropertyAssertionSchema).min(1).max(16),
   })
   .superRefine((spec, ctx) => {
-    const changeAddresses = new Set<string>();
-    const expectedSemantics = new Set<string>();
-
-    for (const [index, change] of spec.changes.entries()) {
-      const address = mutationKey(change);
-      if (changeAddresses.has(address)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["changes", index],
-          message: "Duplicate prototype property change",
-        });
-      }
-      changeAddresses.add(address);
-      expectedSemantics.add(semanticKey(change, change.operation));
-    }
-
-    const seenAssertions = new Set<string>();
-    for (const [index, assertion] of spec.assertions.entries()) {
-      const key = semanticKey(assertion, assertion.expectation);
-      if (seenAssertions.has(key)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["assertions", index],
-          message: "Duplicate semantic assertion",
-        });
-      }
-      seenAssertions.add(key);
-
-      if (!expectedSemantics.has(key)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["assertions", index],
-          message: "Assertion does not match a requested change",
-        });
-      }
-    }
-
-    for (const [index, change] of spec.changes.entries()) {
-      const expected = semanticKey(change, change.operation);
-      if (!seenAssertions.has(expected)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["assertions"],
-          message: `Missing matching assertion for change ${index}`,
-        });
-      }
-    }
+    addSemanticIssues(
+      spec.changes,
+      spec.assertions,
+      (value) => `${value.prototypeType}\u0000${value.prototypeName}\u0000${value.property}`,
+      (value) => `${value.prototypeType}\u0000${value.prototypeName}\u0000${value.property}`,
+      (value) => value.operation,
+      (value) => value.expectation,
+      ctx,
+      "Duplicate prototype property change",
+    );
   });
+
+export const RecipeIngredientModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("recipe_ingredient"),
+    changes: z.array(RecipeIngredientChangeSchema).min(1).max(16),
+    assertions: z.array(RecipeIngredientAssertionSchema).min(1).max(16),
+  })
+  .superRefine((spec, ctx) => {
+    addSemanticIssues(
+      spec.changes,
+      spec.assertions,
+      (value) => `${value.recipeName}\u0000${value.ingredientType}\u0000${value.ingredientName}`,
+      (value) => `${value.recipeName}\u0000${value.ingredientType}\u0000${value.ingredientName}`,
+      (value) => value.operation,
+      (value) => value.expectation,
+      ctx,
+      "Duplicate recipe ingredient change",
+    );
+  });
+
+export const ModSpecSchema = z.union([
+  PrototypePropertyModSpecSchema,
+  RecipeIngredientModSpecSchema,
+]);
 
 export type GameTarget = z.infer<typeof GameTargetSchema>;
 export type ScalarOperation = z.infer<typeof ScalarOperationSchema>;
 export type PrototypePropertyChange = z.infer<typeof PrototypePropertyChangeSchema>;
-export type PrototypePropertyAssertion = z.infer<
-  typeof PrototypePropertyAssertionSchema
->;
+export type PrototypePropertyAssertion = z.infer<typeof PrototypePropertyAssertionSchema>;
+export type RecipeIngredientChange = z.infer<typeof RecipeIngredientChangeSchema>;
+export type RecipeIngredientAssertion = z.infer<typeof RecipeIngredientAssertionSchema>;
+export type PrototypePropertyModSpec = z.infer<typeof PrototypePropertyModSpecSchema>;
+export type RecipeIngredientModSpec = z.infer<typeof RecipeIngredientModSpecSchema>;
 export type ModSpec = z.infer<typeof ModSpecSchema>;

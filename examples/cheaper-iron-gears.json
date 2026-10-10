@@ -1,0 +1,34 @@
+{
+  "title": "Cheaper iron gears",
+  "slug": "cheaper-iron-gears",
+  "target": {
+    "game": "factorio",
+    "channel": "stable",
+    "versionLine": "2.0"
+  },
+  "capability": "recipe_ingredient",
+  "changes": [
+    {
+      "type": "recipe_ingredient",
+      "recipeName": "iron-gear-wheel",
+      "ingredientType": "item",
+      "ingredientName": "iron-plate",
+      "operation": {
+        "type": "set",
+        "value": 1
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "type": "recipe_ingredient_matches",
+      "recipeName": "iron-gear-wheel",
+      "ingredientType": "item",
+      "ingredientName": "iron-plate",
+      "expectation": {
+        "type": "set",
+        "value": 1
+      }
+    }
+  ]
+}

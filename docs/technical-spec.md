@@ -18,16 +18,20 @@ Minimum fields planned for M1:
 - expected assertions/tests;
 - capability identifier.
 
-Current M1 change type:
-- `prototype_property`.
+Implemented capability-specific ModSpec variants:
+- `prototype_property` — scalar mutation of an allow-listed prototype property;
+- `recipe_ingredient` — amount mutation of an existing allow-listed item ingredient in an existing base-game recipe.
 
 Planned M2 extensions:
-- recipe changes;
 - technology cost/prerequisite changes.
 
-Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned.
+A single ModSpec uses exactly one capability family. Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned.
 
-For the first deterministic generator slice, `packages/factorio-generator` supports `crafting_speed` on the base-game stone, steel, and electric furnace prototypes. The allow-list stores the pinned base value for each supported address so relative operations such as `multiply` can be converted into an absolute semantic expectation. The generator validates ModSpec at entry, rejects unsupported addresses, emits deterministic metadata (`version` 0.1.0), and renders guarded numeric prototype mutations without using unchecked Lua identifiers.
+For `prototype_property`, `packages/factorio-generator` supports `crafting_speed` on the base-game stone, steel, and electric furnace prototypes. The allow-list stores the pinned base value for each supported address so relative operations such as `multiply` can be converted into an absolute semantic expectation.
+
+For `recipe_ingredient`, M2 initially supports existing item ingredients only. The versioned allow-list stores the recipe, ingredient type/name, and base amount. `set` and `multiply` are supported only when the resulting item amount is an integer in `1..65535`; invalid amounts fail before Factorio execution. The generator locates the named ingredient inside `data.raw["recipe"][recipe].ingredients` and mutates only its `amount`. New ingredients, ingredient removal, fluids, and recipe products are outside this first recipe capability.
+
+Official prototype reference: `RecipePrototype::ingredients` and `ItemIngredientPrototype::amount` in the Factorio prototype documentation.
 
 ### Generated file manifest
 The Generator returns a bounded manifest rather than direct filesystem or shell operations:
@@ -71,7 +75,9 @@ Examples:
 - expected recipe ingredients/results match the specification;
 - expected technology prerequisites/cost match the specification.
 
-For the current `prototype_property` capability, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
+For the current deterministic capabilities, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment.
+
+`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
 
 ## Deterministic local build command
 `pnpm mod:build -- <mod-spec.json> [output-directory]` performs:
@@ -81,7 +87,9 @@ For the current `prototype_property` capability, the generator returns semantic 
 4. real Factorio load plus semantic validation;
 5. ZIP creation only after validation succeeds.
 
-The included `examples/faster-steel-furnace.json` is the reference M1 input.
+Reference deterministic inputs:
+- `examples/faster-steel-furnace.json` — M1 `prototype_property`;
+- `examples/cheaper-iron-gears.json` — M2 `recipe_ingredient`.
 
 ## Repair loop
 A Repair step receives:
