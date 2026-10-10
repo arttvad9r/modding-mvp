@@ -1,6 +1,7 @@
 import type {
   PrototypePropertyChange,
   RecipeIngredientChange,
+  TechnologyCostChange,
 } from "@project/domain";
 
 export interface SupportedPrototypeProperty {
@@ -15,6 +16,11 @@ export interface SupportedRecipeIngredient {
   readonly ingredientType: "item";
   readonly ingredientName: string;
   readonly baseAmount: number;
+}
+
+export interface SupportedTechnologyCost {
+  readonly technologyName: string;
+  readonly baseCount: number;
 }
 
 const supportedPrototypeProperties = new Map<string, SupportedPrototypeProperty>([
@@ -59,6 +65,14 @@ const supportedRecipeIngredients = new Map<string, SupportedRecipeIngredient>([
   ],
 ]);
 
+const supportedTechnologyCosts = new Map<string, SupportedTechnologyCost>([
+  ["automation", { technologyName: "automation", baseCount: 10 }],
+  ["automation-2", { technologyName: "automation-2", baseCount: 40 }],
+  ["logistics", { technologyName: "logistics", baseCount: 20 }],
+  ["steel-processing", { technologyName: "steel-processing", baseCount: 50 }],
+  ["logistic-science-pack", { technologyName: "logistic-science-pack", baseCount: 75 }],
+]);
+
 function prototypeSupportKey(change: PrototypePropertyChange) {
   return `${change.prototypeType}\u0000${change.prototypeName}\u0000${change.property}`;
 }
@@ -97,4 +111,18 @@ export function getSupportedRecipeIngredient(
 
 export function assertSupportedRecipeIngredient(change: RecipeIngredientChange): void {
   getSupportedRecipeIngredient(change);
+}
+
+export function getSupportedTechnologyCost(
+  change: TechnologyCostChange,
+): SupportedTechnologyCost {
+  const supported = supportedTechnologyCosts.get(change.technologyName);
+  if (!supported) {
+    throw new Error(`Unsupported technology cost: ${change.technologyName}`);
+  }
+  return supported;
+}
+
+export function assertSupportedTechnologyCost(change: TechnologyCostChange): void {
+  getSupportedTechnologyCost(change);
 }

@@ -3,7 +3,7 @@
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 is complete. M2 — expand deterministic capabilities — is in progress; the first completed M2 slice is deterministic `recipe_ingredient` mutation.
+M1 is complete. M2 — expand deterministic capabilities — is in progress; completed M2 slices now include deterministic `recipe_ingredient` and `technology_cost` mutations.
 
 ## Target product pipeline
 
@@ -28,7 +28,7 @@ See ADR-0003 for why real Factorio is the validation authority.
 ## Implemented deterministic artifact boundary
 The current deterministic core provides:
 - `packages/domain` for typed ModSpec and generated-file manifest contracts;
-- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation on base-game furnace `crafting_speed` and allow-listed recipe item ingredient amounts;
+- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation on base-game furnace `crafting_speed`, allow-listed recipe item ingredient amounts, and allow-listed finite technology research costs;
 - semantic assertion Lua generated separately from the user artifact;
 - `packages/factorio-harness` temporary companion validator mod and structured semantic failure classification;
 - temporary-only manifest materialization;

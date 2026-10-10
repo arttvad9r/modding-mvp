@@ -69,6 +69,22 @@ export const RecipeIngredientAssertionSchema = z.strictObject({
   expectation: ScalarOperationSchema,
 });
 
+const technologyAddressFields = {
+  technologyName: z.string().min(1).max(160).regex(factorioIdentifier),
+} as const;
+
+export const TechnologyCostChangeSchema = z.strictObject({
+  type: z.literal("technology_cost"),
+  ...technologyAddressFields,
+  operation: ScalarOperationSchema,
+});
+
+export const TechnologyCostAssertionSchema = z.strictObject({
+  type: z.literal("technology_cost_matches"),
+  ...technologyAddressFields,
+  expectation: ScalarOperationSchema,
+});
+
 function operationKey(operation: z.infer<typeof ScalarOperationSchema>) {
   return operation.type === "set"
     ? `set:${operation.value}`
@@ -169,9 +185,30 @@ export const RecipeIngredientModSpecSchema = z
     );
   });
 
+export const TechnologyCostModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("technology_cost"),
+    changes: z.array(TechnologyCostChangeSchema).min(1).max(16),
+    assertions: z.array(TechnologyCostAssertionSchema).min(1).max(16),
+  })
+  .superRefine((spec, ctx) => {
+    addSemanticIssues(
+      spec.changes,
+      spec.assertions,
+      (value) => value.technologyName,
+      (value) => value.technologyName,
+      (value) => value.operation,
+      (value) => value.expectation,
+      ctx,
+      "Duplicate technology cost change",
+    );
+  });
+
 export const ModSpecSchema = z.union([
   PrototypePropertyModSpecSchema,
   RecipeIngredientModSpecSchema,
+  TechnologyCostModSpecSchema,
 ]);
 
 export type GameTarget = z.infer<typeof GameTargetSchema>;
@@ -180,6 +217,9 @@ export type PrototypePropertyChange = z.infer<typeof PrototypePropertyChangeSche
 export type PrototypePropertyAssertion = z.infer<typeof PrototypePropertyAssertionSchema>;
 export type RecipeIngredientChange = z.infer<typeof RecipeIngredientChangeSchema>;
 export type RecipeIngredientAssertion = z.infer<typeof RecipeIngredientAssertionSchema>;
+export type TechnologyCostChange = z.infer<typeof TechnologyCostChangeSchema>;
+export type TechnologyCostAssertion = z.infer<typeof TechnologyCostAssertionSchema>;
 export type PrototypePropertyModSpec = z.infer<typeof PrototypePropertyModSpecSchema>;
 export type RecipeIngredientModSpec = z.infer<typeof RecipeIngredientModSpecSchema>;
+export type TechnologyCostModSpec = z.infer<typeof TechnologyCostModSpecSchema>;
 export type ModSpec = z.infer<typeof ModSpecSchema>;

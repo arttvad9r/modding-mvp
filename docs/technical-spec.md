@@ -20,10 +20,11 @@ Minimum fields planned for M1:
 
 Implemented capability-specific ModSpec variants:
 - `prototype_property` — scalar mutation of an allow-listed prototype property;
-- `recipe_ingredient` — amount mutation of an existing allow-listed item ingredient in an existing base-game recipe.
+- `recipe_ingredient` — amount mutation of an existing allow-listed item ingredient in an existing base-game recipe;
+- `technology_cost` — mutation of finite research `unit.count` for an allow-listed base-game technology.
 
-Planned M2 extensions:
-- technology cost/prerequisite changes.
+Planned M2 extension:
+- technology prerequisite changes.
 
 A single ModSpec uses exactly one capability family. Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned.
 
@@ -31,7 +32,9 @@ For `prototype_property`, `packages/factorio-generator` supports `crafting_speed
 
 For `recipe_ingredient`, M2 initially supports existing item ingredients only. The versioned allow-list stores the recipe, ingredient type/name, and base amount. `set` and `multiply` are supported only when the resulting item amount is an integer in `1..65535`; invalid amounts fail before Factorio execution. The generator locates the named ingredient inside `data.raw["recipe"][recipe].ingredients` and mutates only its `amount`. New ingredients, ingredient removal, fluids, and recipe products are outside this first recipe capability.
 
-Official prototype reference: `RecipePrototype::ingredients` and `ItemIngredientPrototype::amount` in the Factorio prototype documentation.
+For `technology_cost`, M2 supports allow-listed technologies with a finite numeric `unit.count`. Baselines are read from the pinned Factorio 2.0.77 base data. `set` and `multiply` are accepted only when the resulting count is a positive safe integer. Technologies using `count_formula` are intentionally outside this first technology capability.
+
+Official prototype references: `RecipePrototype::ingredients`, `ItemIngredientPrototype::amount`, and `TechnologyUnit::count` in the Factorio prototype documentation.
 
 ### Generated file manifest
 The Generator returns a bounded manifest rather than direct filesystem or shell operations:
@@ -77,7 +80,7 @@ Examples:
 
 For the current deterministic capabilities, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment.
 
-`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
+`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
 
 ## Deterministic local build command
 `pnpm mod:build -- <mod-spec.json> [output-directory]` performs:
@@ -89,7 +92,8 @@ For the current deterministic capabilities, the generator returns semantic asser
 
 Reference deterministic inputs:
 - `examples/faster-steel-furnace.json` — M1 `prototype_property`;
-- `examples/cheaper-iron-gears.json` — M2 `recipe_ingredient`.
+- `examples/cheaper-iron-gears.json` — M2 `recipe_ingredient`;
+- `examples/double-automation-research-cost.json` — M2 `technology_cost`.
 
 ## Repair loop
 A Repair step receives:

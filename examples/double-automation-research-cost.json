@@ -1,0 +1,30 @@
+{
+  "title": "Double automation research cost",
+  "slug": "double-automation-research-cost",
+  "target": {
+    "game": "factorio",
+    "channel": "stable",
+    "versionLine": "2.0"
+  },
+  "capability": "technology_cost",
+  "changes": [
+    {
+      "type": "technology_cost",
+      "technologyName": "automation",
+      "operation": {
+        "type": "multiply",
+        "factor": 2
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "type": "technology_cost_matches",
+      "technologyName": "automation",
+      "expectation": {
+        "type": "multiply",
+        "factor": 2
+      }
+    }
+  ]
+}

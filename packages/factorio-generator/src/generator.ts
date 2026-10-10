@@ -8,19 +8,24 @@ import {
   type RecipeIngredientAssertion,
   type RecipeIngredientChange,
   type ScalarOperation,
+  type TechnologyCostAssertion,
+  type TechnologyCostChange,
 } from "@project/domain";
 
 import {
   assertSupportedPrototypeProperty,
   assertSupportedRecipeIngredient,
+  assertSupportedTechnologyCost,
   getSupportedPrototypeProperty,
   getSupportedRecipeIngredient,
+  getSupportedTechnologyCost,
 } from "./supported.js";
 
 const GENERATED_VERSION = "0.1.0";
 const GENERATED_AUTHOR = "Generated mod";
 const SEMANTIC_MARKER = "__PROJECT_SEMANTIC_ASSERTION__";
 const MAX_ITEM_INGREDIENT_AMOUNT = 65_535;
+const MAX_SAFE_INTEGER_VALUE = Number.MAX_SAFE_INTEGER;
 const safeLuaIdentifier = /^[A-Za-z0-9_-]+$/;
 const safeLuaProperty = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const controlCharacter = /[\u0000-\u001f\u007f]/;
@@ -79,9 +84,16 @@ function expectedItemIngredientAmount(operation: ScalarOperation, baseAmount: nu
   return expected;
 }
 
+function expectedTechnologyCount(operation: ScalarOperation, baseCount: number): number {
+  const expected = applyOperation(operation, baseCount);
+  if (!Number.isSafeInteger(expected) || expected < 1 || expected > MAX_SAFE_INTEGER_VALUE) {
+    throw new Error(`Technology count must be a positive safe integer; got ${expected}`);
+  }
+  return expected;
+}
+
 function renderPrototypePropertyChange(change: PrototypePropertyChange): string {
   assertSupportedPrototypeProperty(change);
-
   const type = quoteLuaIdentifier(change.prototypeType, "identifier");
   const name = quoteLuaIdentifier(change.prototypeName, "identifier");
   const property = quoteLuaIdentifier(change.property, "property");
@@ -104,7 +116,6 @@ function renderPrototypePropertyChange(change: PrototypePropertyChange): string 
 function renderRecipeIngredientChange(change: RecipeIngredientChange): string {
   const supported = getSupportedRecipeIngredient(change);
   expectedItemIngredientAmount(change.operation, supported.baseAmount);
-
   const recipeName = quoteLuaIdentifier(change.recipeName, "identifier");
   const ingredientName = quoteLuaIdentifier(change.ingredientName, "identifier");
   const missingRecipe = quoteLuaText(`Missing recipe ${change.recipeName}`);
@@ -129,6 +140,25 @@ function renderRecipeIngredientChange(change: RecipeIngredientChange): string {
     `  assert(ingredient, ${missingIngredient})`,
     `  assert(type(ingredient.amount) == \"number\", ${nonNumeric})`,
     `  ingredient.amount = ${renderOperation(change.operation, "ingredient.amount")}`,
+    "end",
+  ].join("\n");
+}
+
+function renderTechnologyCostChange(change: TechnologyCostChange): string {
+  const supported = getSupportedTechnologyCost(change);
+  expectedTechnologyCount(change.operation, supported.baseCount);
+  const technologyName = quoteLuaIdentifier(change.technologyName, "identifier");
+  const missingTechnology = quoteLuaText(`Missing technology ${change.technologyName}`);
+  const missingUnit = quoteLuaText(`Missing technology unit ${change.technologyName}`);
+  const nonNumeric = quoteLuaText(`Expected numeric technology count ${change.technologyName}`);
+
+  return [
+    "do",
+    `  local technology = data.raw[\"technology\"] and data.raw[\"technology\"][${technologyName}]`,
+    `  assert(technology, ${missingTechnology})`,
+    `  assert(technology.unit, ${missingUnit})`,
+    `  assert(type(technology.unit.count) == \"number\", ${nonNumeric})`,
+    `  technology.unit.count = ${renderOperation(change.operation, "technology.unit.count")}`,
     "end",
   ].join("\n");
 }
@@ -195,20 +225,52 @@ function renderRecipeIngredientAssertion(assertion: RecipeIngredientAssertion): 
   ].join("\n");
 }
 
+function renderTechnologyCostAssertion(assertion: TechnologyCostAssertion): string {
+  const supported = getSupportedTechnologyCost({
+    type: "technology_cost",
+    technologyName: assertion.technologyName,
+    operation: assertion.expectation,
+  });
+  const expected = expectedTechnologyCount(assertion.expectation, supported.baseCount);
+  const technologyName = quoteLuaIdentifier(assertion.technologyName, "identifier");
+  const markerPrefix = quoteLuaText(
+    `${SEMANTIC_MARKER}|technology.${assertion.technologyName}.unit.count|expected=${expected}|actual=`,
+  );
+
+  return [
+    "do",
+    `  local technology = data.raw[\"technology\"] and data.raw[\"technology\"][${technologyName}]`,
+    "  local actual = technology and technology.unit and technology.unit.count or nil",
+    `  local expected = ${luaNumber(expected)}`,
+    "  if type(actual) ~= \"number\" or actual ~= expected then",
+    `    error(${markerPrefix} .. tostring(actual), 0)`,
+    "  end",
+    "end",
+  ].join("\n");
+}
+
 export function generateFactorioMod(input: ModSpec): GeneratedFactorioMod {
   const spec = ModSpecSchema.parse(input);
 
   let dataLua: string;
   let semanticAssertionLua: string;
 
-  if (spec.capability === "prototype_property") {
-    for (const change of spec.changes) assertSupportedPrototypeProperty(change);
-    dataLua = `${spec.changes.map(renderPrototypePropertyChange).join("\n\n")}\n`;
-    semanticAssertionLua = `${spec.assertions.map(renderPrototypePropertyAssertion).join("\n\n")}\n`;
-  } else {
-    for (const change of spec.changes) assertSupportedRecipeIngredient(change);
-    dataLua = `${spec.changes.map(renderRecipeIngredientChange).join("\n\n")}\n`;
-    semanticAssertionLua = `${spec.assertions.map(renderRecipeIngredientAssertion).join("\n\n")}\n`;
+  switch (spec.capability) {
+    case "prototype_property":
+      for (const change of spec.changes) assertSupportedPrototypeProperty(change);
+      dataLua = `${spec.changes.map(renderPrototypePropertyChange).join("\n\n")}\n`;
+      semanticAssertionLua = `${spec.assertions.map(renderPrototypePropertyAssertion).join("\n\n")}\n`;
+      break;
+    case "recipe_ingredient":
+      for (const change of spec.changes) assertSupportedRecipeIngredient(change);
+      dataLua = `${spec.changes.map(renderRecipeIngredientChange).join("\n\n")}\n`;
+      semanticAssertionLua = `${spec.assertions.map(renderRecipeIngredientAssertion).join("\n\n")}\n`;
+      break;
+    case "technology_cost":
+      for (const change of spec.changes) assertSupportedTechnologyCost(change);
+      dataLua = `${spec.changes.map(renderTechnologyCostChange).join("\n\n")}\n`;
+      semanticAssertionLua = `${spec.assertions.map(renderTechnologyCostAssertion).join("\n\n")}\n`;
+      break;
   }
 
   const info = {

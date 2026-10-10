@@ -66,8 +66,16 @@ Before starting M2:
 - [x] Generate semantic recipe ingredient assertions.
 - [x] Pass at least five recipe fixtures through real Factorio and ZIP packaging.
 
+### Technology cost capability
+- [x] Add `technology_cost` ModSpec capability.
+- [x] Support `set` and `multiply` for finite `unit.count` technologies.
+- [x] Add Factorio 2.0.77 baselines for initial allow-listed technologies.
+- [x] Reject non-positive and non-integer final research counts before Factorio execution.
+- [x] Generate deterministic technology cost mutation Lua.
+- [x] Generate semantic technology cost assertions.
+- [x] Pass five technology fixtures through real Factorio and ZIP packaging.
+
 ### Remaining M2 candidates
-- [ ] Technology cost capability.
 - [ ] Technology prerequisite capability.
 - [ ] Richer Factorio error taxonomy.
 - [ ] Capability registry/metadata for Planner discovery.

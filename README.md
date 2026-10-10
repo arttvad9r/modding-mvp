@@ -12,7 +12,7 @@ The project deliberately starts with prototype-stage modifications and one game.
 - M1 — Deterministic ModSpec engine: complete.
 - M2 — Expand deterministic capabilities: in progress.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 currently adds allow-listed recipe item ingredient amount changes.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 currently adds allow-listed recipe item ingredient amount changes and finite technology research-cost changes.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -58,6 +58,7 @@ A successful run prints structured `PASS`; a Factorio load failure prints struct
 ```bash
 pnpm mod:build -- examples/faster-steel-furnace.json dist
 pnpm mod:build -- examples/cheaper-iron-gears.json dist
+pnpm mod:build -- examples/double-automation-research-cost.json dist
 ```
 
-The first example changes a prototype scalar property; the second changes an existing recipe item ingredient amount. The command validates the ModSpec, generates only allow-listed files in a temporary build directory, runs Factorio plus semantic assertions, and writes an installable ZIP only after validation passes.
+The examples cover a prototype scalar property, an existing recipe item ingredient amount, and a finite technology research-unit count. The command validates the ModSpec, generates only allow-listed files in a temporary build directory, runs Factorio plus semantic assertions, and writes an installable ZIP only after validation passes.
