@@ -1,0 +1,23 @@
+{
+  "name": "@project/worker",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run test/runtime.test.ts",
+    "start": "tsx src/main.ts",
+    "test:service-integration": "vitest run test/service.integration.test.ts"
+  },
+  "dependencies": {
+    "@project/factorio-service-executor": "workspace:*",
+    "@project/llm": "workspace:*",
+    "@project/service-core": "workspace:*",
+    "@project/service-postgres": "workspace:*",
+    "@project/service-s3": "workspace:*"
+  },
+  "devDependencies": {
+    "drizzle-orm": "0.45.4"
+  }
+}

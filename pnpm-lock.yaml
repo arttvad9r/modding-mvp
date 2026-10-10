@@ -21,6 +21,28 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@24.19.2)(tsx@4.23.15)
 
+  apps/worker:
+    dependencies:
+      '@project/factorio-service-executor':
+        specifier: workspace:*
+        version: link:../../packages/factorio-service-executor
+      '@project/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
+      '@project/service-core':
+        specifier: workspace:*
+        version: link:../../packages/service-core
+      '@project/service-postgres':
+        specifier: workspace:*
+        version: link:../../packages/service-postgres
+      '@project/service-s3':
+        specifier: workspace:*
+        version: link:../../packages/service-s3
+    devDependencies:
+      drizzle-orm:
+        specifier: 0.45.4
+        version: 0.45.4(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.1)
+
   packages/agent-core:
     dependencies:
       '@project/domain':

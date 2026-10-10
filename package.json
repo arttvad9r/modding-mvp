@@ -16,7 +16,11 @@
     "planner:eval": "pnpm --filter @project/agent-core eval --",
     "repair:eval": "pnpm --filter @project/agent-core repair:eval --",
     "prompt:build": "pnpm --filter @project/agent-core pipeline --",
-    "prompt:feedback": "pnpm --filter @project/agent-core feedback --"
+    "prompt:feedback": "pnpm --filter @project/agent-core feedback --",
+    "service:infra:up": "docker compose -f infra/compose.integration.yaml up -d --pull missing",
+    "service:infra:down": "docker compose -f infra/compose.integration.yaml down -v --remove-orphans",
+    "test:service-integration": "bash scripts/with-service-infra.sh bash scripts/run-service-integration.sh",
+    "worker:start": "pnpm --filter @project/worker start"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

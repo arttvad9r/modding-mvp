@@ -3,7 +3,7 @@
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 through M5 are complete. The deterministic core has four capability families, a Planner-facing Factorio capability registry, 20 real-runtime E2E fixtures, and a typed cross-pipeline error taxonomy. Planner and Repair are provider-agnostic and pass their live eval gates on Z.ai `glm-5.3-flash`. M5 exposes the complete prompt-to-validated-ZIP flow locally. M6 is in progress: `packages/service-core` defines the durable generation lifecycle, `packages/factorio-service-executor` connects it to M5, and `packages/service-postgres` now provides real PostgreSQL persistence/pg-boss queueing with atomic submission. Worker/API process adapters, auth/rate limits, production storage-provider smoke, and recovery policy remain.
+M1 through M5 are complete. The deterministic core has four capability families, a Planner-facing Factorio capability registry, 20 real-runtime E2E fixtures, and a typed cross-pipeline error taxonomy. Planner and Repair are provider-agnostic and pass their live eval gates on Z.ai `glm-5.3-flash`. M5 exposes the complete prompt-to-validated-ZIP flow locally. M6 is in progress: `packages/service-core` defines the durable generation lifecycle, `packages/factorio-service-executor` connects it to M5, and `packages/service-postgres` now provides real PostgreSQL persistence/pg-boss queueing with atomic submission. The executable pg-boss worker, generation heartbeat/stale recovery, and Docker-backed Postgres/S3-compatible service E2E are implemented. HTTP API, explicit retry/requeue, auth/rate limits, and hosted storage-provider smoke remain.
 
 ## Target product pipeline
 
@@ -79,7 +79,9 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - Successful workers publish the validated ZIP through `ArtifactStore` before persisting `succeeded`; unsupported/failed outcomes do not publish artifacts.
 - `packages/service-postgres` implements a Drizzle/node-postgres repository, versioned migration, pg-boss queue, and transactional `generation row + job` submission using pg-boss `fromDrizzle`.
 - The adapter integration test boots a checksum-pinned user-space PostgreSQL 18.6 server, applies migrations, exercises revision CAS, round-trips pg-boss jobs, and proves enqueue failure rolls back the generation row.
-- `packages/service-s3` implements `ArtifactStore` with AWS SDK v3 PutObject plus short-lived presigned GetObject URLs; permanent public URLs are not persisted. A local HTTP protocol smoke exercises the SDK/presigner path, while the chosen deployment provider still requires its own smoke test.
+- `packages/service-s3` implements `ArtifactStore` with AWS SDK v3 PutObject plus short-lived presigned GetObject URLs; permanent public URLs are not persisted. Both a protocol-level test and Docker S3-compatible server test exercise upload/download bytes; the selected hosted beta provider still requires its own smoke test.
+- `apps/worker` registers a bounded-concurrency pg-boss consumer, invokes `processGenerationJob`, refreshes running-generation heartbeats, periodically recovers stale running records, and wires production env configuration to Postgres/S3/LLM/Factorio adapters.
+- `infra/compose.integration.yaml` plus `pnpm test:service-integration` prove the full infrastructure path with Docker PostgreSQL and S3Mock while using real Factorio and a fake typed Planner provider.
 - ADR-0011 defines the asynchronous service boundary. ADR-0012 selects PostgreSQL + Drizzle/node-postgres + pg-boss and private S3-compatible object storage for the private-beta adapters.
 
 ## Planned package/application boundaries

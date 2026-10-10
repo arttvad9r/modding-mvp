@@ -128,16 +128,18 @@ Completed first slice:
 - `packages/service-postgres` with Drizzle migration, revision-CAS repository, pg-boss queue, and atomic record+job submission;
 - checksum-pinned PostgreSQL 18.6 local integration runtime proving migration/CAS/queue/transaction rollback;
 - `packages/service-s3` private ZIP artifact adapter with safe key/name validation and 30–900 second presigned GET URLs;
-- AWS SDK HTTP integration smoke proving PutObject + signed GetObject byte round-trip;
+- AWS SDK HTTP integration smoke plus Docker-backed S3-compatible PutObject/presigned-GetObject byte round-trip;
 - initial HTTP/service contract in `docs/service-contract.md`;
 - ADR-0011 asynchronous service/worker boundary;
-- ADR-0012 PostgreSQL + Drizzle/node-postgres + pg-boss + S3-compatible storage default.
+- ADR-0012 PostgreSQL + Drizzle/node-postgres + pg-boss + S3-compatible storage default;
+- `apps/worker` executable pg-boss consumer with generation heartbeats/stale recovery;
+- Docker-backed full service integration proving atomic submit -> worker -> real Factorio -> object storage -> persisted success -> presigned download.
 
 Remaining scope:
-- worker adapter from M5 pipeline to `GenerationExecutor`;
 - HTTP API/web surface;
+- explicit retry/requeue policy;
 - basic authentication and rate limiting;
-- private deployment and operational recovery policy;
+- private deployment and smoke against the selected hosted S3-compatible provider;
 - 30+ testers target.
 
 Exit criteria are the product hypotheses in `product-spec.md`, especially success rate, false-success rate, repeat usage, and willingness to pay.

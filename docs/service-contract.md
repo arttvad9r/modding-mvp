@@ -55,7 +55,7 @@ A successful generation stores a private object reference such as `generations/<
 
 ## Service ports
 
-`packages/service-core` defines infrastructure-neutral ports. `packages/service-postgres` implements the PostgreSQL repository/queue paths and provides an atomic submission store that joins Drizzle and pg-boss in one database transaction:
+`packages/service-core` defines infrastructure-neutral ports. `packages/service-postgres` implements the PostgreSQL repository/queue paths and provides an atomic submission store that joins Drizzle and pg-boss in one database transaction. `apps/worker` is the executable pg-boss consumer and `packages/service-s3` is the private object-store adapter:
 - `GenerationRepository` — durable records plus revision-based compare-and-set updates;
 - `GenerationQueue` — enqueue versioned generation jobs;
 - `ArtifactStore` — publish validated ZIP bytes and return serializable object metadata;

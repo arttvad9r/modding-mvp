@@ -69,6 +69,8 @@ Small refactors, implementation details, and patch dependency upgrades normally 
 - `pnpm repair:eval`
 - `pnpm prompt:build -- "<request>"`
 - `pnpm prompt:feedback -- <generation-id> <up|down> [note]`
+- `pnpm test:service-integration`
+- `pnpm worker:start`
 
 ## Definition of done
 A task is done only when:

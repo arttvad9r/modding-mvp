@@ -16,7 +16,7 @@ The project deliberately starts with prototype-stage modifications and one game.
 - M5 — Local end-to-end prototype: complete.
 - M6 — Private beta service: in progress.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 is in progress: `packages/service-core` defines the asynchronous API/worker lifecycle, `packages/factorio-service-executor` connects workers to the validated M5 pipeline, and `packages/service-postgres` now provides versioned Drizzle migrations, revision-CAS persistence, pg-boss queueing, and atomic generation+job submission verified against real PostgreSQL 18.6. Private S3-compatible artifact storage/presigned downloads are now implemented in `packages/service-s3`; worker/API processes, auth/rate limits, production-provider storage smoke, and recovery policy are next.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 is in progress: `packages/service-core` defines the asynchronous API/worker lifecycle, `packages/factorio-service-executor` connects workers to the validated M5 pipeline, and `packages/service-postgres` now provides versioned Drizzle migrations, revision-CAS persistence, pg-boss queueing, and atomic generation+job submission verified against real PostgreSQL 18.6. `packages/service-s3` implements private S3-compatible artifact storage/presigned downloads, and `apps/worker` now consumes pg-boss jobs with heartbeat/stale recovery. A Docker-backed integration proves atomic submit -> worker -> real Factorio -> object storage -> persisted success -> presigned download. HTTP API, explicit retry/requeue, auth/rate limits, hosted-storage smoke, and deployment remain.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -43,12 +43,15 @@ pnpm postgres:setup
 
 The setup scripts install the pinned Factorio 2.0.77 headless runtime and build PostgreSQL 18.6 for local M6 integration tests under git-ignored `.tools/`; both source archives are checksum-verified. The PostgreSQL runtime is a dev/test dependency, not a production deployment prescription.
 
+Docker-backed M6 service integration uses pinned `postgres:18.6-alpine3.24` plus `adobe/s3mock:5.2.3`. The compose credentials are fixed local-test values only and must never be reused for deployment.
+
 ## Checks
 
 ```bash
 pnpm typecheck
 pnpm test
 pnpm test:integration
+pnpm test:service-integration
 pnpm build
 ```
 
@@ -128,3 +131,19 @@ pnpm prompt:feedback -- <generation-id> up "Installed successfully"
 ```
 
 The recorded M5 live smoke with Z.ai `glm-5.3-flash` completed prompt → Planner → generation → Factorio → ZIP in 5.4 seconds using one Planner attempt and 2,215 model tokens; no Repair was required.
+
+## Private-beta service integration
+
+Run the Docker-backed infrastructure path with:
+
+```bash
+pnpm test:service-integration
+```
+
+The command starts isolated PostgreSQL + S3Mock containers, verifies S3 upload/presigned download, then exercises atomic generation submission through pg-boss and the executable worker using real Factorio. The integration Planner is a typed fake provider so infrastructure tests do not consume external LLM quota. The wrapper removes containers and volumes when the command exits.
+
+Run the real worker with deployment environment variables from `.env.example` using:
+
+```bash
+pnpm worker:start
+```

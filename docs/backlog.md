@@ -188,11 +188,13 @@ Before starting M2:
 - [x] Make PostgreSQL submit persist+enqueue atomic through Drizzle transaction + pg-boss `fromDrizzle`.
 - [x] Add checksum-pinned PostgreSQL 18.6 dev runtime plus real migration/repository/queue/rollback integration tests.
 - [x] Implement private S3-compatible artifact store and bounded presigned download flow through AWS SDK v3.
+- [x] Add Docker-backed S3-compatible integration smoke with upload + presigned download byte round-trip.
 - [ ] Run storage smoke against the actual private-beta S3-compatible provider before deployment.
 
 ### Worker/API
 - [x] Adapt M5 `runLocalFactorioGeneration` into the service `GenerationExecutor` without exposing local `.runs` persistence.
-- [ ] Add worker process consuming generation jobs and preserving typed terminal outcomes/telemetry.
+- [x] Add executable pg-boss worker process consuming generation jobs and preserving typed terminal outcomes/telemetry.
+- [x] Add Docker-backed full service integration: atomic submit -> pg-boss worker -> real Factorio -> S3-compatible upload -> persisted success -> presigned download.
 - [ ] Add `POST /v1/generations`, `GET /v1/generations/:id`, and terminal feedback endpoint.
 - [ ] Add basic authentication and per-user/IP rate limits for private beta.
 - [x] Add running-generation heartbeat and CAS-safe stale-running recovery to retryable `failed`.
