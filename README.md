@@ -74,7 +74,6 @@ Ollama Cloud test run:
 ```bash
 LLM_PROVIDER=ollama-cloud \
 OLLAMA_API_KEY=... \
-OLLAMA_MODEL=<model-id> \
 pnpm prompt:plan -- "Make steel furnaces twice as fast"
 ```
 
@@ -83,17 +82,18 @@ Z.ai general/prepaid API test run:
 ```bash
 LLM_PROVIDER=zai \
 ZAI_API_KEY=... \
-ZAI_MODEL=<model-id> \
 pnpm prompt:plan -- "Make steel furnaces twice as fast"
 ```
 
 For a Z.ai Coding Plan API key, additionally set `ZAI_API_MODE=coding`; the project then uses the coding-only base URL instead of the general API URL. OpenAI remains available with `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
 
+The dev/eval defaults are `deepseek-v4.1-flash:cloud` for Ollama Cloud and `glm-5.3-flash` for Z.ai. Override either with `LLM_MODEL` (or the provider-specific model variable).
+
 The same provider configuration runs the golden Planner corpus:
 
 ```bash
-LLM_PROVIDER=ollama-cloud OLLAMA_API_KEY=... OLLAMA_MODEL=<model-id> pnpm planner:eval
-LLM_PROVIDER=zai ZAI_API_KEY=... ZAI_MODEL=<model-id> pnpm planner:eval
+LLM_PROVIDER=ollama-cloud OLLAMA_API_KEY=... pnpm planner:eval
+LLM_PROVIDER=zai ZAI_API_KEY=... pnpm planner:eval
 ```
 
 The default eval gates are 90% classification accuracy and 80% exact supported-ModSpec semantic accuracy. No live eval result is recorded until a real key/model run is performed.

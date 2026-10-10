@@ -60,6 +60,8 @@ Malformed or registry-invalid model output receives at most one correction retry
 
 Golden Planner evals live under `evals/planner/`. The initial gate is >=90% supported/unsupported classification accuracy and >=80% exact semantic change accuracy on supported cases. These thresholds are development gates, not product KPI claims.
 
+For M3 development/evaluation, provider presets use `glm-5.3-flash` on Z.ai and `deepseek-v4.1-flash:cloud` on Ollama Cloud by default. These are dev/eval defaults only; provider/model selection remains runtime configuration and is not a production architecture commitment.
+
 ### Generated file manifest
 The Generator returns a bounded manifest rather than direct filesystem or shell operations:
 - relative path;

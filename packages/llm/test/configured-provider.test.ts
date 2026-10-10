@@ -14,14 +14,13 @@ describe("createConfiguredLlmProvider", () => {
       {
         LLM_PROVIDER: "ollama-cloud",
         OLLAMA_API_KEY: "test-key",
-        OLLAMA_MODEL: "test-model",
       },
       { fetchImpl: noopFetch },
     );
 
     expect(configured).toMatchObject({
       id: "ollama-cloud",
-      model: "test-model",
+      model: "deepseek-v4.1-flash:cloud",
       baseUrl: "https://ollama.com/v1",
       transport: "chat_completions",
     });
@@ -32,7 +31,6 @@ describe("createConfiguredLlmProvider", () => {
       {
         LLM_PROVIDER: "zai",
         ZAI_API_KEY: "test-key",
-        ZAI_MODEL: "glm-test",
       },
       { fetchImpl: noopFetch },
     );
@@ -40,12 +38,13 @@ describe("createConfiguredLlmProvider", () => {
       {
         LLM_PROVIDER: "z.ai",
         ZAI_API_KEY: "test-key",
-        ZAI_MODEL: "glm-test",
         ZAI_API_MODE: "coding",
       },
       { fetchImpl: noopFetch },
     );
 
+    expect(general.model).toBe("glm-5.3-flash");
+    expect(coding.model).toBe("glm-5.3-flash");
     expect(general.baseUrl).toBe("https://api.z.ai/api/paas/v4");
     expect(coding.baseUrl).toBe("https://api.z.ai/api/coding/paas/v4");
   });

@@ -117,6 +117,7 @@ Before starting M2:
 - [x] Track provider/model/token/cost metadata.
 - [x] Create 24-case golden natural-language prompt eval set.
 - [x] Add reusable eval runner and `pnpm planner:eval`.
+- [x] Set dev/eval provider defaults: Z.ai `glm-5.3-flash`, Ollama Cloud `deepseek-v4.1-flash:cloud`.
 - [x] Add ADR-0009 for the constrained Planner/provider boundary.
 - [ ] Configure Ollama Cloud and/or Z.ai runtime API keys locally and run the golden eval corpus.
 - [ ] Reach classification accuracy >= 90%.

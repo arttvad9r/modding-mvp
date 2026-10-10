@@ -20,6 +20,8 @@ export interface ConfiguredLlmProviderDependencies {
 }
 
 const OLLAMA_CLOUD_BASE_URL = "https://ollama.com/v1";
+const DEFAULT_OLLAMA_CLOUD_MODEL = "deepseek-v4.1-flash:cloud";
+const DEFAULT_ZAI_MODEL = "glm-5.3-flash";
 const ZAI_GENERAL_BASE_URL = "https://api.z.ai/api/paas/v4";
 const ZAI_CODING_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
 
@@ -135,7 +137,8 @@ export function createConfiguredLlmProvider(
 
   if (id === "ollama-cloud") {
     const apiKey = required(env, ["OLLAMA_API_KEY"], "Ollama Cloud API key");
-    const model = required(env, ["LLM_MODEL", "OLLAMA_MODEL"], "Ollama Cloud model");
+    const model =
+      value(env, "LLM_MODEL") ?? value(env, "OLLAMA_MODEL") ?? DEFAULT_OLLAMA_CLOUD_MODEL;
     const baseUrl = value(env, "OLLAMA_BASE_URL") ?? OLLAMA_CLOUD_BASE_URL;
     return {
       id,
@@ -155,7 +158,7 @@ export function createConfiguredLlmProvider(
   }
 
   const apiKey = required(env, ["ZAI_API_KEY"], "Z.ai API key");
-  const model = required(env, ["LLM_MODEL", "ZAI_MODEL"], "Z.ai model");
+  const model = value(env, "LLM_MODEL") ?? value(env, "ZAI_MODEL") ?? DEFAULT_ZAI_MODEL;
   const mode = parseZaiMode(value(env, "ZAI_API_MODE"));
   const baseUrl =
     value(env, "ZAI_BASE_URL") ??
