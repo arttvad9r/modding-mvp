@@ -114,7 +114,7 @@ function sendJson(
 }
 
 function publicGeneration(record: GenerationRecord): Record<string, unknown> {
-  const { userId: _userId, ...rest } = record;
+  const { userId: _userId, baseModSpec: _baseModSpec, ...rest } = record;
   if (record.status !== "succeeded") return rest;
   return {
     ...rest,
@@ -282,6 +282,30 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
           ...(dependencies.now === undefined ? {} : { now: dependencies.now }),
         });
         sendJson(response, 202, { generation: publicGeneration(record) });
+        return;
+      }
+
+      const reviseId = generationIdFromPath(url.pathname, "/revise");
+      if (method === "POST" && reviseId !== null) {
+        await applyRouteLimits(dependencies, context, "create");
+        const current = await findGenerationForUser(dependencies.repository, reviseId, context.user.id);
+        if (current === null) throw new HttpError(404, "not_found", "Generation not found");
+        if (current.status !== "succeeded") {
+          throw new HttpError(409, "not_revisable", "Only successful generations can be revised");
+        }
+        const body = SubmitGenerationRequestSchema.parse(await readJsonBody(request));
+        const revised = await submitGenerationAtomically({
+          submissionStore: dependencies.submissionStore,
+          userId: context.user.id,
+          prompt: body.prompt,
+          sourceGenerationId: current.id,
+          baseModSpec: current.modSpec,
+          ...(dependencies.now === undefined ? {} : { now: dependencies.now }),
+        });
+        sendJson(response, 202, {
+          generation: publicGeneration(revised),
+          revisedFromGenerationId: current.id,
+        });
         return;
       }
 

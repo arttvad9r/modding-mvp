@@ -280,6 +280,7 @@ export async function processGenerationJob(
       await options.executor.execute({
         generationId: claimed.id,
         prompt: claimed.prompt,
+        ...(claimed.baseModSpec === undefined ? {} : { baseModSpec: claimed.baseModSpec }),
       }),
     );
   } catch (error) {

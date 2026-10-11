@@ -284,6 +284,66 @@ describe("private-beta HTTP API", () => {
     expect(api.submissionStore.jobs).toHaveLength(2);
   });
 
+  it("revises only an owned successful generation by creating a new immutable generation", async () => {
+    const api = await startApi();
+    const created = (await (await submit(api)).json()) as { generation: { id: string } };
+    const queued = api.repository.records.get(created.generation.id);
+    if (!queued) throw new Error("Missing queued generation");
+
+    const tooEarly = await fetch(`${api.baseUrl}/v1/generations/${queued.id}/revise`, {
+      method: "POST",
+      headers: auth(api.token),
+      body: JSON.stringify({ prompt: "Also halve Automation research cost" }),
+    });
+    expect(tooEarly.status).toBe(409);
+
+    const succeeded = GenerationRecordSchema.parse({
+      ...queued,
+      revision: 1,
+      status: "succeeded",
+      startedAt: "2026-10-11T00:00:01.000Z",
+      finishedAt: "2026-10-11T00:00:02.000Z",
+      updatedAt: "2026-10-11T00:00:02.000Z",
+      modSpec,
+      artifact: {
+        key: `generations/${queued.id}/faster-steel-furnaces_0.1.0.zip`,
+        fileName: "faster-steel-furnaces_0.1.0.zip",
+        contentType: "application/zip",
+        sizeBytes: 321,
+      },
+      telemetry,
+    });
+    api.repository.records.set(queued.id, succeeded);
+
+    const response = await fetch(`${api.baseUrl}/v1/generations/${queued.id}/revise`, {
+      method: "POST",
+      headers: auth(api.token),
+      body: JSON.stringify({ prompt: "Also halve Automation research cost" }),
+    });
+    expect(response.status).toBe(202);
+    const body = (await response.json()) as {
+      generation: { id: string; status: string; sourceGenerationId?: string; baseModSpec?: unknown };
+      revisedFromGenerationId: string;
+    };
+    expect(body.revisedFromGenerationId).toBe(queued.id);
+    expect(body.generation).toMatchObject({
+      status: "queued",
+      sourceGenerationId: queued.id,
+    });
+    expect(body.generation).not.toHaveProperty("baseModSpec");
+    expect(body.generation.id).not.toBe(queued.id);
+
+    const revised = api.repository.records.get(body.generation.id);
+    expect(revised).toMatchObject({
+      status: "queued",
+      prompt: "Also halve Automation research cost",
+      sourceGenerationId: queued.id,
+      baseModSpec: modSpec,
+    });
+    expect(api.repository.records.get(queued.id)).toEqual(succeeded);
+    expect(api.submissionStore.jobs).toHaveLength(2);
+  });
+
   it("accepts feedback only after terminal state and redirects downloads through a signer", async () => {
     const api = await startApi();
     const created = (await (await submit(api)).json()) as { generation: { id: string } };

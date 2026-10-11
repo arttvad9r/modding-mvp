@@ -19,7 +19,7 @@ The queue message is versioned and contains only:
 
 The persisted **generation record** is a separate versioned contract and is currently `schemaVersion: 2`; v2 adds immutable `userId` ownership. Queue jobs intentionally remain `schemaVersion: 1` because their payload contract is still only the generation ID. User records are separately versioned and currently use schema version 1.
 
-The prompt, ModSpec, telemetry, errors, artifact metadata, and feedback stay in persistent generation state rather than being copied into queue payloads.
+The prompt, ModSpec, telemetry, errors, artifact metadata, and feedback stay in persistent generation state rather than being copied into queue payloads. A follow-up revision generation may additionally carry `sourceGenerationId` and an internal `baseModSpec` snapshot; these fields are loaded by the worker from persistent state and are never copied into the queue job.
 
 ## Initial HTTP shape
 
@@ -36,6 +36,23 @@ Expected behavior:
 - atomically persist status `queued` and enqueue the generation ID when using the PostgreSQL adapter;
 - return `202 Accepted` with the generation record/ID;
 - never run Planner, Factorio, or Repair in the request handler.
+
+### `POST /v1/generations/:id/revise`
+
+Request:
+
+```json
+{ "prompt": "Keep everything else, but make steel furnaces another 25% faster" }
+```
+
+Expected behavior:
+- require ownership and a successful source generation;
+- create a new queued generation rather than reopening the source;
+- copy the source accepted ModSpec into internal `baseModSpec` and retain `sourceGenerationId`;
+- enqueue only the new generation ID;
+- Revision Planner returns the complete resulting typed bundle, after which the standard real-Factorio validation/artifact path runs again.
+
+The public child record may expose `sourceGenerationId` for lineage but never exposes the duplicated internal `baseModSpec` snapshot.
 
 ### `GET /v1/generations/:id`
 
@@ -87,13 +104,14 @@ API rate limits are backed by PostgreSQL fixed-window counters for both user ID 
 - `GET /health/live` — unauthenticated liveness check.
 - `POST /v1/generations` — authenticate, rate-limit, atomically persist+enqueue, return `202`.
 - `GET /v1/generations/:id` — owner-scoped status/result; internal `userId` and object-store key are omitted.
+- `POST /v1/generations/:id/revise` — owner-scoped successful-generation follow-up; creates a new immutable child generation from the accepted ModSpec snapshot.
 - `POST /v1/generations/:id/feedback` — owner-scoped feedback for terminal results only.
 - `POST /v1/generations/:id/retry` — only for owner-scoped `failed` records whose typed error is retryable; creates a new queued generation with the same prompt and leaves the original terminal record unchanged.
 - `GET /v1/generations/:id/download` — owner-scoped 60-second presigned object URL only after success. Default clients receive a `302`; clients sending `Accept: application/json` receive `{ downloadUrl, expiresInSeconds }`, which lets the same-origin tester UI navigate to object storage without forwarding the bearer token.
 - `POST /v1/survey` — authenticated per-user upsert of `{ willingnessToPay: "yes" | "maybe" | "no" }` for the private-beta willingness-to-pay hypothesis.
 
 ## Tester UI
-`GET /` serves the private-beta tester interface from the same `apps/web` process. The page explains the intentionally narrow prototype-stage beta scope, offers known-good example prompts, stores the beta token only in tab-scoped `sessionStorage`, submits prompts through the authenticated API, polls until terminal state, explains unsupported/retryable outcomes, exposes the signed ZIP download on success, records optional up/down feedback, and asks the explicit willingness-to-pay survey after success. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.
+`GET /` serves the private-beta tester interface from the same `apps/web` process. The page explains the intentionally narrow prototype-stage beta scope, offers known-good example prompts, stores the beta token only in tab-scoped `sessionStorage`, submits prompts through the authenticated API, polls until terminal state, explains unsupported/retryable outcomes, exposes the signed ZIP download on success, offers a “Refine this tweak bundle” follow-up form that creates a new revision generation, records optional up/down feedback, and asks the explicit willingness-to-pay survey after success. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.
 
 ## Beta KPI report
 `pnpm beta:kpis` reads the deployment PostgreSQL database, excludes users with `metricsEligible=false` and all of their generations/surveys, and emits one JSON report covering active/provisioned testers, distinct-prompt repeat usage, supported terminal success, direct success without Repair, prompt-to-result and Factorio-validation medians, feedback coverage and the reported false-success proxy, willingness to pay, token/cost coverage, and Repair attempts. The report is observational; it does not mark M6 hypotheses as achieved until real beta data reaches their thresholds.

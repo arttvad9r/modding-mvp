@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { ProjectError } from "@project/domain";
+import { ProjectError, type ModSpec } from "@project/domain";
 import type { LlmJsonRequest, LlmJsonResponse, LlmProvider } from "@project/llm";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -49,6 +49,31 @@ function plannerDraft() {
     ],
   } as const;
 }
+
+const revisionBaseSpec: ModSpec = {
+  title: "Fast start",
+  slug: "fast-start",
+  target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+  capability: "prototype_property",
+  changes: [
+    {
+      type: "prototype_property",
+      prototypeType: "furnace",
+      prototypeName: "steel-furnace",
+      property: "crafting_speed",
+      operation: { type: "multiply", factor: 1.5 },
+    },
+  ],
+  assertions: [
+    {
+      type: "prototype_property_matches",
+      prototypeType: "furnace",
+      prototypeName: "steel-furnace",
+      property: "crafting_speed",
+      expectation: { type: "multiply", factor: 1.5 },
+    },
+  ],
+};
 
 const tempDirectories: string[] = [];
 
@@ -169,6 +194,46 @@ describe("runLocalFactorioGeneration", () => {
       finalDurationMs: 77,
     });
     expect(result.progress.map((event) => event.stage)).toContain("repairing");
+  });
+
+
+  it("revises an accepted ModSpec before deterministic generation and validation", async () => {
+    const root = await tempDirectory();
+    const provider = new SequenceProvider([
+      response({
+        status: "supported",
+        changes: [
+          revisionBaseSpec.changes[0],
+          {
+            type: "technology_cost",
+            technologyName: "automation",
+            operation: { type: "multiply", factor: 0.5 },
+          },
+        ],
+      }, 120, 30),
+    ]);
+    const result = await runLocalFactorioGeneration(
+      {
+        provider,
+        prompt: "Keep the furnace tweak and also halve Automation research cost",
+        baseModSpec: revisionBaseSpec,
+        outputDirectory: path.join(root, "dist"),
+        runDirectory: path.join(root, "runs"),
+      },
+      {
+        generationId: () => "generation-revision",
+        validate: async () => ({ ok: true, durationMs: 88 }),
+      },
+    );
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") throw new Error("expected revised success");
+    expect(result.modSpec.capability).toBe("mixed");
+    expect(result.modSpec.title).toBe(revisionBaseSpec.title);
+    expect(result.modSpec.slug).toBe(revisionBaseSpec.slug);
+    expect(result.modSpec.changes).toHaveLength(2);
+    expect(provider.requests[0]?.schemaName).toBe("factorio_revision_decision");
+    expect(result.progress[0]?.message).toContain("follow-up revision");
   });
 
   it("returns a terminal typed failure without invoking Repair for process errors", async () => {

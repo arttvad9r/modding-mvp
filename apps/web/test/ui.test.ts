@@ -42,6 +42,9 @@ describe("private-beta tester UI", () => {
       expect(html).toContain("Not supported yet");
       expect(html).toContain('id="token"');
       expect(html).toContain('id="clear-token"');
+      expect(html).toContain("Refine this tweak bundle");
+      expect(html).toContain('id="revision-prompt"');
+      expect(html).toContain('id="revise"');
       expect(html).toContain('src="/app.js"');
 
       const script = await fetch(`${baseUrl}/app.js`);
@@ -54,6 +57,8 @@ describe("private-beta tester UI", () => {
       expect(javascript).toContain('Accept: "application/json"');
       expect(javascript).toContain("/feedback");
       expect(javascript).toContain("/retry");
+      expect(javascript).toContain("/revise");
+      expect(javascript).toContain("Revised generation in progress");
       expect(javascript).toContain("/v1/survey");
 
       const css = await fetch(`${baseUrl}/app.css`);

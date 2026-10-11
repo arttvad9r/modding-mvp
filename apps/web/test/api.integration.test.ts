@@ -23,23 +23,36 @@ import { createGenerationApiHandler } from "../src/api.js";
 import { createPrivateBetaWebHandler } from "../src/ui.js";
 
 class FixedPlannerProvider implements LlmProvider {
-  async generateJson(_request: LlmJsonRequest): Promise<LlmJsonResponse> {
+  async generateJson(request: LlmJsonRequest): Promise<LlmJsonResponse> {
+    const steelChange = {
+      type: "prototype_property" as const,
+      prototypeType: "furnace",
+      prototypeName: "steel-furnace",
+      property: "crafting_speed",
+      operation: { type: "multiply" as const, factor: 2 },
+    };
+    const value =
+      request.schemaName === "factorio_revision_decision"
+        ? {
+            status: "supported" as const,
+            changes: [
+              steelChange,
+              {
+                type: "technology_cost" as const,
+                technologyName: "automation",
+                operation: { type: "multiply" as const, factor: 0.5 },
+              },
+            ],
+          }
+        : {
+            status: "supported" as const,
+            title: "Faster steel furnaces API",
+            slug: "faster-steel-furnaces-api-e2e",
+            capability: "prototype_property" as const,
+            changes: [steelChange],
+          };
     return {
-      value: {
-        status: "supported",
-        title: "Faster steel furnaces API",
-        slug: "faster-steel-furnaces-api-e2e",
-        capability: "prototype_property",
-        changes: [
-          {
-            type: "prototype_property",
-            prototypeType: "furnace",
-            prototypeName: "steel-furnace",
-            property: "crafting_speed",
-            operation: { type: "multiply", factor: 2 },
-          },
-        ],
-      },
+      value,
       provider: "api-integration-fake",
       model: "typed-planner-fixture",
       usage: { inputTokens: 80, outputTokens: 20, totalTokens: 100 },
@@ -179,6 +192,38 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       const artifactResponse = await fetch(downloadBody.downloadUrl);
       expect(artifactResponse.status).toBe(200);
       expect((await artifactResponse.arrayBuffer()).byteLength).toBe(generation.artifact.sizeBytes);
+
+      const reviseResponse = await fetch(
+        `${baseUrl}/v1/generations/${created.generation.id}/revise`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ prompt: "Keep the furnace tweak and also halve Automation research cost" }),
+        },
+      );
+      expect(reviseResponse.status).toBe(202);
+      const reviseBody = (await reviseResponse.json()) as {
+        generation: { id: string; status: string; sourceGenerationId?: string; baseModSpec?: unknown };
+        revisedFromGenerationId: string;
+      };
+      expect(reviseBody.revisedFromGenerationId).toBe(created.generation.id);
+      expect(reviseBody.generation.sourceGenerationId).toBe(created.generation.id);
+      expect(reviseBody.generation.baseModSpec).toBeUndefined();
+
+      const revised = (await waitForSuccess(baseUrl, createdUser.accessToken, reviseBody.generation.id)) as {
+        status: string;
+        sourceGenerationId?: string;
+        modSpec: { capability: string; changes: unknown[] };
+        artifact: { fileName: string; sizeBytes: number; key?: string };
+      };
+      expect(revised).toMatchObject({
+        status: "succeeded",
+        sourceGenerationId: created.generation.id,
+        modSpec: { capability: "mixed" },
+        artifact: { fileName: "faster-steel-furnaces-api-e2e_0.1.0.zip" },
+      });
+      expect(revised.modSpec.changes).toHaveLength(2);
+      expect(revised.artifact.sizeBytes).toBeGreaterThan(0);
 
       const feedbackResponse = await fetch(
         `${baseUrl}/v1/generations/${created.generation.id}/feedback`,

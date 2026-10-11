@@ -124,6 +124,16 @@ const INDEX_HTML = String.raw`<!doctype html>
         <strong>Next:</strong> put the downloaded ZIP in your Factorio <code>mods</code> folder without unpacking it, then launch the game.
       </div>
 
+      <div id="revision" class="feedback hidden">
+        <p class="feedback-title">Refine this tweak bundle</p>
+        <label for="revision-prompt">Describe what should change from this validated version</label>
+        <textarea id="revision-prompt" maxlength="4000" placeholder="Example: Keep everything else, but make steel furnaces another 25% faster and restore Automation research cost to normal"></textarea>
+        <div class="actions">
+          <button id="revise" type="button" class="secondary">Revise &amp; validate</button>
+          <span id="revision-state" class="muted" role="status" aria-live="polite"></span>
+        </div>
+      </div>
+
       <div id="feedback" class="feedback hidden">
         <p class="feedback-title">Did this result work for you?</p>
         <label for="feedback-note">Optional note</label>
@@ -289,6 +299,10 @@ const APP_JS = String.raw`(() => {
   const installNote = document.querySelector("#install-note");
   const downloadButton = document.querySelector("#download");
   const retryButton = document.querySelector("#retry");
+  const revision = document.querySelector("#revision");
+  const revisionPrompt = document.querySelector("#revision-prompt");
+  const reviseButton = document.querySelector("#revise");
+  const revisionState = document.querySelector("#revision-state");
   const feedback = document.querySelector("#feedback");
   const feedbackNote = document.querySelector("#feedback-note");
   const feedbackState = document.querySelector("#feedback-state");
@@ -417,6 +431,7 @@ const APP_JS = String.raw`(() => {
     downloadButton.classList.toggle("hidden", !canDownload);
     retryButton.classList.toggle("hidden", !canRetry);
     installNote.classList.toggle("hidden", !canDownload);
+    revision.classList.toggle("hidden", record.status !== "succeeded");
     const terminal = ["succeeded", "failed", "unsupported"].includes(record.status);
     feedback.classList.toggle("hidden", !terminal);
     survey.classList.toggle("hidden", record.status !== "succeeded");
@@ -494,6 +509,8 @@ const APP_JS = String.raw`(() => {
     generationId = null;
     feedbackState.textContent = "";
     surveyState.textContent = "";
+    revisionState.textContent = "";
+    revisionPrompt.value = "";
     feedbackNote.value = "";
     resultPanel.classList.add("hidden");
     generateButton.disabled = true;
@@ -524,6 +541,7 @@ const APP_JS = String.raw`(() => {
         method: "POST",
       });
       generationId = body.generation.id;
+      revisionPrompt.value = "";
       feedbackState.textContent = "";
       surveyState.textContent = "";
       render(body.generation);
@@ -534,6 +552,41 @@ const APP_JS = String.raw`(() => {
       requestState.textContent = friendlyError(error);
     } finally {
       retryButton.disabled = false;
+    }
+  });
+
+  reviseButton.addEventListener("click", async () => {
+    if (!generationId) return;
+    const prompt = revisionPrompt.value.trim();
+    if (!prompt) {
+      revisionState.textContent = "Describe what you want to change from this version.";
+      revisionPrompt.focus();
+      return;
+    }
+    if (pollTimer !== null) window.clearTimeout(pollTimer);
+    reviseButton.disabled = true;
+    revisionState.textContent = "Submitting revision…";
+    requestState.textContent = "Starting a revised generation…";
+    try {
+      const sourceGenerationId = generationId;
+      const body = await api("/v1/generations/" + encodeURIComponent(sourceGenerationId) + "/revise", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      generationId = body.generation.id;
+      revisionPrompt.value = "";
+      feedbackState.textContent = "";
+      surveyState.textContent = "";
+      revisionState.textContent = "Revision queued from " + sourceGenerationId + ".";
+      render(body.generation);
+      generateButton.disabled = true;
+      requestState.textContent = "Revised generation in progress…";
+      pollTimer = window.setTimeout(poll, 500);
+    } catch (error) {
+      revisionState.textContent = friendlyError(error);
+    } finally {
+      reviseButton.disabled = false;
     }
   });
 

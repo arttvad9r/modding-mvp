@@ -1,9 +1,9 @@
-# Architecture v0.12
+# Architecture v0.13
 
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 through M5 are complete and the M6 private-beta service foundation is operational. M6A is now the active product-value gate before public recruitment. The deterministic core still has four reviewed primitive capability families, but a backward-compatible `mixed` ModSpec can compose those primitives into one tweak bundle. The generator dispatches each typed change independently, while semantic assertions and real Factorio 2.0.77 remain authoritative. The reviewed prototype-property catalog now includes speed parameters for furnaces, assembling machines, mining drills, transport belts, inserters, and labs. The service, PostgreSQL/pg-boss queue, object storage, auth/rate limits, tester UI, hosted deployment, and KPI instrumentation remain in place. The M6A compound-request UI/runtime is deployed tailnet-only on the home server from source commit `8112d38`; live health plus host/app checks pass. Public off-tailnet ingress and 30+ tester recruitment remain deferred until the M6A product-value gate is satisfied.
+M1 through M5 are complete and the M6 private-beta service foundation is operational. M6A is now the active product-value gate before public recruitment. The deterministic core still has four reviewed primitive capability families, but a backward-compatible `mixed` ModSpec can compose those primitives into one tweak bundle. The generator dispatches each typed change independently, while semantic assertions and real Factorio 2.0.77 remain authoritative. The reviewed prototype-property catalog now includes speed parameters for furnaces, assembling machines, mining drills, transport belts, inserters, and labs. The service, PostgreSQL/pg-boss queue, object storage, auth/rate limits, tester UI, hosted deployment, and KPI instrumentation remain in place. The M6A compound-request UI/runtime is deployed tailnet-only on the home server from source commit `8112d38`; live health plus host/app checks pass. Follow-up editing is now implemented locally/service-wide: a successful generation can spawn a new immutable revision generation from its accepted ModSpec snapshot, and the revised bundle is fully revalidated before a new artifact is exposed. Public off-tailnet ingress and 30+ tester recruitment remain deferred until the M6A product-value gate is satisfied.
 
 ## Target product pipeline
 
@@ -50,6 +50,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `evals/planner/golden.json` and `pnpm planner:eval` provide repeatable model evaluation.
 - For Ollama reasoning models used as JSON planners, the adapter can request `reasoning_effort: none`; this avoids reasoning/content splits while application-side Zod validation remains authoritative.
 - The original M3 live baselines reached 100% classification and supported ModSpec accuracy on the 24-case corpus with Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`; after the M6A mixed/assembler expansion, Z.ai `glm-5.3-flash` again passed 24/24 classification and 14/14 exact supported ModSpecs on the updated corpus.
+- `planFactorioRevision` accepts an already validated base ModSpec plus a follow-up request. The model returns the complete resulting typed change set only; the application preserves title/slug/target, derives capability/assertions, and rejects unsupported/partial revisions. A live Z.ai smoke correctly preserved/remapped a mixed bundle and passed real Factorio without Repair.
 
 ## Implemented Repair boundary
 - `packages/agent-core` accepts the original immutable ModSpec, previous bounded manifest, normalized runtime error, provider, and candidate validator.
@@ -74,6 +75,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `packages/service-core` owns transport/infrastructure-neutral generation records, jobs, telemetry, artifact references, feedback, and lifecycle schemas.
 - Lifecycle is `queued -> running -> succeeded | unsupported | failed`.
 - API submission persists `queued` state and publishes a versioned queue message containing only `generationId`; the API must not run Planner, Factorio, or Repair inline.
+- Owner-scoped `POST /v1/generations/:id/revise` accepts follow-up text only for successful source generations. It creates a fresh queued generation with `sourceGenerationId` and internal `baseModSpec`; the source record/artifact remain unchanged and the queue payload stays generation-ID-only.
 - Workers use a monotonically increasing `revision` for compare-and-set claiming/updates; duplicate delivery after a terminal state is a no-op and already-running work is not executed twice. Active jobs refresh revision/`updatedAt` heartbeats, and a CAS-safe recovery pass converts genuinely stale running records into retryable process failures.
 - `GenerationRepository`, `GenerationQueue`, `ArtifactStore`, and `GenerationExecutor` are ports. Future HTTP/PostgreSQL/pg-boss/S3 implementations are adapters around them.
 - `packages/factorio-service-executor` implements `GenerationExecutor` by running the proven M5 pipeline in an isolated temporary root, mapping telemetry to service schemas, reading only the validated ZIP bytes, and deleting temporary reports/artifacts afterward.

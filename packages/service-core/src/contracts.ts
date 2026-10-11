@@ -101,6 +101,8 @@ const GenerationBaseSchema = z.strictObject({
   userId: UserIdSchema,
   revision: z.number().int().nonnegative(),
   prompt: GenerationPromptSchema,
+  sourceGenerationId: GenerationIdSchema.optional(),
+  baseModSpec: ModSpecSchema.optional(),
   createdAt: TimestampSchema,
   updatedAt: TimestampSchema,
 });
@@ -143,13 +145,30 @@ export const FailedGenerationRecordSchema = GenerationBaseSchema.extend({
   feedback: GenerationFeedbackSchema.optional(),
 });
 
-export const GenerationRecordSchema = z.discriminatedUnion("status", [
-  QueuedGenerationRecordSchema,
-  RunningGenerationRecordSchema,
-  SucceededGenerationRecordSchema,
-  UnsupportedGenerationRecordSchema,
-  FailedGenerationRecordSchema,
-]);
+export const GenerationRecordSchema = z
+  .discriminatedUnion("status", [
+    QueuedGenerationRecordSchema,
+    RunningGenerationRecordSchema,
+    SucceededGenerationRecordSchema,
+    UnsupportedGenerationRecordSchema,
+    FailedGenerationRecordSchema,
+  ])
+  .superRefine((record, ctx) => {
+    if ((record.sourceGenerationId === undefined) !== (record.baseModSpec === undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sourceGenerationId"],
+        message: "Revision generations require both sourceGenerationId and baseModSpec",
+      });
+    }
+    if (record.sourceGenerationId === record.id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sourceGenerationId"],
+        message: "A generation cannot revise itself",
+      });
+    }
+  });
 
 export const GenerationJobSchema = z.strictObject({
   schemaVersion: z.literal(1),
@@ -232,5 +251,6 @@ export interface GenerationExecutor {
   execute(input: {
     readonly generationId: string;
     readonly prompt: string;
+    readonly baseModSpec?: ModSpec;
   }): Promise<ServiceGenerationExecution>;
 }

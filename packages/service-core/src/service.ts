@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { ProjectError, normalizeProjectError } from "@project/domain";
+import { ModSpecSchema, ProjectError, normalizeProjectError, type ModSpec } from "@project/domain";
 import { z } from "zod";
 
 import {
@@ -19,6 +19,8 @@ import { UserIdSchema } from "./auth.js";
 interface QueuedGenerationInput {
   readonly userId: string;
   readonly prompt: string;
+  readonly sourceGenerationId?: string;
+  readonly baseModSpec?: ModSpec;
   readonly generationId?: () => string;
   readonly now?: () => Date;
 }
@@ -34,6 +36,10 @@ function createQueuedGeneration(input: QueuedGenerationInput): QueuedGenerationR
     userId,
     revision: 0,
     prompt: request.prompt,
+    ...(input.sourceGenerationId === undefined
+      ? {}
+      : { sourceGenerationId: GenerationIdSchema.parse(input.sourceGenerationId) }),
+    ...(input.baseModSpec === undefined ? {} : { baseModSpec: ModSpecSchema.parse(input.baseModSpec) }),
     status: "queued",
     createdAt: timestamp,
     updatedAt: timestamp,

@@ -1,8 +1,13 @@
-import { ProjectError } from "@project/domain";
+import { ProjectError, type ModSpec } from "@project/domain";
 import type { LlmJsonRequest, LlmJsonResponse, LlmProvider } from "@project/llm";
 import { describe, expect, it } from "vitest";
 
-import { buildPlannerSystemPrompt, planFactorioPrompt } from "../src/index.js";
+import {
+  buildPlannerSystemPrompt,
+  buildRevisionSystemPrompt,
+  planFactorioPrompt,
+  planFactorioRevision,
+} from "../src/index.js";
 
 class SequenceProvider implements LlmProvider {
   readonly requests: LlmJsonRequest[] = [];
@@ -74,6 +79,42 @@ function mixedFastStartDraft() {
     ],
   } as const;
 }
+
+
+const acceptedSpec: ModSpec = {
+  title: "Fast start",
+  slug: "fast-start",
+  target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+  capability: "mixed",
+  changes: [
+    {
+      type: "prototype_property",
+      prototypeType: "furnace",
+      prototypeName: "steel-furnace",
+      property: "crafting_speed",
+      operation: { type: "multiply", factor: 1.5 },
+    },
+    {
+      type: "technology_cost",
+      technologyName: "automation",
+      operation: { type: "multiply", factor: 0.5 },
+    },
+  ],
+  assertions: [
+    {
+      type: "prototype_property_matches",
+      prototypeType: "furnace",
+      prototypeName: "steel-furnace",
+      property: "crafting_speed",
+      expectation: { type: "multiply", factor: 1.5 },
+    },
+    {
+      type: "technology_cost_matches",
+      technologyName: "automation",
+      expectation: { type: "multiply", factor: 0.5 },
+    },
+  ],
+};
 
 describe("Planner prompt contract", () => {
   it("builds supported scope from the Factorio capability registry", () => {
@@ -223,5 +264,76 @@ describe("planFactorioPrompt", () => {
       planFactorioPrompt({ provider, prompt: "123456", maxPromptChars: 5 }),
     ).rejects.toMatchObject({ code: "input_error" });
     expect(provider.requests).toHaveLength(0);
+  });
+});
+
+
+describe("planFactorioRevision", () => {
+  it("preserves unchanged tweaks and application-owned metadata while revising the full bundle", async () => {
+    const provider = new SequenceProvider([
+      response({
+        status: "supported",
+        changes: [
+          {
+            type: "prototype_property",
+            prototypeType: "furnace",
+            prototypeName: "steel-furnace",
+            property: "crafting_speed",
+            operation: { type: "multiply", factor: 1.875 },
+          },
+          {
+            type: "technology_cost",
+            technologyName: "automation",
+            operation: { type: "multiply", factor: 0.5 },
+          },
+        ],
+      }),
+    ]);
+
+    const result = await planFactorioRevision({
+      provider,
+      baseModSpec: acceptedSpec,
+      prompt: "Keep everything else, but make steel furnaces another 25% faster",
+    });
+
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported revision");
+    expect(result.modSpec.title).toBe(acceptedSpec.title);
+    expect(result.modSpec.slug).toBe(acceptedSpec.slug);
+    expect(result.modSpec.target).toEqual(acceptedSpec.target);
+    expect(result.modSpec.capability).toBe("mixed");
+    expect(result.modSpec.changes).toHaveLength(2);
+    expect(result.modSpec.changes[0]).toMatchObject({
+      type: "prototype_property",
+      operation: { type: "multiply", factor: 1.875 },
+    });
+    expect(result.modSpec.changes[1]).toEqual(acceptedSpec.changes[1]);
+    expect(provider.requests[0]?.schemaName).toBe("factorio_revision_decision");
+    expect(provider.requests[0]?.messages[1]?.content).toContain('"slug": "fast-start"');
+  });
+
+  it("can remove a tweak by returning the complete remaining bundle", async () => {
+    const provider = new SequenceProvider([
+      response({
+        status: "supported",
+        changes: [acceptedSpec.changes[0]],
+      }),
+    ]);
+    const result = await planFactorioRevision({
+      provider,
+      baseModSpec: acceptedSpec,
+      prompt: "Restore Automation research cost to normal and keep the furnace tweak",
+    });
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported revision");
+    expect(result.modSpec.capability).toBe("prototype_property");
+    expect(result.modSpec.changes).toEqual([acceptedSpec.changes[0]]);
+  });
+
+  it("publishes the complete-result and no-partial-application contract", () => {
+    const prompt = buildRevisionSystemPrompt();
+    expect(prompt).toContain("COMPLETE resulting typed change set");
+    expect(prompt).toContain("Preserve unchanged tweaks exactly");
+    expect(prompt).toContain("return unsupported rather than partially applying");
   });
 });

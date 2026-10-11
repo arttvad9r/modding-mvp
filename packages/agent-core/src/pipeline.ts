@@ -23,6 +23,7 @@ import {
 } from "@project/llm";
 
 import { planFactorioPrompt, type PlannerAttemptMetadata } from "./planner.js";
+import { planFactorioRevision } from "./revision.js";
 import {
   repairFactorioManifest,
   type RepairAttemptMetadata,
@@ -103,6 +104,7 @@ export interface LocalGenerationOptions {
   readonly runDirectory?: string;
   readonly factorioBin?: string;
   readonly maxRepairAttempts?: number;
+  readonly baseModSpec?: ModSpec;
   readonly onProgress?: (event: PipelineProgressEvent) => void;
 }
 
@@ -255,8 +257,20 @@ export async function runLocalFactorioGeneration(
   };
 
   try {
-    emit("planning", "Planning request against supported Factorio capabilities");
-    const plan = await planFactorioPrompt({ provider: options.provider, prompt: options.prompt });
+    emit(
+      "planning",
+      options.baseModSpec === undefined
+        ? "Planning request against supported Factorio capabilities"
+        : "Planning follow-up revision against the accepted tweak bundle",
+    );
+    const plan =
+      options.baseModSpec === undefined
+        ? await planFactorioPrompt({ provider: options.provider, prompt: options.prompt })
+        : await planFactorioRevision({
+            provider: options.provider,
+            baseModSpec: options.baseModSpec,
+            prompt: options.prompt,
+          });
     plannerAttempts = plan.attempts;
 
     if (plan.status === "unsupported") {

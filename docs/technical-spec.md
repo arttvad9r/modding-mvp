@@ -1,4 +1,4 @@
-# Technical specification v0.2
+# Technical specification v0.3
 
 ## System goal
 Implement a bounded pipeline that converts a user request into a Factorio mod artifact and validates the artifact with the real game runtime before reporting success.
@@ -63,6 +63,19 @@ Golden Planner evals live under `evals/planner/`. The initial gate is >=90% supp
 Recorded Planner baselines on 2026-10-11: the original M3 corpus passed 24/24 classification and 12/12 supported semantic ModSpec cases on both Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`. After the M6A mixed-bundle/assembler expansion, Z.ai Coding Plan `glm-5.3-flash` passed the updated 24-case corpus at 24/24 classification and 14/14 exact supported semantic ModSpecs (74,458 total tokens), including the new heterogeneous mixed request. The earlier Z.ai HTTP 429/code 1113 result came from sending a Coding Plan key to the general endpoint, whose quota is separate.
 
 For M3 development/evaluation, provider presets use `glm-5.3-flash` on Z.ai and `deepseek-v4.1-flash:cloud` on Ollama Cloud by default. These are dev/eval defaults only; provider/model selection remains runtime configuration and is not a production architecture commitment.
+
+### Follow-up revision contract
+`packages/agent-core` also exposes a constrained Revision Planner for an already accepted ModSpec. The input is the application-owned base ModSpec plus a bounded follow-up prompt. Supported model output contains only the **complete resulting `changes` array**; it is not a patch and cannot emit title, slug, target, assertions, Lua, or files.
+
+The revision application contract is:
+- preserve every existing tweak unless the follow-up explicitly changes or removes/restores it;
+- interpret relative follow-up wording against the current accepted bundle;
+- return `unsupported` rather than silently dropping an unsupported requested change;
+- preserve base title, slug, and target in application code;
+- derive the resulting single-family/`mixed` capability and semantic assertions deterministically;
+- run the same support checks, deterministic generator, real Factorio validation, optional bounded Repair, and ZIP packaging as a fresh generation.
+
+Live M6A smoke on 2026-10-11 with Z.ai `glm-5.3-flash`: starting from a four-change mixed bundle, the follow-up “keep everything else, restore Automation research cost to normal, and make steel furnaces another 25% faster” produced the expected three-change result (`assembler ×2`, `steel furnace ×1.875`, gears at one plate), passed Factorio in 1,684 ms, completed in 12,399 ms using 4,133 model tokens, and required no Repair. See ADR-0016.
 
 ### Generated file manifest
 The Generator returns a bounded manifest rather than direct filesystem or shell operations:
@@ -154,7 +167,7 @@ Maximum automatic Repair model attempts: **2 hard cap**. Attempt history capture
 Repair regression evals live under `evals/repair/`. `pnpm repair:eval` injects known load/semantic failures into deterministic artifacts, then runs `failure -> Repair -> real Factorio -> original semantic assertions`. Initial development gate: >=80% repaired cases. Z.ai Coding Plan `glm-5.3-flash` passes 5/5 Repair cases with 5 total attempts; Ollama Cloud remains an alternate tested provider.
 
 ## Local end-to-end prototype
-`packages/agent-core` exposes `runLocalFactorioGeneration`, which composes existing bounded components rather than replacing them. The flow is:
+`packages/agent-core` exposes `runLocalFactorioGeneration`, which composes existing bounded components rather than replacing them. When `baseModSpec` is present, the planning stage uses the follow-up Revision Planner before continuing through the same downstream pipeline. The flow is:
 1. Planner classifies/derives a validated ModSpec;
 2. deterministic generator creates the bounded manifest and original semantic assertions;
 3. real Factorio validates the candidate;
@@ -190,7 +203,7 @@ Worker rules:
 7. treat terminal redelivery as idempotent and do not execute already-running work again;
 8. allow a separate CAS-safe recovery pass to mark genuinely stale running records as retryable process failures without silently requeueing them.
 
-The service record retains immutable `userId`, prompt, accepted ModSpec when applicable, Planner/Repair attempt metadata, aggregate usage/cost, validation state, typed failures, artifact metadata, and bounded user feedback. The persisted generation-record contract is currently `schemaVersion: 2`; the pg-boss generation-job payload remains independently versioned at schema version 1 because its shape did not change when ownership was added. `packages/factorio-service-executor` implements the service executor port by running M5 under a fresh temporary root, returning validated ZIP bytes plus mapped service telemetry, and deleting temporary M5 reports/artifacts before returning. See `docs/service-contract.md` and ADR-0011.
+The service record retains immutable `userId`, prompt, accepted ModSpec when applicable, Planner/Repair attempt metadata, aggregate usage/cost, validation state, typed failures, artifact metadata, and bounded user feedback. Revision generations additionally retain `sourceGenerationId` and an internal immutable `baseModSpec` snapshot; both optional fields appear together and remain compatible with existing schema-version-2 records. Public API responses omit the duplicated base snapshot. The persisted generation-record contract is currently `schemaVersion: 2`; the pg-boss generation-job payload remains independently versioned at schema version 1 because its shape did not change when ownership was added. `packages/factorio-service-executor` implements the service executor port by running M5 under a fresh temporary root, returning validated ZIP bytes plus mapped service telemetry, and deleting temporary M5 reports/artifacts before returning. See `docs/service-contract.md` and ADR-0011.
 
 Private-beta adapter defaults from ADR-0012:
 - PostgreSQL for durable service state;
@@ -206,7 +219,7 @@ Private-beta API security:
 - successful API responses omit internal ownership and object-store key fields;
 - per-user and salted-IP fixed-window rate-limit counters live in PostgreSQL; raw IP addresses are not used as bucket keys;
 - proxy forwarding headers are trusted only when explicitly configured;
-- artifact downloads require ownership and redirect to a short-lived presigned URL. See ADR-0013. `apps/worker` is the executable pg-boss consumer and wires the configured LLM provider, Factorio executor, PostgreSQL repository, and S3 artifact store. Local service integration uses pinned Docker PostgreSQL 18.6 plus Adobe S3Mock 5.2.3 and proves atomic submission -> queue consumption -> real Factorio validation -> S3-compatible upload -> persisted success -> presigned download. The integration Planner is a typed fake provider so this infrastructure test does not spend external LLM quota. The selected beta object-storage provider is SeaweedFS 4.39 on the Helsinki VPS and has passed the deployment upload/presigned-download/delete smoke.
+- artifact downloads require ownership and redirect to a short-lived presigned URL. Follow-up revisions are also owner-scoped and only successful source generations are revisable; the source record is never reopened. See ADR-0013 and ADR-0016. `apps/worker` is the executable pg-boss consumer and wires the configured LLM provider, Factorio executor, PostgreSQL repository, and S3 artifact store. Local service integration uses pinned Docker PostgreSQL 18.6 plus Adobe S3Mock 5.2.3 and proves atomic submission -> queue consumption -> real Factorio validation -> S3-compatible upload -> persisted success -> presigned download. The integration Planner is a typed fake provider so this infrastructure test does not spend external LLM quota. The selected beta object-storage provider is SeaweedFS 4.39 on the Helsinki VPS and has passed the deployment upload/presigned-download/delete smoke.
 
 ## Package boundaries
 Current and planned repository boundaries:

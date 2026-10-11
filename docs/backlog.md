@@ -176,7 +176,7 @@ Before starting M2:
 - [x] Dispatch mixed changes/assertions deterministically without adding an arbitrary-Lua path.
 - [x] Expand reviewed numeric prototype speed targets to assembling machines, mining drills, transport belts, inserters, and labs using pinned 2.0.77 baselines.
 - [x] Add real-Factorio validation for a multi-family fast-start bundle.
-- [ ] Add iterative follow-up editing of an accepted tweak bundle.
+- [x] Add iterative follow-up editing of an accepted successful tweak bundle through a new immutable revision generation.
 - [ ] Add the next high-value reviewed tweak primitives with semantic assertions.
 - [x] Finalize the first mixed-request golden eval slice and rerun the live Planner gate (24/24 classification, 14/14 exact supported ModSpecs on Z.ai `glm-5.3-flash`).
 - [x] Deploy the compound-request beta UX to the tailnet-only home-server runtime (`8112d38`) and verify live UI/health, apps-health, and host network checks.

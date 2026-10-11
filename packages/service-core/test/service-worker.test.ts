@@ -129,11 +129,13 @@ class MemoryArtifactStore implements ArtifactStore {
 
 class FixedExecutor implements GenerationExecutor {
   calls = 0;
+  lastInput: Parameters<GenerationExecutor["execute"]>[0] | undefined;
 
   constructor(private readonly execution: ServiceGenerationExecution) {}
 
-  async execute(): Promise<ServiceGenerationExecution> {
+  async execute(input: Parameters<GenerationExecutor["execute"]>[0]): Promise<ServiceGenerationExecution> {
     this.calls += 1;
+    this.lastInput = input;
     return this.execution;
   }
 }
@@ -225,6 +227,45 @@ describe("generation worker state machine", () => {
     expect(duplicate.outcome).toBe("already_terminal");
     expect(executor.calls).toBe(1);
     expect(artifacts.puts).toHaveLength(1);
+  });
+
+  it("passes an immutable base ModSpec snapshot to the executor for revision generations", async () => {
+    const repository = new MemoryRepository();
+    const queue = new MemoryQueue();
+    const sourceGenerationId = "22222222-2222-4222-8222-222222222222";
+    await submitGeneration({
+      userId,
+      repository,
+      queue,
+      prompt: "Keep the furnace tweak and halve Automation research cost",
+      sourceGenerationId,
+      baseModSpec: modSpec,
+      generationId: () => generationId,
+      now: () => fixedDate,
+    });
+    const executor = new FixedExecutor({
+      status: "unsupported",
+      reason: "Synthetic revision outcome",
+      telemetry,
+    });
+
+    await processGenerationJob({
+      repository,
+      artifactStore: new MemoryArtifactStore(),
+      executor,
+      job: queue.jobs[0]!,
+      now: () => fixedDate,
+    });
+
+    expect(executor.lastInput).toMatchObject({
+      generationId,
+      prompt: "Keep the furnace tweak and halve Automation research cost",
+      baseModSpec: modSpec,
+    });
+    expect(await repository.get(generationId)).toMatchObject({
+      sourceGenerationId,
+      baseModSpec: modSpec,
+    });
   });
 
   it("persists unsupported and failed executor outcomes without publishing artifacts", async () => {

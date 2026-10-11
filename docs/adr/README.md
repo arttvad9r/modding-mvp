@@ -48,3 +48,4 @@ Do not create an ADR merely for:
 - [ADR-0013: Private beta uses opaque bearer tokens, owned generations, and PostgreSQL rate limits](0013-private-beta-token-auth-and-ownership.md)
 - [ADR-0014](0014-explicit-generation-retry-policy.md) — private-beta retries create a new generation and automatic pg-boss retries stay disabled.
 - [ADR-0015](0015-composable-mixed-modspec.md) — compose reviewed capability primitives into backward-compatible mixed tweak bundles.
+- [ADR-0016](0016-immutable-follow-up-revisions.md) — follow-up edits create new immutable generations from an accepted ModSpec snapshot.
