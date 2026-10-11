@@ -39,7 +39,11 @@ M6A requirements:
 - supported prototype-property scope includes reviewed speed parameters for furnaces, assembling machines, mining drills, transport belts, inserters, and labs, in addition to the existing recipe/research primitives;
 - unsupported parts of a compound request must cause an explicit unsupported result rather than silent partial fulfillment;
 - a user can revise an accepted successful tweak bundle through a follow-up request without learning or editing Lua; each revision is a new generation and the source result remains immutable;
-- reviewed recipe crafting time, existing recipe result amounts, and item stack sizes are available as typed primitives for common throughput/inventory rebalance bundles.
+- reviewed recipe crafting time, existing recipe result amounts, and item stack sizes are available as typed primitives for common throughput/inventory rebalance bundles;
+- broad/category wording is fail-closed when completeness cannot be proven; users must name exact targets instead of receiving a silent allow-list subset;
+- successful results expose the exact accepted change list and follow-up revisions expose a derived diff;
+- authenticated testers can reopen recent generations after reload and continue a successful bundle;
+- tester-facing copy states that automated validation covers isolated base-game Factorio 2.0.77 only, not arbitrary third-party mod stacks or Space Age compatibility.
 
 `mixed` is a ModSpec composition marker, not an unconstrained generation mode: every contained change must still be an allow-listed typed primitive. Follow-up editing uses the same rule: the Revision Planner returns the complete resulting typed bundle, while the application preserves metadata and revalidates the whole result.
 

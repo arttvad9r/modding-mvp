@@ -25,5 +25,10 @@
   {"id":"unsupported-assets","prompt":"Replace the steel furnace sprite with a newly generated neon texture.","expected":{"status":"unsupported"}},
   {"id":"recipe-gears-crafting-faster","prompt":"Make iron gears craft twice as fast.","expected":{"status":"supported","capability":"recipe_crafting_time","changes":[{"type":"recipe_crafting_time","recipeName":"iron-gear-wheel","operation":{"type":"multiply","factor":0.5}}]}},
   {"id":"item-circuit-stack-500","prompt":"Set electronic circuit stack size to 500.","expected":{"status":"supported","capability":"item_stack_size","changes":[{"type":"item_stack_size","itemName":"electronic-circuit","operation":{"type":"set","value":500}}]}},
-  {"id":"unsupported-new-recipe-result","prompt":"Make the copper cable recipe also produce sulfur as a second result.","expected":{"status":"unsupported"}}
+  {"id":"unsupported-new-recipe-result","prompt":"Make the copper cable recipe also produce sulfur as a second result.","expected":{"status":"unsupported"}},
+  {"id":"broad-all-inserters","prompt":"Make all inserters twice as fast.","expected":{"status":"unsupported"}},
+  {"id":"broad-generic-inserters","prompt":"Make inserters twice as fast.","expected":{"status":"unsupported"}},
+  {"id":"broad-all-belts","prompt":"Make all transport belts 50% faster.","expected":{"status":"unsupported"}},
+  {"id":"broad-all-recipes","prompt":"Make all recipes craft twice as fast.","expected":{"status":"unsupported"}},
+  {"id":"broad-generic-furnaces","prompt":"Make furnaces twice as fast.","expected":{"status":"unsupported"}}
 ]

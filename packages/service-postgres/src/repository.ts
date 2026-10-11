@@ -1,4 +1,4 @@
-import { and, asc, eq, lt } from "drizzle-orm";
+import { and, asc, desc, eq, lt } from "drizzle-orm";
 
 import {
   GenerationRecordSchema,
@@ -72,6 +72,16 @@ export class PostgresGenerationRepository implements GenerationRepository {
       .where(and(eq(generations.id, id), eq(generations.revision, expectedRevision)))
       .returning({ id: generations.id });
     return rows.length === 1;
+  }
+
+  async listByUserCreatedDesc(userId: string, limit: number): Promise<readonly GenerationRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(generations)
+      .where(eq(generations.userId, userId))
+      .orderBy(desc(generations.createdAt))
+      .limit(limit);
+    return rows.map(rowToRecord);
   }
 
   async listRunningUpdatedBefore(

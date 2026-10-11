@@ -63,7 +63,7 @@ Ollama Cloud uses JSON mode plus application-side Zod validation/retry; strict p
 ### Planner contract
 `packages/agent-core` owns natural-language planning. It consumes the machine-readable Factorio registry and a provider-agnostic `LlmProvider` from `packages/llm`. The model must not emit Lua, file manifests, target metadata, or semantic assertions.
 
-A supported model response contains only title, kebab-case slug, and typed changes; those changes may span multiple reviewed primitive families. An unsupported response contains a reason. The application derives the single-family or `mixed` ModSpec root, fixed Factorio stable 2.0 target, and matching semantic assertions, validates the result through `ModSpecSchema`, then verifies every change against `packages/factorio-knowledge`. Compound prompts are all-or-unsupported: the Planner must not silently drop an unsupported requested part.
+A supported model response contains only title, kebab-case slug, and typed changes; those changes may span multiple reviewed primitive families. An unsupported response contains a reason. The application derives the single-family or `mixed` ModSpec root, fixed Factorio stable 2.0 target, and matching semantic assertions, validates the result through `ModSpecSchema`, then verifies every change against `packages/factorio-knowledge`. Compound prompts are all-or-unsupported: the Planner must not silently drop an unsupported requested part. Broad/universal category wording (for example `all inserters`) is additionally fail-closed by application code when registry completeness for the human category is not proven; this guard can return `unsupported` before an LLM call.
 
 Malformed or registry-invalid model output receives at most one correction retry by default. Planner calls retain provider, model, token, duration, and optional estimated-cost metadata. The first provider adapter uses the OpenAI Responses API JSON response format through native `fetch`; provider/model choice is configuration. See ADR-0009.
 
@@ -223,6 +223,11 @@ Private-beta adapter defaults from ADR-0012:
 - private S3-compatible object storage via AWS SDK v3 semantics for validated ZIP artifacts.
 
 Production migrations are versioned Drizzle migrations; schema push at application startup is not the production migration policy. `packages/service-postgres` stores the runtime-validated record JSON alongside indexed id/status/revision/timestamps and performs optimistic updates by revision. API submission can use `PostgresGenerationSubmissionStore`, which inserts the queued row and calls pg-boss `send()` through `fromDrizzle(tx, sql)` inside one transaction. The integration test proves a queue failure rolls the row back. A checksum-pinned PostgreSQL 18.6 source build under `.tools/` is used only for reproducible local integration tests. `packages/service-s3` uploads only runtime-validated ZIP keys/names through AWS SDK v3 PutObject. Generation records persist only private object metadata; downloads are generated on demand as 30–900 second presigned GetObject URLs with attachment filename/content type. Object keys are persisted, while authorization to request a signed URL remains in the API layer. Redis is not part of the initial beta architecture.
+
+Tester transparency/recovery:
+- successful public generation JSON includes the accepted typed `modSpec.changes`; revision results derive a bounded public diff from the internal base snapshot without exposing `baseModSpec`;
+- `GET /v1/generations?limit=1..20` lists only the authenticated user's newest generations using the existing user/created-at index, so reload does not destroy access to prior downloads/revisions;
+- automated success currently means isolated base-game Factorio 2.0.77 validation, not compatibility with arbitrary third-party mod stacks or Space Age.
 
 Private-beta API security:
 - users are operator-provisioned with high-entropy opaque bearer tokens; only SHA-256 token hashes are persisted;

@@ -21,6 +21,12 @@ class MemoryRepository implements GenerationRepository {
     this.records.set(id, GenerationRecordSchema.parse(next));
     return true;
   }
+  async listByUserCreatedDesc(userId: string, limit: number) {
+    return [...this.records.values()]
+      .filter((record) => record.userId === userId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, limit);
+  }
   async listRunningUpdatedBefore() { return []; }
 }
 

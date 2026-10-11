@@ -115,7 +115,7 @@ Exit criteria:
 - ZIP is exposed only after real Factorio + semantic validation succeeds.
 
 ## M6A — Minimum Interesting Product
-Status: in progress.
+Status: complete.
 
 Goal: make the already-working service materially more useful than asking a general chat model for one tiny Lua edit before recruiting external testers.
 
@@ -133,15 +133,9 @@ Completed M6A slices:
 - reviewed `recipe_crafting_time`, `recipe_result`, and `item_stack_size` primitives with registry-derived Planner/Revision support and real-Factorio semantic validation; a mixed regression bundle changes gear crafting time, belt output, and circuit stack size in one validated ZIP.
 - refreshed live Z.ai `glm-5.3-flash` Planner gate on the expanded seven-family corpus: **27/27 classification and 17/17 exact supported ModSpecs**; live Throughput bundle smoke (gear crafting ×0.5, belt output = 4, circuit stack = 500) completed prompt -> validated ZIP in **7.957 s**, including **1.676 s** Factorio validation, **4,466 tokens**, and no Repair.
 
-Exit review on 2026-10-11: **not yet passed**. The runtime/validation stack is ready, but a realistic prompt review exposed one silent partial-fulfillment case (`all inserters`) and product-trust gaps: the UI does not show the exact accepted change set, returning users cannot reopen prior generations from the UI, and the success copy does not state clearly enough that validation is against the isolated base-game 2.0.77 environment rather than an arbitrary player mod stack.
+Final exit review on 2026-10-11: **passed**. The first review found a silent partial-fulfillment risk for broad category wording (`all inserters`) plus three tester-trust gaps. The release now rejects broad/universal category requests conservatively unless exact targets are named, exposes the accepted change list and revision diff, provides owner-scoped recent-generation recovery, and states that automated validation is against isolated base-game Factorio 2.0.77 rather than arbitrary third-party mod stacks or Space Age. The adversarial Planner corpus expanded to 32 cases and Z.ai `glm-5.3-flash` passed **32/32 classification and 17/17 exact supported ModSpecs**. Full typecheck/unit/build/real-Factorio integration and Docker service E2E also pass.
 
-Remaining scope before external recruitment:
-- make universal/category requests all-or-unsupported unless the application can prove complete reviewed coverage;
-- expose the accepted change set/revision diff to testers;
-- add owner-scoped recent generation recovery/history;
-- clarify the exact validation/compatibility boundary in tester-facing copy;
-- add the exit-review adversarial prompts to eval coverage and keep the live Planner gate green;
-- repeat the exit review, then recruit a first 5–10 player cohort before scaling toward the 30+ M6 target.
+M6A is therefore closed. External recruitment should start with a 5–10 player cohort, then scale toward the 30+ M6 target only after reviewing their first usage/feedback.
 
 Exit criteria:
 - one natural-language request can express a useful multi-change rebalance and produce one validated ZIP;
@@ -150,7 +144,7 @@ Exit criteria:
 - Planner mixed-request eval remains above the existing classification/semantic development gates.
 
 ## M6 — Private beta service
-Status: infrastructure ready; external recruitment gated on M6A.
+Status: in progress; M6A product-value gate passed.
 
 Goal: validate product usefulness with real Factorio players after the M6A product-value gate.
 
@@ -181,9 +175,9 @@ Completed slices:
 - hosted SeaweedFS smoke proving upload -> presigned GET -> byte comparison -> delete;
 - deployed live Z.ai `glm-5.3-flash` E2E proving API -> pg-boss -> worker -> real Factorio -> private object storage -> presigned ZIP -> feedback/survey; the first server smoke succeeded directly in 19.1 s using 2,205 tokens.
 
-Remaining scope after M6A exits:
-- enable public HTTPS ingress for testers outside the tailnet (Tailscale Funnel requires tailnet-admin approval, or use a conventional public domain/reverse proxy);
-- recruit 30+ active testers and evaluate the product hypotheses from observed beta data.
+Remaining scope:
+- enable public HTTPS ingress for testers outside the tailnet (prefer the planned dedicated public VPS/reverse proxy rather than exposing the home server directly);
+- recruit a first 5–10 player cohort, review prompt/support/false-success feedback, then scale toward 30+ active testers and evaluate the product hypotheses from observed beta data.
 
 Exit criteria are the product hypotheses in `product-spec.md`, especially success rate, false-success rate, repeat usage, and willingness to pay.
 

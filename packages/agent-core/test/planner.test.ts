@@ -194,6 +194,40 @@ describe("planFactorioPrompt", () => {
     ]);
   });
 
+  it("rejects explicit universal category scopes before calling the model", async () => {
+    const provider = new SequenceProvider([]);
+    const result = await planFactorioPrompt({ provider, prompt: "Make all inserters twice as fast" });
+
+    expect(result).toMatchObject({ status: "unsupported" });
+    if (result.status !== "unsupported") throw new Error("expected unsupported result");
+    expect(result.reason).toContain("Broad category request for inserters");
+    expect(provider.requests).toHaveLength(0);
+  });
+
+  it("rejects generic plural category wording after structured planning", async () => {
+    const provider = new SequenceProvider([response({
+      status: "supported",
+      title: "Faster inserters",
+      slug: "faster-inserters",
+      changes: [
+        { type: "prototype_property", prototypeType: "inserter", prototypeName: "inserter", property: "extension_speed", operation: { type: "multiply", factor: 2 } },
+        { type: "prototype_property", prototypeType: "inserter", prototypeName: "inserter", property: "rotation_speed", operation: { type: "multiply", factor: 2 } },
+      ],
+    })]);
+    const result = await planFactorioPrompt({ provider, prompt: "Make inserters twice as fast" });
+
+    expect(result).toMatchObject({ status: "unsupported" });
+    if (result.status !== "unsupported") throw new Error("expected unsupported result");
+    expect(result.reason).toContain("Broad category request for inserters");
+    expect(provider.requests).toHaveLength(1);
+  });
+
+  it("keeps explicit reviewed targets supported", async () => {
+    const provider = new SequenceProvider([response(fasterSteelDraft())]);
+    const result = await planFactorioPrompt({ provider, prompt: "Make steel furnaces twice as fast" });
+    expect(result.status).toBe("supported");
+  });
+
   it("returns an explicit unsupported decision without inventing a ModSpec", async () => {
     const provider = new SequenceProvider([
       response({ status: "unsupported", reason: "Adding a new ore is outside the current registry." }),
@@ -356,6 +390,17 @@ describe("planFactorioRevision", () => {
     if (result.status !== "supported") throw new Error("expected supported revision");
     expect(result.modSpec.capability).toBe("prototype_property");
     expect(result.modSpec.changes).toEqual([acceptedSpec.changes[0]]);
+  });
+
+  it("rejects broad category follow-ups before calling the revision model", async () => {
+    const provider = new SequenceProvider([]);
+    const result = await planFactorioRevision({
+      provider,
+      baseModSpec: acceptedSpec,
+      prompt: "Also make all inserters twice as fast",
+    });
+    expect(result).toMatchObject({ status: "unsupported" });
+    expect(provider.requests).toHaveLength(0);
   });
 
   it("publishes the complete-result and no-partial-application contract", () => {

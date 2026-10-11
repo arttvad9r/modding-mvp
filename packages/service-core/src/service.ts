@@ -142,6 +142,17 @@ export async function findGenerationForUser(
   return record === null || record.userId !== ownerId ? null : record;
 }
 
+export async function listGenerationsForUser(
+  repository: GenerationRepository,
+  userId: string,
+  limit = 10,
+): Promise<readonly GenerationRecord[]> {
+  const ownerId = UserIdSchema.parse(userId);
+  const boundedLimit = z.number().int().min(1).max(20).parse(limit);
+  const records = await repository.listByUserCreatedDesc(ownerId, boundedLimit);
+  return records.map((record) => GenerationRecordSchema.parse(record));
+}
+
 const FeedbackInputSchema = z.strictObject({
   generationId: GenerationIdSchema,
   userId: UserIdSchema,

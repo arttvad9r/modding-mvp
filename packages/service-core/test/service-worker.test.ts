@@ -91,6 +91,13 @@ class MemoryRepository implements GenerationRepository {
     return true;
   }
 
+  async listByUserCreatedDesc(userId: string, limit: number) {
+    return [...this.records.values()]
+      .filter((record) => record.userId === userId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, limit);
+  }
+
   async listRunningUpdatedBefore(cutoff: string, limit: number) {
     return [...this.records.values()]
       .filter((record) => record.status === "running" && record.updatedAt < cutoff)

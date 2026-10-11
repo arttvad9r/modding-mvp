@@ -199,6 +199,7 @@ export interface GenerationRepository {
     expectedRevision: number,
     next: GenerationRecord,
   ): Promise<boolean>;
+  listByUserCreatedDesc(userId: string, limit: number): Promise<readonly GenerationRecord[]>;
   listRunningUpdatedBefore(cutoff: string, limit: number): Promise<readonly RunningGenerationRecord[]>;
 }
 

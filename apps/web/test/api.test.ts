@@ -35,6 +35,12 @@ class MemoryRepository implements GenerationRepository {
     this.records.set(id, GenerationRecordSchema.parse(next));
     return true;
   }
+  async listByUserCreatedDesc(userId: string, limit: number) {
+    return [...this.records.values()]
+      .filter((record) => record.userId === userId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, limit);
+  }
   async listRunningUpdatedBefore() { return []; }
 }
 
@@ -224,6 +230,28 @@ describe("private-beta HTTP API", () => {
     expect(response.status).toBe(404);
   });
 
+
+  it("lists only the authenticated user's recent generations in newest-first order", async () => {
+    const api = await startApi();
+    const first = (await (await submit(api)).json()) as { generation: { id: string } };
+    const second = (await (await submit(api)).json()) as { generation: { id: string } };
+    await submit(api, api.otherToken);
+
+    const secondRecord = api.repository.records.get(second.generation.id);
+    if (!secondRecord) throw new Error("Missing second generation");
+    api.repository.records.set(second.generation.id, GenerationRecordSchema.parse({
+      ...secondRecord,
+      createdAt: "2026-10-11T00:00:05.000Z",
+      updatedAt: "2026-10-11T00:00:05.000Z",
+    }));
+
+    const response = await fetch(`${api.baseUrl}/v1/generations?limit=10`, { headers: auth(api.token) });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { generations: Array<{ id: string; userId?: string }> };
+    expect(body.generations.map((entry) => entry.id)).toEqual([second.generation.id, first.generation.id]);
+    expect(body.generations.every((entry) => entry.userId === undefined)).toBe(true);
+  });
+
   it("records willingness-to-pay survey responses per authenticated beta user", async () => {
     const api = await startApi();
     const response = await fetch(`${api.baseUrl}/v1/survey`, {
@@ -334,12 +362,54 @@ describe("private-beta HTTP API", () => {
     expect(body.generation.id).not.toBe(queued.id);
 
     const revised = api.repository.records.get(body.generation.id);
+    if (!revised) throw new Error("Missing revised generation");
     expect(revised).toMatchObject({
       status: "queued",
       prompt: "Also halve Automation research cost",
       sourceGenerationId: queued.id,
       baseModSpec: modSpec,
     });
+
+    const revisedModSpec = {
+      ...modSpec,
+      capability: "mixed" as const,
+      changes: [
+        ...modSpec.changes,
+        { type: "technology_cost" as const, technologyName: "automation", operation: { type: "multiply" as const, factor: 0.5 } },
+      ],
+      assertions: [
+        ...modSpec.assertions,
+        { type: "technology_cost_matches" as const, technologyName: "automation", expectation: { type: "multiply" as const, factor: 0.5 } },
+      ],
+    };
+    const revisedSuccess = GenerationRecordSchema.parse({
+      ...revised,
+      revision: 1,
+      status: "succeeded",
+      startedAt: "2026-10-11T00:00:03.000Z",
+      finishedAt: "2026-10-11T00:00:04.000Z",
+      updatedAt: "2026-10-11T00:00:04.000Z",
+      modSpec: revisedModSpec,
+      artifact: {
+        key: `generations/${revised.id}/faster-steel-furnaces_0.1.0.zip`,
+        fileName: "faster-steel-furnaces_0.1.0.zip",
+        contentType: "application/zip",
+        sizeBytes: 333,
+      },
+      telemetry,
+    });
+    api.repository.records.set(revised.id, revisedSuccess);
+
+    const publicRevision = await fetch(`${api.baseUrl}/v1/generations/${revised.id}`, { headers: auth(api.token) });
+    const publicBody = (await publicRevision.json()) as { generation: { baseModSpec?: unknown; revisionDiff?: unknown[] } };
+    expect(publicBody.generation.baseModSpec).toBeUndefined();
+    expect(publicBody.generation.revisionDiff).toEqual([
+      {
+        kind: "added",
+        after: { type: "technology_cost", technologyName: "automation", operation: { type: "multiply", factor: 0.5 } },
+      },
+    ]);
+
     expect(api.repository.records.get(queued.id)).toEqual(succeeded);
     expect(api.submissionStore.jobs).toHaveLength(2);
   });

@@ -25,6 +25,7 @@ import {
 import { z } from "zod";
 
 import type { PlannerAttemptMetadata, PlannerResult } from "./planner.js";
+import { findBroadScopeIssue } from "./scope-guard.js";
 
 const SupportedRevisionDraftSchema = z.strictObject({
   status: z.literal("supported"),
@@ -226,6 +227,16 @@ export async function planFactorioRevision(
     });
   }
 
+  const preflightScopeIssue = findBroadScopeIssue(prompt);
+  if (preflightScopeIssue !== null) {
+    return {
+      status: "unsupported",
+      reason: preflightScopeIssue.reason,
+      attempts: [],
+      usage: aggregateLlmUsage([]),
+    };
+  }
+
   const messages: LlmMessage[] = [
     { role: "system", content: buildRevisionSystemPrompt() },
     {
@@ -287,6 +298,15 @@ export async function planFactorioRevision(
         };
       }
       const modSpec = deriveRevision(baseModSpec, draft.changes);
+      const broadScopeIssue = findBroadScopeIssue(prompt, modSpec.changes);
+      if (broadScopeIssue !== null) {
+        return {
+          status: "unsupported",
+          reason: broadScopeIssue.reason,
+          attempts,
+          usage: aggregateLlmUsage(attempts.map((entry) => entry.usage)),
+        };
+      }
       return {
         status: "supported",
         modSpec,

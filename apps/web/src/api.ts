@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { ProjectError } from "@project/domain";
+import { ProjectError, type ModChange } from "@project/domain";
 import {
   BetaSurveyResponseSchema,
   SubmitGenerationRequestSchema,
   WillingnessToPaySchema,
   authenticateAccessToken,
   findGenerationForUser,
+  listGenerationsForUser,
   recordGenerationFeedback,
   submitGenerationAtomically,
   type ArtifactDownloadSigner,
@@ -113,9 +114,54 @@ function sendJson(
   response.end(`${JSON.stringify(body)}\n`);
 }
 
+function changeKey(change: ModChange): string {
+  switch (change.type) {
+    case "prototype_property":
+      return `${change.type}:${change.prototypeType}:${change.prototypeName}:${change.property}`;
+    case "recipe_ingredient":
+      return `${change.type}:${change.recipeName}:${change.ingredientType}:${change.ingredientName}`;
+    case "recipe_crafting_time":
+      return `${change.type}:${change.recipeName}`;
+    case "recipe_result":
+      return `${change.type}:${change.recipeName}:${change.resultType}:${change.resultName}`;
+    case "item_stack_size":
+      return `${change.type}:${change.itemName}`;
+    case "technology_cost":
+      return `${change.type}:${change.technologyName}`;
+    case "technology_prerequisite":
+      return `${change.type}:${change.technologyName}:${change.prerequisiteName}`;
+  }
+}
+
+type RevisionDiffEntry =
+  | { readonly kind: "added"; readonly after: ModChange }
+  | { readonly kind: "removed"; readonly before: ModChange }
+  | { readonly kind: "changed"; readonly before: ModChange; readonly after: ModChange };
+
+function revisionDiff(
+  record: Extract<GenerationRecord, { status: "succeeded" }>,
+): readonly RevisionDiffEntry[] | undefined {
+  if (record.baseModSpec === undefined) return undefined;
+  const before = new Map(record.baseModSpec.changes.map((change) => [changeKey(change), change]));
+  const after = new Map(record.modSpec.changes.map((change) => [changeKey(change), change]));
+  const keys = [...new Set([...before.keys(), ...after.keys()])].sort();
+  const diff: RevisionDiffEntry[] = [];
+  for (const key of keys) {
+    const previous = before.get(key);
+    const current = after.get(key);
+    if (previous === undefined && current !== undefined) diff.push({ kind: "added", after: current });
+    else if (previous !== undefined && current === undefined) diff.push({ kind: "removed", before: previous });
+    else if (previous !== undefined && current !== undefined && JSON.stringify(previous) !== JSON.stringify(current)) {
+      diff.push({ kind: "changed", before: previous, after: current });
+    }
+  }
+  return diff;
+}
+
 function publicGeneration(record: GenerationRecord): Record<string, unknown> {
   const { userId: _userId, baseModSpec: _baseModSpec, ...rest } = record;
   if (record.status !== "succeeded") return rest;
+  const diff = revisionDiff(record);
   return {
     ...rest,
     artifact: {
@@ -123,6 +169,7 @@ function publicGeneration(record: GenerationRecord): Record<string, unknown> {
       contentType: record.artifact.contentType,
       sizeBytes: record.artifact.sizeBytes,
     },
+    ...(diff === undefined ? {} : { revisionDiff: diff }),
   };
 }
 
@@ -282,6 +329,14 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
           ...(dependencies.now === undefined ? {} : { now: dependencies.now }),
         });
         sendJson(response, 202, { generation: publicGeneration(record) });
+        return;
+      }
+
+      if (method === "GET" && url.pathname === "/v1/generations") {
+        await applyRouteLimits(dependencies, context, "read");
+        const limit = z.coerce.number().int().min(1).max(20).parse(url.searchParams.get("limit") ?? "10");
+        const records = await listGenerationsForUser(dependencies.repository, context.user.id, limit);
+        sendJson(response, 200, { generations: records.map(publicGeneration) });
         return;
       }
 

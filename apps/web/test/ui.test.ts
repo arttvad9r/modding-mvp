@@ -45,6 +45,10 @@ describe("private-beta tester UI", () => {
       expect(html).toContain("Not supported yet");
       expect(html).toContain('id="token"');
       expect(html).toContain('id="clear-token"');
+      expect(html).toContain("Your recent generations");
+      expect(html).toContain("Accepted changes");
+      expect(html).toContain("Revision diff");
+      expect(html).toContain("isolated base-game Factorio 2.0.77");
       expect(html).toContain("Refine this tweak bundle");
       expect(html).toContain('id="revision-prompt"');
       expect(html).toContain('id="revise"');
@@ -65,6 +69,10 @@ describe("private-beta tester UI", () => {
       expect(javascript).toContain("/retry");
       expect(javascript).toContain("/revise");
       expect(javascript).toContain("Revised generation in progress");
+      expect(javascript).toContain("/v1/generations?limit=10");
+      expect(javascript).toContain("renderHistory");
+      expect(javascript).toContain("describeChange");
+      expect(javascript).toContain("revisionDiff");
       expect(javascript).toContain("/v1/survey");
 
       const css = await fetch(`${baseUrl}/app.css`);

@@ -170,7 +170,7 @@ Before starting M2:
 - [x] Feedback is locally capturable by generation ID.
 - [x] ZIP publication remains downstream of real Factorio + semantic validation.
 
-## M6A — Minimum Interesting Product — in progress
+## M6A — Minimum Interesting Product — complete
 - [x] Add backward-compatible mixed ModSpec composition across multiple primitive capability families.
 - [x] Make Planner preserve multiple heterogeneous supported changes in one request.
 - [x] Dispatch mixed changes/assertions deterministically without adding an arbitrary-Lua path.
@@ -183,12 +183,12 @@ Before starting M2:
 
 ### M6A exit review — 2026-10-11
 - [x] Run a fresh product/scope review against the deployed seven-family runtime and realistic non-golden prompts.
-- [ ] Prevent universal/category prompts from silently partially applying when the registry covers only some members (review reproduced this with `Make all inserters twice as fast`: burner and long-handed inserters were omitted).
-- [ ] Show the exact interpreted change list, and revision diff, in tester UI so a successful Factorio validation cannot hide a prompt-to-ModSpec interpretation mistake.
-- [ ] Add an owner-scoped recent-generation/history flow so reload/returning users can reopen downloads and continue revisions instead of losing the in-memory generation ID.
-- [ ] State the validation environment explicitly in the UI: current success proves the generated mod against isolated base-game Factorio 2.0.77, not arbitrary third-party mod stacks or unvalidated DLC combinations.
-- [ ] Add the exit-review adversarial prompts to regression/eval coverage and rerun the live Planner gate after fixing partial-fulfillment semantics.
-- [ ] Re-run the M6A exit review; if green, start with a 5–10 player external cohort before scaling recruitment to the 30+ M6 target.
+- [x] Prevent universal/category prompts from silently partially applying when the registry covers only some members (review reproduced this with `Make all inserters twice as fast`: burner and long-handed inserters were omitted).
+- [x] Show the exact interpreted change list, and revision diff, in tester UI so a successful Factorio validation cannot hide a prompt-to-ModSpec interpretation mistake.
+- [x] Add an owner-scoped recent-generation/history flow so reload/returning users can reopen downloads and continue revisions instead of losing the in-memory generation ID.
+- [x] State the validation environment explicitly in the UI: current success proves the generated mod against isolated base-game Factorio 2.0.77, not arbitrary third-party mod stacks or unvalidated DLC combinations.
+- [x] Add the exit-review adversarial prompts to regression/eval coverage and rerun the live Planner gate after fixing partial-fulfillment semantics.
+- [x] Re-run the M6A exit review; if green, start with a 5–10 player external cohort before scaling recruitment to the 30+ M6 target.
 
 ## M6 — in progress
 

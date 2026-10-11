@@ -24,7 +24,7 @@ const INDEX_HTML = String.raw`<!doctype html>
 
     <section class="notice" aria-label="Beta scope notice">
       <strong>This beta focuses on personal base-game tweak packs.</strong>
-      <span>Combine supported machine speed, crafting time, recipe input/output, stack-size, and research changes in one request. If any essential part is outside the current scope, the whole request is rejected instead of silently dropping it.</span>
+      <span>Combine supported machine speed, crafting time, recipe input/output, stack-size, and research changes in one request. If any essential part is outside the current scope, the whole request is rejected instead of silently dropping it. Validation currently runs against isolated base-game Factorio 2.0.77; third-party mod stacks and Space Age compatibility are not claimed.</span>
     </section>
 
     <section class="panel access-panel" aria-labelledby="auth-title">
@@ -42,6 +42,19 @@ const INDEX_HTML = String.raw`<!doctype html>
         <button id="clear-token" type="button" class="ghost">Clear</button>
       </div>
       <p class="hint">Stored only in this browser tab's session storage. Closing the tab clears it.</p>
+    </section>
+
+    <section class="panel history-panel" aria-labelledby="history-title">
+      <div class="section-head">
+        <div>
+          <p class="step">RECENT</p>
+          <h2 id="history-title">Your recent generations</h2>
+        </div>
+        <button id="refresh-history" type="button" class="ghost">Refresh</button>
+      </div>
+      <div id="history-list" class="history-list">
+        <p class="muted">Save a beta token to load recent generations.</p>
+      </div>
     </section>
 
     <section class="panel request-panel" aria-labelledby="request-title">
@@ -115,13 +128,23 @@ const INDEX_HTML = String.raw`<!doctype html>
       <p id="result-message" class="result-message"></p>
       <dl id="result-meta"></dl>
 
+      <div id="change-summary" class="change-summary hidden">
+        <p class="feedback-title">Accepted changes</p>
+        <ul id="change-list" class="change-list"></ul>
+      </div>
+
+      <div id="revision-diff-summary" class="change-summary hidden">
+        <p class="feedback-title">Revision diff</p>
+        <ul id="revision-diff-list" class="change-list"></ul>
+      </div>
+
       <div id="result-actions" class="actions hidden">
         <button id="download" type="button">Download validated ZIP</button>
         <button id="retry" type="button" class="secondary hidden">Retry generation</button>
       </div>
 
       <div id="install-note" class="install-note hidden">
-        <strong>Next:</strong> put the downloaded ZIP in your Factorio <code>mods</code> folder without unpacking it, then launch the game.
+        <strong>Next:</strong> put the downloaded ZIP in your Factorio <code>mods</code> folder without unpacking it, then launch the game. The automated check proves this bundle against isolated base-game Factorio 2.0.77 only; your own third-party mod stack still needs an in-game check.
       </div>
 
       <div id="revision" class="feedback hidden">
@@ -259,6 +282,15 @@ dl{display:grid;grid-template-columns:max-content 1fr;gap:8px 15px;margin:14px 0
 dt{color:#71808c}
 dd{margin:0;overflow-wrap:anywhere;color:#c7d0d7}
 .install-note{margin-top:14px;border:1px solid #36513e;background:rgba(74,122,88,.09);border-radius:11px;padding:12px 13px;color:#bcd2c3;font-size:13px;line-height:1.5}
+.history-list{display:grid;gap:8px}
+.history-item{display:grid;grid-template-columns:1fr auto;gap:6px 14px;width:100%;text-align:left;background:#10171d;color:#dce3e8;border:1px solid #2d3943;padding:11px 13px}
+.history-item:hover{background:#172027;border-color:#455560;filter:none}
+.history-prompt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}
+.history-meta{font-size:11px;color:#83919c;white-space:nowrap}
+.change-summary{border:1px solid #2d3943;background:#0f161c;border-radius:11px;padding:13px 14px;margin:14px 0}
+.change-list{margin:0;padding-left:19px;color:#c8d2d9;font-size:13px;line-height:1.6}
+.change-list li+li{margin-top:4px}
+.diff-kind{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#c58c35;margin-right:7px}
 .feedback{border-top:1px solid #29333e;margin-top:22px;padding-top:20px}
 .feedback-title{font-size:14px;font-weight:800;margin:0 0 12px;color:#dbe2e7}
 .hidden{display:none!important}
@@ -291,10 +323,16 @@ const APP_JS = String.raw`(() => {
   const promptCount = document.querySelector("#prompt-count");
   const generateButton = document.querySelector("#generate");
   const requestState = document.querySelector("#request-state");
+  const historyList = document.querySelector("#history-list");
+  const refreshHistory = document.querySelector("#refresh-history");
   const resultPanel = document.querySelector("#result-panel");
   const statusBadge = document.querySelector("#status-badge");
   const resultMeta = document.querySelector("#result-meta");
   const resultMessage = document.querySelector("#result-message");
+  const changeSummary = document.querySelector("#change-summary");
+  const changeList = document.querySelector("#change-list");
+  const revisionDiffSummary = document.querySelector("#revision-diff-summary");
+  const revisionDiffList = document.querySelector("#revision-diff-list");
   const resultActions = document.querySelector("#result-actions");
   const installNote = document.querySelector("#install-note");
   const downloadButton = document.querySelector("#download");
@@ -397,6 +435,55 @@ const APP_JS = String.raw`(() => {
     return (bytes / 1024).toFixed(1) + " KiB";
   }
 
+  function humanize(value) {
+    const text = String(value || "").replaceAll("-", " ").replaceAll("_", " ");
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+  }
+
+  function operationText(operation) {
+    if (!operation) return "";
+    if (operation.type === "set") return "= " + String(operation.value);
+    if (operation.type === "multiply") return "×" + String(operation.factor);
+    return operation.type;
+  }
+
+  function describeChange(change) {
+    if (!change) return "Unknown change";
+    if (change.type === "prototype_property") return humanize(change.prototypeName) + " · " + humanize(change.property) + " " + operationText(change.operation);
+    if (change.type === "recipe_ingredient") return humanize(change.recipeName) + " recipe · " + humanize(change.ingredientName) + " " + operationText(change.operation);
+    if (change.type === "recipe_crafting_time") return humanize(change.recipeName) + " crafting time " + operationText(change.operation);
+    if (change.type === "recipe_result") return humanize(change.recipeName) + " output · " + humanize(change.resultName) + " " + operationText(change.operation);
+    if (change.type === "item_stack_size") return humanize(change.itemName) + " stack size " + operationText(change.operation);
+    if (change.type === "technology_cost") return humanize(change.technologyName) + " research cost " + operationText(change.operation);
+    if (change.type === "technology_prerequisite") return humanize(change.technologyName) + " prerequisite · " + operationText(change.operation) + " " + humanize(change.prerequisiteName);
+    return humanize(change.type);
+  }
+
+  function renderChangeDetails(record) {
+    changeList.replaceChildren();
+    const changes = record.modSpec && Array.isArray(record.modSpec.changes) ? record.modSpec.changes : [];
+    changeSummary.classList.toggle("hidden", changes.length === 0);
+    changes.forEach((change) => {
+      const item = document.createElement("li");
+      item.textContent = describeChange(change);
+      changeList.append(item);
+    });
+
+    revisionDiffList.replaceChildren();
+    const diff = Array.isArray(record.revisionDiff) ? record.revisionDiff : [];
+    revisionDiffSummary.classList.toggle("hidden", diff.length === 0);
+    diff.forEach((entry) => {
+      const item = document.createElement("li");
+      const kind = document.createElement("span");
+      kind.className = "diff-kind";
+      kind.textContent = entry.kind;
+      item.append(kind);
+      if (entry.kind === "changed") item.append(document.createTextNode(describeChange(entry.before) + " → " + operationText(entry.after && entry.after.operation)));
+      else item.append(document.createTextNode(describeChange(entry.after || entry.before)));
+      revisionDiffList.append(item);
+    });
+  }
+
   function renderProgress(status) {
     const terminal = ["succeeded", "failed", "unsupported"].includes(status);
     progress.querySelectorAll("span").forEach((item) => item.classList.remove("active", "done"));
@@ -427,6 +514,7 @@ const APP_JS = String.raw`(() => {
     if (record.artifact && record.artifact.fileName) addMeta("Artifact", record.artifact.fileName);
     const size = record.artifact ? fileSize(record.artifact.sizeBytes) : null;
     if (size) addMeta("ZIP size", size);
+    renderChangeDetails(record);
 
     const canDownload = record.status === "succeeded";
     const canRetry = record.status === "failed" && record.error && record.error.retryable === true;
@@ -465,6 +553,7 @@ const APP_JS = String.raw`(() => {
         generateButton.disabled = false;
         requestState.textContent = "Generation finished.";
         pollTimer = null;
+        void loadHistory();
         return;
       }
       pollTimer = window.setTimeout(poll, 1000);
@@ -486,6 +575,7 @@ const APP_JS = String.raw`(() => {
     sessionStorage.setItem(TOKEN_KEY, value);
     setAccessState(true, "Ready");
     requestState.textContent = "Beta access saved for this tab.";
+    void loadHistory();
   });
 
   clearToken.addEventListener("click", () => {
@@ -493,8 +583,72 @@ const APP_JS = String.raw`(() => {
     tokenInput.value = "";
     setAccessState(false, "Not saved");
     requestState.textContent = "Beta token cleared.";
+    historyList.replaceChildren();
+    const message = document.createElement("p");
+    message.className = "muted";
+    message.textContent = "Save a beta token to load recent generations.";
+    historyList.append(message);
     tokenInput.focus();
   });
+
+  function renderHistory(records) {
+    historyList.replaceChildren();
+    if (!Array.isArray(records) || records.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "No generations yet.";
+      historyList.append(empty);
+      return;
+    }
+    records.forEach((record) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "history-item";
+      const prompt = document.createElement("span");
+      prompt.className = "history-prompt";
+      prompt.textContent = record.prompt || record.id;
+      const meta = document.createElement("span");
+      meta.className = "history-meta";
+      const created = record.createdAt ? new Date(record.createdAt).toLocaleString() : "";
+      meta.textContent = String(record.status || "") + (created ? " · " + created : "");
+      button.append(prompt, meta);
+      button.addEventListener("click", async () => {
+        try {
+          const body = await api("/v1/generations/" + encodeURIComponent(record.id));
+          generationId = body.generation.id;
+          const terminal = render(body.generation);
+          resultPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+          if (!terminal) {
+            generateButton.disabled = true;
+            if (pollTimer !== null) window.clearTimeout(pollTimer);
+            pollTimer = window.setTimeout(poll, 500);
+          }
+        } catch (error) {
+          requestState.textContent = friendlyError(error);
+        }
+      });
+      historyList.append(button);
+    });
+  }
+
+  async function loadHistory() {
+    if (!token()) return;
+    refreshHistory.disabled = true;
+    try {
+      const body = await api("/v1/generations?limit=10");
+      renderHistory(body.generations);
+    } catch (error) {
+      historyList.replaceChildren();
+      const message = document.createElement("p");
+      message.className = "muted";
+      message.textContent = friendlyError(error);
+      historyList.append(message);
+    } finally {
+      refreshHistory.disabled = false;
+    }
+  }
+
+  refreshHistory.addEventListener("click", () => void loadHistory());
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -642,6 +796,8 @@ const APP_JS = String.raw`(() => {
       }
     });
   });
+
+  if (stored) void loadHistory();
 })();`;
 
 function sendStatic(response: ServerResponse, contentType: string, body: string): void {

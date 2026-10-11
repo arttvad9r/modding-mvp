@@ -26,6 +26,8 @@ import {
 } from "@project/llm";
 import { z } from "zod";
 
+import { findBroadScopeIssue } from "./scope-guard.js";
+
 const safeSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const titleSchema = z.string().trim().min(1).max(120);
 const slugSchema = z.string().min(1).max(80).regex(safeSlug);
@@ -284,6 +286,16 @@ export async function planFactorioPrompt(
     });
   }
 
+  const preflightScopeIssue = findBroadScopeIssue(prompt);
+  if (preflightScopeIssue !== null) {
+    return {
+      status: "unsupported",
+      reason: preflightScopeIssue.reason,
+      attempts: [],
+      usage: aggregateLlmUsage([]),
+    };
+  }
+
   const messages: LlmMessage[] = [
     { role: "system", content: buildPlannerSystemPrompt() },
     { role: "user", content: prompt },
@@ -343,6 +355,15 @@ export async function planFactorioPrompt(
 
       const modSpec = deriveModSpec(draft);
       assertModSpecSupported(modSpec);
+      const broadScopeIssue = findBroadScopeIssue(prompt, modSpec.changes);
+      if (broadScopeIssue !== null) {
+        return {
+          status: "unsupported",
+          reason: broadScopeIssue.reason,
+          attempts,
+          usage: aggregateLlmUsage(attempts.map((entry) => entry.usage)),
+        };
+      }
       return {
         status: "supported",
         modSpec,

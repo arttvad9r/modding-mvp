@@ -182,6 +182,12 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       expect(generation.artifact.key).toBeUndefined();
       expect(generation.artifact.sizeBytes).toBeGreaterThan(0);
 
+      const initialHistoryResponse = await fetch(`${baseUrl}/v1/generations?limit=10`, { headers });
+      expect(initialHistoryResponse.status).toBe(200);
+      const initialHistory = (await initialHistoryResponse.json()) as { generations: Array<{ id: string; userId?: string }> };
+      expect(initialHistory.generations[0]?.id).toBe(created.generation.id);
+      expect(initialHistory.generations[0]?.userId).toBeUndefined();
+
       const downloadResponse = await fetch(
         `${baseUrl}/v1/generations/${created.generation.id}/download`,
         { headers: { ...headers, Accept: "application/json" } },
@@ -214,6 +220,7 @@ describe("private-beta HTTP API through real service infrastructure", () => {
         status: string;
         sourceGenerationId?: string;
         modSpec: { capability: string; changes: unknown[] };
+        revisionDiff?: Array<{ kind: string; before?: unknown; after?: unknown }>;
         artifact: { fileName: string; sizeBytes: number; key?: string };
       };
       expect(revised).toMatchObject({
@@ -224,6 +231,17 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       });
       expect(revised.modSpec.changes).toHaveLength(2);
       expect(revised.artifact.sizeBytes).toBeGreaterThan(0);
+      expect(revised.revisionDiff).toEqual([
+        {
+          kind: "added",
+          after: { type: "technology_cost", technologyName: "automation", operation: { type: "multiply", factor: 0.5 } },
+        },
+      ]);
+
+      const revisedHistoryResponse = await fetch(`${baseUrl}/v1/generations?limit=10`, { headers });
+      const revisedHistory = (await revisedHistoryResponse.json()) as { generations: Array<{ id: string }> };
+      expect(revisedHistory.generations.map((entry) => entry.id)).toContain(reviseBody.generation.id);
+      expect(revisedHistory.generations.map((entry) => entry.id)).toContain(created.generation.id);
 
       const feedbackResponse = await fetch(
         `${baseUrl}/v1/generations/${created.generation.id}/feedback`,

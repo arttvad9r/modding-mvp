@@ -54,9 +54,13 @@ Expected behavior:
 
 The public child record may expose `sourceGenerationId` for lineage but never exposes the duplicated internal `baseModSpec` snapshot.
 
+### `GET /v1/generations?limit=10`
+
+Returns up to 20 newest generations owned by the authenticated user, ordered newest-first. This is the tester recovery/history path used after reload; another user's generations are never returned.
+
 ### `GET /v1/generations/:id`
 
-Returns the current generation state. Terminal states expose either artifact metadata, an unsupported reason, or a normalized typed error.
+Returns the current generation state. Terminal states expose either artifact metadata, an unsupported reason, or a normalized typed error. Successful records expose the accepted ModSpec change list. Successful revision records additionally expose a derived `revisionDiff` (`added | removed | changed`) while the internal duplicated `baseModSpec` snapshot remains hidden.
 
 ### `POST /v1/generations/:id/feedback`
 
@@ -103,7 +107,8 @@ API rate limits are backed by PostgreSQL fixed-window counters for both user ID 
 ## Implemented HTTP endpoints
 - `GET /health/live` — unauthenticated liveness check.
 - `POST /v1/generations` — authenticate, rate-limit, atomically persist+enqueue, return `202`.
-- `GET /v1/generations/:id` — owner-scoped status/result; internal `userId` and object-store key are omitted.
+- `GET /v1/generations?limit=1..20` — owner-scoped newest-first recent-generation history.
+- `GET /v1/generations/:id` — owner-scoped status/result; internal `userId`, `baseModSpec`, and object-store key are omitted; successful revisions may include a derived public diff.
 - `POST /v1/generations/:id/revise` — owner-scoped successful-generation follow-up; creates a new immutable child generation from the accepted ModSpec snapshot.
 - `POST /v1/generations/:id/feedback` — owner-scoped feedback for terminal results only.
 - `POST /v1/generations/:id/retry` — only for owner-scoped `failed` records whose typed error is retryable; creates a new queued generation with the same prompt and leaves the original terminal record unchanged.
@@ -111,7 +116,7 @@ API rate limits are backed by PostgreSQL fixed-window counters for both user ID 
 - `POST /v1/survey` — authenticated per-user upsert of `{ willingnessToPay: "yes" | "maybe" | "no" }` for the private-beta willingness-to-pay hypothesis.
 
 ## Tester UI
-`GET /` serves the private-beta tester interface from the same `apps/web` process. The page explains the intentionally narrow prototype-stage beta scope, offers known-good example prompts, stores the beta token only in tab-scoped `sessionStorage`, submits prompts through the authenticated API, polls until terminal state, explains unsupported/retryable outcomes, exposes the signed ZIP download on success, offers a “Refine this tweak bundle” follow-up form that creates a new revision generation, records optional up/down feedback, and asks the explicit willingness-to-pay survey after success. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.
+`GET /` serves the private-beta tester interface from the same `apps/web` process. The page explains the intentionally narrow prototype-stage beta scope and the isolated base-game Factorio 2.0.77 validation boundary, offers known-good example prompts, stores the beta token only in tab-scoped `sessionStorage`, loads the authenticated user's recent generations, submits prompts through the API, polls until terminal state, renders the exact accepted typed changes plus a revision diff when applicable, explains unsupported/retryable outcomes, exposes the signed ZIP download on success, offers a “Refine this tweak bundle” follow-up form, records optional up/down feedback, and asks the explicit willingness-to-pay survey after success. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.
 
 ## Beta KPI report
 `pnpm beta:kpis` reads the deployment PostgreSQL database, excludes users with `metricsEligible=false` and all of their generations/surveys, and emits one JSON report covering active/provisioned testers, distinct-prompt repeat usage, supported terminal success, direct success without Repair, prompt-to-result and Factorio-validation medians, feedback coverage and the reported false-success proxy, willingness to pay, token/cost coverage, and Repair attempts. The report is observational; it does not mark M6 hypotheses as achieved until real beta data reaches their thresholds.
