@@ -143,10 +143,46 @@ Exit criteria:
 - a user can revise an accepted bundle through the product rather than starting from source code;
 - Planner mixed-request eval remains above the existing classification/semantic development gates.
 
-## M6 — Private beta service
-Status: in progress; M6A product-value gate passed.
+## M6B — Content Mods before external beta
+Status: in progress.
 
-Goal: validate product usefulness with real Factorio players after the M6A product-value gate.
+Goal: make the product capable of creating meaningful new Factorio content, not only changing existing values, while preserving deterministic typed generation and real-runtime semantic validation.
+
+Implemented content slices are `new_item`, `new_recipe`, and `new_machine`, and they can compose into one validated content graph.
+
+`new_item`:
+- create a new intermediate item from a reviewed base item visual/template;
+- define stack size, item-only crafting recipe, and existing/new technology unlock;
+- allow the declared `custom-*` item to feed `new_recipe` and `new_machine` changes in the same bundle;
+- reject undeclared custom references and prototype-name collisions before generation.
+
+`new_machine`:
+- create a new assembling machine or electric furnace from one reviewed base-game template;
+- create its placeable item and recipe with reviewed existing ingredient items;
+- set final crafting speed, energy use, module slots, stack size, and recipe crafting time;
+- unlock through one reviewed existing technology or create one new technology with reviewed prerequisites/science tier/count/time;
+- inherit base-game graphics/icons instead of generating assets;
+- derive and execute semantic assertions covering the whole created content bundle;
+- support follow-up revisions using the existing immutable revision flow.
+
+`new_recipe`:
+- create a new alternative item-only recipe for one reviewed existing base-game item;
+- specify reviewed ingredients, result amount, and crafting time;
+- unlock via an existing reviewed technology or one new bounded technology;
+- semantically validate recipe shape and unlock in real Factorio.
+
+Exit criteria for these slices:
+- deterministic `new_machine` ModSpec builds a validated installable ZIP in Factorio 2.0.77;
+- Planner can extract representative EN/RU machine-creation requests at the normal live eval gates;
+- UI clearly shows created-machine intent and no longer claims all new entities are unsupported;
+- full typecheck/unit/build/real-Factorio/service E2E remains green.
+
+M6B stops at this bounded data-stage content graph for the first external beta. Arbitrary `control.lua` and generated/custom assets are separate later stages because the current validation boundary does not prove runtime-event behavior, save/multiplayer behavior, or media correctness.
+
+## M6 — Private beta service
+Status: in progress; M6A passed and M6B content-value work now precedes public recruitment.
+
+Goal: validate product usefulness with real Factorio players after the M6A trust gate and M6B content-value expansion.
 
 Completed slices:
 - `packages/service-core` runtime schemas for generation records/jobs/telemetry/artifact refs;
@@ -175,7 +211,7 @@ Completed slices:
 - hosted SeaweedFS smoke proving upload -> presigned GET -> byte comparison -> delete;
 - deployed live Z.ai `glm-5.3-flash` E2E proving API -> pg-boss -> worker -> real Factorio -> private object storage -> presigned ZIP -> feedback/survey; the first server smoke succeeded directly in 19.1 s using 2,205 tokens.
 
-Remaining scope:
+Remaining scope after M6B:
 - enable public HTTPS ingress for testers outside the tailnet (prefer the planned dedicated public VPS/reverse proxy rather than exposing the home server directly);
 - recruit a first 5–10 player cohort, review prompt/support/false-success feedback, then scale toward 30+ active testers and evaluate the product hypotheses from observed beta data.
 

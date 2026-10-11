@@ -265,3 +265,108 @@ describe("M6A rebalance ModSpec families", () => {
     expect(ModSpecSchema.safeParse({ ...spec, assertions: [spec.assertions[0]] }).success).toBe(false);
   });
 });
+
+
+describe("M6B new_machine ModSpec", () => {
+  const spec = {
+    title: "Advanced electric furnace",
+    slug: "advanced-electric-furnace",
+    target,
+    capability: "new_machine",
+    changes: [{
+      type: "new_machine",
+      machineType: "furnace",
+      basePrototypeName: "electric-furnace",
+      name: "custom-advanced-electric-furnace",
+      displayName: "Advanced Electric Furnace",
+      speed: 4,
+      energyUsageKw: 540,
+      moduleSlots: 4,
+      itemStackSize: 50,
+      recipeCraftingTime: 5,
+      recipeIngredients: [
+        { itemName: "steel-plate", amount: 10 },
+        { itemName: "advanced-circuit", amount: 5 },
+        { itemName: "stone-brick", amount: 10 },
+      ],
+      unlock: {
+        type: "new_technology",
+        displayName: "Advanced Electric Furnace",
+        prerequisites: ["advanced-material-processing-2"],
+        scienceTier: "chemical",
+        count: 300,
+        time: 30,
+      },
+    }],
+    assertions: [{
+      type: "new_machine_matches",
+      machineType: "furnace",
+      basePrototypeName: "electric-furnace",
+      name: "custom-advanced-electric-furnace",
+      displayName: "Advanced Electric Furnace",
+      speed: 4,
+      energyUsageKw: 540,
+      moduleSlots: 4,
+      itemStackSize: 50,
+      recipeCraftingTime: 5,
+      recipeIngredients: [
+        { itemName: "steel-plate", amount: 10 },
+        { itemName: "advanced-circuit", amount: 5 },
+        { itemName: "stone-brick", amount: 10 },
+      ],
+      unlock: {
+        type: "new_technology",
+        displayName: "Advanced Electric Furnace",
+        prerequisites: ["advanced-material-processing-2"],
+        scienceTier: "chemical",
+        count: 300,
+        time: 30,
+      },
+    }],
+  } as const;
+
+  it("accepts a complete new content bundle", () => {
+    expect(ModSpecSchema.parse(spec)).toEqual(spec);
+  });
+
+  it("rejects a semantic assertion that differs from the requested machine", () => {
+    expect(ModSpecSchema.safeParse({
+      ...spec,
+      assertions: [{ ...spec.assertions[0], speed: 5 }],
+    }).success).toBe(false);
+  });
+});
+
+
+describe("M6B new_recipe ModSpec", () => {
+  const spec = {
+    title: "Steel gears recipe",
+    slug: "steel-gears-recipe",
+    target,
+    capability: "new_recipe",
+    changes: [{ type: "new_recipe", name: "custom-steel-gears", displayName: "Steel Gears", energyRequired: 1, ingredients: [{ itemName: "steel-plate", amount: 1 }], resultItemName: "iron-gear-wheel", resultAmount: 5, unlock: { type: "existing_technology", technologyName: "steel-processing" } }],
+    assertions: [{ type: "new_recipe_matches", name: "custom-steel-gears", displayName: "Steel Gears", energyRequired: 1, ingredients: [{ itemName: "steel-plate", amount: 1 }], resultItemName: "iron-gear-wheel", resultAmount: 5, unlock: { type: "existing_technology", technologyName: "steel-processing" } }],
+  } as const;
+
+  it("accepts a complete alternative recipe", () => {
+    expect(ModSpecSchema.parse(spec)).toEqual(spec);
+  });
+
+  it("rejects semantic drift in the result amount", () => {
+    expect(ModSpecSchema.safeParse({ ...spec, assertions: [{ ...spec.assertions[0], resultAmount: 4 }] }).success).toBe(false);
+  });
+});
+
+
+describe("M6B new_item ModSpec", () => {
+  const spec = {
+    title: "Reinforced plate",
+    slug: "reinforced-plate",
+    target,
+    capability: "new_item",
+    changes: [{ type: "new_item", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } }],
+    assertions: [{ type: "new_item_matches", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } }],
+  } as const;
+  it("accepts a new intermediate item with its recipe and unlock", () => expect(ModSpecSchema.parse(spec)).toEqual(spec));
+  it("rejects semantic drift", () => expect(ModSpecSchema.safeParse({ ...spec, assertions: [{ ...spec.assertions[0], stackSize: 50 }] }).success).toBe(false));
+});

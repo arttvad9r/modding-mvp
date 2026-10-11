@@ -215,3 +215,211 @@ describe("M6A high-value rebalance primitives through real Factorio", () => {
     30_000,
   );
 });
+
+
+describe("M6B new content machine through real Factorio", () => {
+  it("creates and semantically validates a new furnace, item, recipe, and technology", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-new-machine-output-"));
+    const spec: ModSpec = {
+      title: "Advanced electric furnace",
+      slug: "advanced-electric-furnace",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+      capability: "new_machine",
+      changes: [{
+        type: "new_machine", machineType: "furnace", basePrototypeName: "electric-furnace",
+        name: "custom-advanced-electric-furnace", displayName: "Advanced Electric Furnace",
+        speed: 4, energyUsageKw: 540, moduleSlots: 4, itemStackSize: 50,
+        recipeCraftingTime: 5,
+        recipeIngredients: [{ itemName: "steel-plate", amount: 10 }, { itemName: "advanced-circuit", amount: 5 }, { itemName: "stone-brick", amount: 10 }],
+        unlock: { type: "new_technology", displayName: "Advanced Electric Furnace", prerequisites: ["advanced-material-processing-2"], scienceTier: "chemical", count: 300, time: 30 },
+      }],
+      assertions: [{
+        type: "new_machine_matches", machineType: "furnace", basePrototypeName: "electric-furnace",
+        name: "custom-advanced-electric-furnace", displayName: "Advanced Electric Furnace",
+        speed: 4, energyUsageKw: 540, moduleSlots: 4, itemStackSize: 50,
+        recipeCraftingTime: 5,
+        recipeIngredients: [{ itemName: "steel-plate", amount: 10 }, { itemName: "advanced-circuit", amount: 5 }, { itemName: "stone-brick", amount: 10 }],
+        unlock: { type: "new_technology", displayName: "Advanced Electric Furnace", prerequisites: ["advanced-material-processing-2"], scienceTier: "chemical", count: 300, time: 30 },
+      }],
+    };
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+
+  it("creates multiple reviewed machine types with their native speed properties", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-new-machine-types-output-"));
+    const defs = [
+      { machineType: "mining-drill", basePrototypeName: "electric-mining-drill", name: "custom-precision-drill", displayName: "Precision Drill", speed: 1, energyUsageKw: 140, moduleSlots: 3, itemStackSize: 50, recipeCraftingTime: 6, recipeIngredients: [{ itemName: "electric-mining-drill", amount: 1 }, { itemName: "processing-unit", amount: 5 }], unlock: { type: "existing_technology", technologyName: "mining-productivity-1" } },
+      { machineType: "lab", basePrototypeName: "lab", name: "custom-fast-lab", displayName: "Fast Lab", speed: 2, energyUsageKw: 120, moduleSlots: 2, itemStackSize: 20, recipeCraftingTime: 6, recipeIngredients: [{ itemName: "lab", amount: 1 }, { itemName: "advanced-circuit", amount: 5 }], unlock: { type: "existing_technology", technologyName: "research-speed-1" } },
+      { machineType: "assembling-machine", basePrototypeName: "chemical-plant", name: "custom-rapid-chemical-plant", displayName: "Rapid Chemical Plant", speed: 2, energyUsageKw: 420, moduleSlots: 3, itemStackSize: 20, recipeCraftingTime: 8, recipeIngredients: [{ itemName: "chemical-plant", amount: 1 }, { itemName: "processing-unit", amount: 5 }], unlock: { type: "existing_technology", technologyName: "oil-processing" } },
+      { machineType: "assembling-machine", basePrototypeName: "centrifuge", name: "custom-rapid-centrifuge", displayName: "Rapid Centrifuge", speed: 2, energyUsageKw: 700, moduleSlots: 2, itemStackSize: 20, recipeCraftingTime: 10, recipeIngredients: [{ itemName: "centrifuge", amount: 1 }, { itemName: "processing-unit", amount: 10 }], unlock: { type: "existing_technology", technologyName: "uranium-processing" } },
+    ] as const;
+    const spec = {
+      title: "Advanced production machines", slug: "advanced-production-machines",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "new_machine",
+      changes: defs.map((definition) => ({ type: "new_machine" as const, ...definition })),
+      assertions: defs.map((definition) => ({ type: "new_machine_matches" as const, ...definition })),
+    } as unknown as ModSpec;
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("creates an upgraded assembler using the base machine in its recipe and an existing technology unlock", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-new-assembler-output-"));
+    const spec: ModSpec = {
+      title: "Precision assembler", slug: "precision-assembler",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "new_machine",
+      changes: [{ type: "new_machine", machineType: "assembling-machine", basePrototypeName: "assembling-machine-3", name: "custom-precision-assembler", displayName: "Precision Assembler", speed: 2.5, energyUsageKw: 500, moduleSlots: 4, itemStackSize: 50, recipeCraftingTime: 8, recipeIngredients: [{ itemName: "assembling-machine-3", amount: 1 }, { itemName: "processing-unit", amount: 10 }, { itemName: "electric-engine-unit", amount: 5 }], unlock: { type: "existing_technology", technologyName: "production-science-pack" } }],
+      assertions: [{ type: "new_machine_matches", machineType: "assembling-machine", basePrototypeName: "assembling-machine-3", name: "custom-precision-assembler", displayName: "Precision Assembler", speed: 2.5, energyUsageKw: 500, moduleSlots: 4, itemStackSize: 50, recipeCraftingTime: 8, recipeIngredients: [{ itemName: "assembling-machine-3", amount: 1 }, { itemName: "processing-unit", amount: 10 }, { itemName: "electric-engine-unit", amount: 5 }], unlock: { type: "existing_technology", technologyName: "production-science-pack" } }],
+    };
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+});
+
+
+describe("M6B new alternative recipe through real Factorio", () => {
+  it("creates and semantically validates an alternative recipe and technology unlock", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-new-recipe-output-"));
+    const spec: ModSpec = {
+      title: "Steel gears recipe", slug: "steel-gears-recipe",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "new_recipe",
+      changes: [{ type: "new_recipe", name: "custom-steel-gears", displayName: "Steel Gears", energyRequired: 1, ingredients: [{ itemName: "steel-plate", amount: 1 }], resultItemName: "iron-gear-wheel", resultAmount: 5, unlock: { type: "existing_technology", technologyName: "steel-processing" } }],
+      assertions: [{ type: "new_recipe_matches", name: "custom-steel-gears", displayName: "Steel Gears", energyRequired: 1, ingredients: [{ itemName: "steel-plate", amount: 1 }], resultItemName: "iron-gear-wheel", resultAmount: 5, unlock: { type: "existing_technology", technologyName: "steel-processing" } }],
+    };
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("creates a new technology for an alternative recipe and validates its research definition", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-new-recipe-tech-output-"));
+    const spec: ModSpec = {
+      title: "Compact processing units", slug: "compact-processing-units",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "new_recipe",
+      changes: [{ type: "new_recipe", name: "custom-compact-processing-units", displayName: "Compact Processing Units", energyRequired: 5, ingredients: [{ itemName: "advanced-circuit", amount: 5 }, { itemName: "electronic-circuit", amount: 10 }], resultItemName: "processing-unit", resultAmount: 2, unlock: { type: "new_technology", displayName: "Compact Processing", prerequisites: ["production-science-pack"], scienceTier: "production", count: 200, time: 30 } }],
+      assertions: [{ type: "new_recipe_matches", name: "custom-compact-processing-units", displayName: "Compact Processing Units", energyRequired: 5, ingredients: [{ itemName: "advanced-circuit", amount: 5 }, { itemName: "electronic-circuit", amount: 10 }], resultItemName: "processing-unit", resultAmount: 2, unlock: { type: "new_technology", displayName: "Compact Processing", prerequisites: ["production-science-pack"], scienceTier: "production", count: 200, time: 30 } }],
+    };
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+});
+
+
+describe("M6B new intermediate item through real Factorio", () => {
+  it("creates a custom material with a new research definition", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-new-item-tech-output-"));
+    const spec: ModSpec = {
+      title: "Reinforced plate research", slug: "reinforced-plate-research",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "new_item",
+      changes: [{ type: "new_item", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "new_technology", displayName: "Reinforced Materials", prerequisites: ["advanced-material-processing-2"], scienceTier: "chemical", count: 150, time: 30 } }],
+      assertions: [{ type: "new_item_matches", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "new_technology", displayName: "Reinforced Materials", prerequisites: ["advanced-material-processing-2"], scienceTier: "chemical", count: 150, time: 30 } }],
+    };
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+});
+
+describe("M6B custom material alternative recipe through real Factorio", () => {
+  it("uses a same-bundle custom material in a new alternative recipe", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-custom-item-recipe-output-"));
+    const spec: ModSpec = {
+      title: "Reinforced gear progression", slug: "reinforced-gear-progression",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "mixed",
+      changes: [
+        { type: "new_item", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+        { type: "new_recipe", name: "custom-reinforced-gears", displayName: "Reinforced Gears", energyRequired: 1, ingredients: [{ itemName: "custom-reinforced-plate", amount: 1 }], resultItemName: "iron-gear-wheel", resultAmount: 5, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+      ],
+      assertions: [
+        { type: "new_item_matches", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+        { type: "new_recipe_matches", name: "custom-reinforced-gears", displayName: "Reinforced Gears", energyRequired: 1, ingredients: [{ itemName: "custom-reinforced-plate", amount: 1 }], resultItemName: "iron-gear-wheel", resultAmount: 5, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+      ],
+    };
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+});
+
+describe("M6B custom material content tree through real Factorio", () => {
+  it("creates a new intermediate item and uses it in a new machine recipe", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-content-tree-output-"));
+    const spec: ModSpec = {
+      title: "Reinforced furnace progression", slug: "reinforced-furnace-progression",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "mixed",
+      changes: [
+        { type: "new_item", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+        { type: "new_machine", machineType: "furnace", basePrototypeName: "electric-furnace", name: "custom-reinforced-furnace", displayName: "Reinforced Furnace", speed: 4, energyUsageKw: 500, moduleSlots: 4, itemStackSize: 50, recipeCraftingTime: 6, recipeIngredients: [{ itemName: "electric-furnace", amount: 1 }, { itemName: "custom-reinforced-plate", amount: 10 }, { itemName: "processing-unit", amount: 5 }], unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+      ],
+      assertions: [
+        { type: "new_item_matches", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+        { type: "new_machine_matches", machineType: "furnace", basePrototypeName: "electric-furnace", name: "custom-reinforced-furnace", displayName: "Reinforced Furnace", speed: 4, energyUsageKw: 500, moduleSlots: 4, itemStackSize: 50, recipeCraftingTime: 6, recipeIngredients: [{ itemName: "electric-furnace", amount: 1 }, { itemName: "custom-reinforced-plate", amount: 10 }, { itemName: "processing-unit", amount: 5 }], unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+      ],
+    };
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("creates a new intermediate item and uses it in a new alternative recipe", async () => {
+    const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-content-recipe-tree-output-"));
+    const spec: ModSpec = {
+      title: "Reinforced gear progression", slug: "reinforced-gear-progression",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "mixed",
+      changes: [
+        { type: "new_item", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+        { type: "new_recipe", name: "custom-reinforced-gears", displayName: "Reinforced Gears", energyRequired: 2, ingredients: [{ itemName: "custom-reinforced-plate", amount: 1 }, { itemName: "iron-gear-wheel", amount: 2 }], resultItemName: "iron-gear-wheel", resultAmount: 6, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+      ],
+      assertions: [
+        { type: "new_item_matches", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+        { type: "new_recipe_matches", name: "custom-reinforced-gears", displayName: "Reinforced Gears", energyRequired: 2, ingredients: [{ itemName: "custom-reinforced-plate", amount: 1 }, { itemName: "iron-gear-wheel", amount: 2 }], resultItemName: "iron-gear-wheel", resultAmount: 6, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+      ],
+    };
+    try {
+      const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+      expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+      expect(result.validation.errorType).toBeNull();
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+});

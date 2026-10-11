@@ -8,6 +8,9 @@ import {
   ItemStackSizeChangeSchema,
   TechnologyCostChangeSchema,
   TechnologyPrerequisiteChangeSchema,
+  NewMachineChangeSchema,
+  NewRecipeChangeSchema,
+  NewItemChangeSchema,
   serializeProjectError,
   type ModSpec,
 } from "@project/domain";
@@ -24,6 +27,9 @@ const EvalChangeSchema = z.discriminatedUnion("type", [
   ItemStackSizeChangeSchema,
   TechnologyCostChangeSchema,
   TechnologyPrerequisiteChangeSchema,
+  NewMachineChangeSchema,
+  NewRecipeChangeSchema,
+  NewItemChangeSchema,
 ]);
 
 const SupportedExpectationSchema = z.strictObject({
@@ -36,6 +42,9 @@ const SupportedExpectationSchema = z.strictObject({
     "item_stack_size",
     "technology_cost",
     "technology_prerequisite",
+    "new_machine",
+    "new_recipe",
+    "new_item",
     "mixed",
   ]),
   changes: z.array(EvalChangeSchema).min(1).max(16),

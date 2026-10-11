@@ -7,6 +7,9 @@ import {
   ItemStackSizeChange,
   TechnologyCostChange,
   TechnologyPrerequisiteChange,
+  NewMachineChange,
+  NewRecipeChange,
+  NewItemChange,
 } from "@project/domain";
 
 export interface SupportedPrototypeProperty {
@@ -50,6 +53,16 @@ export interface SupportedTechnologyPrerequisite {
   readonly prerequisiteName: string;
   readonly basePresent: boolean;
   readonly allowedOperation: "add" | "remove";
+}
+
+export interface SupportedNewMachineTemplate {
+  readonly machineType: "assembling-machine" | "furnace" | "mining-drill" | "lab";
+  readonly basePrototypeName: "assembling-machine-2" | "assembling-machine-3" | "electric-furnace" | "electric-mining-drill" | "lab" | "chemical-plant" | "oil-refinery" | "centrifuge";
+  readonly baseItemName: string;
+  readonly speedProperty: "crafting_speed" | "mining_speed" | "researching_speed";
+  readonly baseSpeed: number;
+  readonly baseEnergyUsageKw: number;
+  readonly baseModuleSlots: number;
 }
 
 const supportedPrototypeProperties = new Map<string, SupportedPrototypeProperty>([
@@ -208,6 +221,44 @@ const supportedTechnologyPrerequisites = new Map<string, SupportedTechnologyPrer
   ],
 ]);
 
+const supportedNewMachineTemplates = new Map<string, SupportedNewMachineTemplate>([
+  ["assembling-machine\u0000assembling-machine-2", { machineType: "assembling-machine", basePrototypeName: "assembling-machine-2", baseItemName: "assembling-machine-2", speedProperty: "crafting_speed", baseSpeed: 0.75, baseEnergyUsageKw: 150, baseModuleSlots: 2 }],
+  ["assembling-machine\u0000assembling-machine-3", { machineType: "assembling-machine", basePrototypeName: "assembling-machine-3", baseItemName: "assembling-machine-3", speedProperty: "crafting_speed", baseSpeed: 1.25, baseEnergyUsageKw: 375, baseModuleSlots: 4 }],
+  ["furnace\u0000electric-furnace", { machineType: "furnace", basePrototypeName: "electric-furnace", baseItemName: "electric-furnace", speedProperty: "crafting_speed", baseSpeed: 2, baseEnergyUsageKw: 180, baseModuleSlots: 2 }],
+  ["mining-drill\u0000electric-mining-drill", { machineType: "mining-drill", basePrototypeName: "electric-mining-drill", baseItemName: "electric-mining-drill", speedProperty: "mining_speed", baseSpeed: 0.5, baseEnergyUsageKw: 90, baseModuleSlots: 3 }],
+  ["lab\u0000lab", { machineType: "lab", basePrototypeName: "lab", baseItemName: "lab", speedProperty: "researching_speed", baseSpeed: 1, baseEnergyUsageKw: 60, baseModuleSlots: 2 }],
+  ["assembling-machine\u0000chemical-plant", { machineType: "assembling-machine", basePrototypeName: "chemical-plant", baseItemName: "chemical-plant", speedProperty: "crafting_speed", baseSpeed: 1, baseEnergyUsageKw: 210, baseModuleSlots: 3 }],
+  ["assembling-machine\u0000oil-refinery", { machineType: "assembling-machine", basePrototypeName: "oil-refinery", baseItemName: "oil-refinery", speedProperty: "crafting_speed", baseSpeed: 1, baseEnergyUsageKw: 420, baseModuleSlots: 3 }],
+  ["assembling-machine\u0000centrifuge", { machineType: "assembling-machine", basePrototypeName: "centrifuge", baseItemName: "centrifuge", speedProperty: "crafting_speed", baseSpeed: 1, baseEnergyUsageKw: 350, baseModuleSlots: 2 }],
+]);
+
+const supportedNewMachineRecipeItems = new Set([
+  "iron-plate", "copper-plate", "steel-plate", "iron-gear-wheel", "electronic-circuit",
+  "advanced-circuit", "processing-unit", "stone-brick", "pipe", "engine-unit",
+  "electric-engine-unit", "concrete", "plastic-bar", "battery",
+  "assembling-machine-2", "assembling-machine-3", "electric-furnace", "electric-mining-drill", "lab", "chemical-plant", "oil-refinery", "centrifuge",
+]);
+
+const supportedNewItemTemplates = new Set([
+  "iron-plate", "copper-plate", "steel-plate", "iron-gear-wheel", "electronic-circuit",
+  "advanced-circuit", "processing-unit", "plastic-bar", "battery",
+]);
+
+function supportedContentItem(itemName: string, additionalItems: ReadonlySet<string> = new Set()): boolean {
+  return supportedNewMachineRecipeItems.has(itemName) || additionalItems.has(itemName);
+}
+
+const supportedNewMachineTechnologies = new Set([
+  "automation", "automation-2", "logistics", "logistics-2", "steel-processing",
+  "advanced-material-processing", "advanced-material-processing-2",
+  "electric-energy-distribution-1", "chemical-science-pack", "production-science-pack",
+  "oil-processing", "uranium-processing", "research-speed-1", "mining-productivity-1",
+]);
+
+function newMachineTemplateKey(change: NewMachineChange): string {
+  return `${change.machineType}\u0000${change.basePrototypeName}`;
+}
+
 function prototypeSupportKey(change: PrototypePropertyChange) {
   return `${change.prototypeType}\u0000${change.prototypeName}\u0000${change.property}`;
 }
@@ -335,6 +386,118 @@ export function assertSupportedTechnologyPrerequisite(
   change: TechnologyPrerequisiteChange,
 ): void {
   getSupportedTechnologyPrerequisite(change);
+}
+
+export function getSupportedNewMachineTemplate(change: NewMachineChange, additionalItems: ReadonlySet<string> = new Set()): SupportedNewMachineTemplate {
+  const template = supportedNewMachineTemplates.get(newMachineTemplateKey(change));
+  if (!template) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new machine template: ${change.machineType}.${change.basePrototypeName}`, details: { capability: "new_machine" } });
+  }
+  if (!change.name.startsWith("custom-")) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: "New machine internal name must start with custom-", details: { capability: "new_machine" } });
+  }
+  const seenItems = new Set<string>();
+  for (const ingredient of change.recipeIngredients) {
+    if (!supportedContentItem(ingredient.itemName, additionalItems)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new machine recipe ingredient: ${ingredient.itemName}`, details: { capability: "new_machine" } });
+    }
+    if (seenItems.has(ingredient.itemName)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Duplicate new machine recipe ingredient: ${ingredient.itemName}`, details: { capability: "new_machine" } });
+    }
+    seenItems.add(ingredient.itemName);
+  }
+  const technologies = change.unlock.type === "existing_technology"
+    ? [change.unlock.technologyName]
+    : change.unlock.prerequisites;
+  for (const technologyName of technologies) {
+    if (!supportedNewMachineTechnologies.has(technologyName)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new machine technology reference: ${technologyName}`, details: { capability: "new_machine" } });
+    }
+  }
+  if (change.unlock.type === "new_technology" && new Set(change.unlock.prerequisites).size !== change.unlock.prerequisites.length) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: "New machine technology prerequisites must be unique", details: { capability: "new_machine" } });
+  }
+  return template;
+}
+
+export function assertSupportedNewMachine(change: NewMachineChange, additionalItems: ReadonlySet<string> = new Set()): void {
+  getSupportedNewMachineTemplate(change, additionalItems);
+}
+
+export function assertSupportedNewRecipe(change: NewRecipeChange, additionalItems: ReadonlySet<string> = new Set()): void {
+  if (!change.name.startsWith("custom-")) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: "New recipe internal name must start with custom-", details: { capability: "new_recipe" } });
+  }
+  const seenItems = new Set<string>();
+  for (const ingredient of change.ingredients) {
+    if (!supportedContentItem(ingredient.itemName, additionalItems)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new recipe ingredient: ${ingredient.itemName}`, details: { capability: "new_recipe" } });
+    }
+    if (seenItems.has(ingredient.itemName)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Duplicate new recipe ingredient: ${ingredient.itemName}`, details: { capability: "new_recipe" } });
+    }
+    seenItems.add(ingredient.itemName);
+  }
+  if (!supportedContentItem(change.resultItemName, additionalItems)) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new recipe result item: ${change.resultItemName}`, details: { capability: "new_recipe" } });
+  }
+  const technologies = change.unlock.type === "existing_technology" ? [change.unlock.technologyName] : change.unlock.prerequisites;
+  for (const technologyName of technologies) {
+    if (!supportedNewMachineTechnologies.has(technologyName)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new recipe technology reference: ${technologyName}`, details: { capability: "new_recipe" } });
+    }
+  }
+  if (change.unlock.type === "new_technology" && new Set(change.unlock.prerequisites).size !== change.unlock.prerequisites.length) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: "New recipe technology prerequisites must be unique", details: { capability: "new_recipe" } });
+  }
+}
+
+export function assertSupportedNewItem(change: NewItemChange): void {
+  if (!change.name.startsWith("custom-")) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: "New item internal name must start with custom-", details: { capability: "new_item" } });
+  }
+  if (!supportedNewItemTemplates.has(change.baseItemName)) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new item visual template: ${change.baseItemName}`, details: { capability: "new_item" } });
+  }
+  const seenItems = new Set<string>();
+  for (const ingredient of change.recipeIngredients) {
+    if (!supportedNewMachineRecipeItems.has(ingredient.itemName)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new item recipe ingredient: ${ingredient.itemName}`, details: { capability: "new_item" } });
+    }
+    if (seenItems.has(ingredient.itemName)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Duplicate new item recipe ingredient: ${ingredient.itemName}`, details: { capability: "new_item" } });
+    }
+    seenItems.add(ingredient.itemName);
+  }
+  const technologies = change.unlock.type === "existing_technology" ? [change.unlock.technologyName] : change.unlock.prerequisites;
+  for (const technologyName of technologies) {
+    if (!supportedNewMachineTechnologies.has(technologyName)) {
+      throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported new item technology reference: ${technologyName}`, details: { capability: "new_item" } });
+    }
+  }
+  if (change.unlock.type === "new_technology" && new Set(change.unlock.prerequisites).size !== change.unlock.prerequisites.length) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: "New item technology prerequisites must be unique", details: { capability: "new_item" } });
+  }
+}
+
+export function listSupportedNewItemTemplates(): readonly string[] {
+  return [...supportedNewItemTemplates.values()];
+}
+
+export function listSupportedNewMachineTemplates(): readonly SupportedNewMachineTemplate[] {
+  return [...supportedNewMachineTemplates.values()];
+}
+
+export function listSupportedNewMachineRecipeItems(): readonly string[] {
+  return [...supportedNewMachineRecipeItems.values()];
+}
+
+export function listSupportedNewRecipeItems(): readonly string[] {
+  return [...supportedNewMachineRecipeItems.values()];
+}
+
+export function listSupportedNewMachineTechnologies(): readonly string[] {
+  return [...supportedNewMachineTechnologies.values()];
 }
 
 export function listSupportedPrototypeProperties(): readonly SupportedPrototypeProperty[] {

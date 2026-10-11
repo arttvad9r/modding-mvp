@@ -14,6 +14,9 @@ import {
   assertSupportedItemStackSize,
   assertSupportedTechnologyCost,
   assertSupportedTechnologyPrerequisite,
+  assertSupportedNewMachine,
+  assertSupportedNewRecipe,
+  assertSupportedNewItem,
   listFactorioCapabilities,
 } from "@project/factorio-knowledge";
 import {
@@ -53,6 +56,9 @@ For supported output, changes is the COMPLETE resulting tweak bundle after apply
 - item_stack_size: {"type":"item_stack_size","itemName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - technology_cost: {"type":"technology_cost","technologyName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - technology_prerequisite: {"type":"technology_prerequisite","technologyName":string,"prerequisiteName":string,"operation":{"type":"add"}|{"type":"remove"}}
+- new_machine: {"type":"new_machine","machineType":"assembling-machine"|"furnace"|"mining-drill"|"lab","basePrototypeName":"assembling-machine-2"|"assembling-machine-3"|"electric-furnace"|"electric-mining-drill"|"lab"|"chemical-plant"|"oil-refinery"|"centrifuge","name":string starting with "custom-","displayName":string,"speed":number,"energyUsageKw":number,"moduleSlots":integer,"itemStackSize":integer,"recipeCraftingTime":number,"recipeIngredients":[{"itemName":string,"amount":integer},...],"unlock":{"type":"existing_technology","technologyName":string}|{"type":"new_technology","displayName":string,"prerequisites":[string,...],"scienceTier":"automation"|"logistic"|"chemical"|"production"|"utility","count":integer,"time":number}}
+- new_recipe: {"type":"new_recipe","name":string starting with "custom-","displayName":string,"energyRequired":number,"ingredients":[{"itemName":string,"amount":integer},...],"resultItemName":string,"resultAmount":integer,"unlock":{"type":"existing_technology","technologyName":string}|{"type":"new_technology","displayName":string,"prerequisites":[string,...],"scienceTier":"automation"|"logistic"|"chemical"|"production"|"utility","count":integer,"time":number}}
+- new_item: {"type":"new_item","baseItemName":"iron-plate"|"copper-plate"|"steel-plate"|"iron-gear-wheel"|"electronic-circuit"|"advanced-circuit"|"processing-unit"|"plastic-bar"|"battery","name":string starting with "custom-","displayName":string,"stackSize":integer,"recipeCraftingTime":number,"recipeIngredients":[{"itemName":string,"amount":integer},...],"recipeResultAmount":integer,"unlock":{"type":"existing_technology","technologyName":string}|{"type":"new_technology","displayName":string,"prerequisites":[string,...],"scienceTier":"automation"|"logistic"|"chemical"|"production"|"utility","count":integer,"time":number}}
 Preserve every existing tweak unless the follow-up explicitly changes or removes it. A request to restore a target to base-game behavior removes that target's tweak from the resulting list. Relative wording such as "another 25% faster" is relative to the current accepted bundle. If any essential requested change is unsupported, or the result would contain no tweaks, return unsupported. Do not include title, slug, capability, target, assertions, Lua, files, markdown, or additional keys.`;
 
 function registryContext(): string {
@@ -79,6 +85,8 @@ export function buildRevisionSystemPrompt(): string {
     "If any essential requested change is outside the registry, return unsupported rather than partially applying the revision.",
     "Write any user-facing unsupported reason in the same language as the user request.",
     "The application preserves title/slug/target and deterministically derives capability plus semantic assertions.",
+    "For new_machine, numeric machine fields are absolute final values; preserve the complete machine definition unless the follow-up explicitly changes it.",
+    "Preserve new_item definitions and their custom references unless the follow-up explicitly changes them; never leave a reference to a removed custom item.",
     "Capability registry:",
     registryContext(),
     "Output contract:",
@@ -123,37 +131,40 @@ function assertionForChange(change: ModChange): ModAssertion {
         prerequisiteName: change.prerequisiteName,
         expectation: change.operation,
       };
-  }
-}
-
-function assertChangeSupported(change: ModChange): void {
-  switch (change.type) {
-    case "prototype_property":
-      assertSupportedPrototypeProperty(change);
-      return;
-    case "recipe_ingredient":
-      assertSupportedRecipeIngredient(change);
-      return;
-    case "recipe_crafting_time":
-      assertSupportedRecipeCraftingTime(change);
-      return;
-    case "recipe_result":
-      assertSupportedRecipeResult(change);
-      return;
-    case "item_stack_size":
-      assertSupportedItemStackSize(change);
-      return;
-    case "technology_cost":
-      assertSupportedTechnologyCost(change);
-      return;
-    case "technology_prerequisite":
-      assertSupportedTechnologyPrerequisite(change);
-      return;
+    case "new_machine":
+      return { ...change, type: "new_machine_matches" };
+    case "new_recipe":
+      return { ...change, type: "new_recipe_matches" };
+    case "new_item":
+      return { ...change, type: "new_item_matches" };
   }
 }
 
 function assertSpecSupported(spec: ModSpec): void {
-  for (const change of spec.changes) assertChangeSupported(change);
+  const contentNames = new Map<string, string>();
+  const customItems = new Set<string>();
+  for (const change of spec.changes) {
+    if (change.type === "new_item" || change.type === "new_machine" || change.type === "new_recipe") {
+      const previous = contentNames.get(change.name);
+      if (previous !== undefined) throw new ProjectError({ code: "unsupported_capability", stage: "planning", message: `Content name collision: ${change.name}` });
+      contentNames.set(change.name, change.type);
+    }
+    if (change.type === "new_item") customItems.add(change.name);
+  }
+  for (const change of spec.changes) {
+    switch (change.type) {
+      case "prototype_property": assertSupportedPrototypeProperty(change); break;
+      case "recipe_ingredient": assertSupportedRecipeIngredient(change); break;
+      case "recipe_crafting_time": assertSupportedRecipeCraftingTime(change); break;
+      case "recipe_result": assertSupportedRecipeResult(change); break;
+      case "item_stack_size": assertSupportedItemStackSize(change); break;
+      case "technology_cost": assertSupportedTechnologyCost(change); break;
+      case "technology_prerequisite": assertSupportedTechnologyPrerequisite(change); break;
+      case "new_machine": assertSupportedNewMachine(change, customItems); break;
+      case "new_recipe": assertSupportedNewRecipe(change, customItems); break;
+      case "new_item": assertSupportedNewItem(change); break;
+    }
+  }
 }
 
 function deriveRevision(base: ModSpec, changes: readonly ModChange[]): ModSpec {

@@ -39,10 +39,18 @@ describe("private-beta tester UI", () => {
       expect(html).toContain("We build & check");
       expect(html).toContain("Paste your invite token");
       expect(html).toContain("Start with an example");
+      expect(html).toContain("NEW CONTENT");
+      expect(html).toContain("Create a new machine with its own recipe and technology");
+      expect(html).toContain("Add a new alternative recipe for an existing item");
+      expect(html).toContain("Create a new material and use it in a new machine");
+      expect(html).toContain('data-prompt-ru="Создай новый промежуточный предмет «Усиленная пластина»');
+      expect(html).toContain('data-prompt-ru="Создай новый рецепт «Стальные шестерни»');
+      expect(html).toContain("custom graphics/assets");
       expect(html).toContain("What can I change right now?");
       expect(html).toContain('data-lang-select="en"');
       expect(html).toContain('data-lang-select="ru"');
       expect(html).toContain('data-prompt-ru="Ускорь сборочный автомат 2');
+      expect(html).toContain('data-prompt-ru="Создай новую машину «Улучшенная электрическая печь»');
       expect(html).toContain('id="token"');
       expect(html).toContain('id="clear-token"');
       expect(html).toContain('id="history-panel"');
@@ -62,6 +70,12 @@ describe("private-beta tester UI", () => {
       expect(javascript).toContain("sessionStorage.removeItem");
       expect(javascript).toContain("Настрой Factorio под себя.");
       expect(javascript).toContain("Собрать мой мод");
+      expect(javascript).toContain('"cap.new_machine":"Новая машина"');
+      expect(javascript).toContain('"cap.new_recipe":"Новый рецепт"');
+      expect(javascript).toContain('"cap.new_item":"Новый материал"');
+      expect(javascript).toContain('change.type === "new_machine"');
+      expect(javascript).toContain('change.type === "new_recipe"');
+      expect(javascript).toContain('change.type === "new_item"');
       expect(javascript).toContain("Проверка запускается в изолированной базовой Factorio 2.0.77");
       expect(javascript).toContain("data-prompt-en");
       expect(javascript).toContain('Accept:"application/json"');
@@ -81,6 +95,7 @@ describe("private-beta tester UI", () => {
       expect(stylesheet).toContain(".language-switch");
       expect(stylesheet).toContain(".workflow");
       expect(stylesheet).toContain(".example-grid");
+      expect(stylesheet).toContain(".example-featured");
 
       const api = await fetch(`${baseUrl}/v1/generations/example`);
       expect(api.status).toBe(204);

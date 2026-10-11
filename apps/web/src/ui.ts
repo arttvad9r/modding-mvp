@@ -22,7 +22,7 @@ const INDEX_HTML = String.raw`<!doctype html>
     <header class="hero">
       <p class="eyebrow" data-i18n="hero.eyebrow">FACTORIO 2.0 · PRIVATE BETA</p>
       <h1 data-i18n="hero.title">Make Factorio play your way.</h1>
-      <p class="lede" data-i18n="hero.lede">Describe the balance changes you want in normal language. Get one installable mod that has already been loaded and checked in Factorio.</p>
+      <p class="lede" data-i18n="hero.lede">Describe the mod you want in normal language — rebalance the game or create new reviewed machines and recipes. Get one installable ZIP that has already been loaded and checked in Factorio.</p>
       <div class="proof-row" aria-label="Beta guarantees">
         <span data-i18n="proof.noCode">No Lua required</span>
         <span data-i18n="proof.multi">Several tweaks in one mod</span>
@@ -33,7 +33,7 @@ const INDEX_HTML = String.raw`<!doctype html>
     <section class="workflow" aria-label="How it works">
       <article class="workflow-card">
         <span>1</span>
-        <div><strong data-i18n="workflow.describe.title">Describe</strong><p data-i18n="workflow.describe.body">Tell us what you want to rebalance.</p></div>
+        <div><strong data-i18n="workflow.describe.title">Describe</strong><p data-i18n="workflow.describe.body">Tell us what you want to change or add.</p></div>
       </article>
       <article class="workflow-card">
         <span>2</span>
@@ -49,7 +49,7 @@ const INDEX_HTML = String.raw`<!doctype html>
       <div class="notice-icon" aria-hidden="true">i</div>
       <div>
         <strong data-i18n="notice.title">What this beta is good at</strong>
-        <p data-i18n="notice.body">Personal base-game rebalance packs: selected machine speeds, recipes, stack sizes and research changes. If part of your request is outside the reviewed scope, we reject the whole request instead of pretending it worked.</p>
+        <p data-i18n="notice.body">Personal base-game mods: rebalance existing content or create a new reviewed assembling machine/electric furnace with its own item, recipe and technology unlock. If part of your request is outside the reviewed scope, we reject the whole request instead of pretending it worked.</p>
         <p class="notice-boundary" data-i18n="notice.boundary">Validation runs in isolated base-game Factorio 2.0.77. Compatibility with Space Age or your third-party mod stack is not guaranteed yet.</p>
       </div>
     </section>
@@ -84,6 +84,18 @@ const INDEX_HTML = String.raw`<!doctype html>
       <div class="examples" aria-labelledby="examples-title">
         <p id="examples-title" class="mini-title" data-i18n="examples.title">Start with an example</p>
         <div class="example-grid">
+          <button type="button" class="example example-featured" data-prompt-en="Create a new machine called Advanced Electric Furnace based on the electric furnace. Set crafting speed to 4, energy use to 540 kW, module slots to 4 and stack size to 50. Recipe: 10 steel plates, 5 advanced circuits and 10 stone bricks, 5 seconds. Unlock it with a new technology called Advanced Electric Furnace after Advanced material processing 2, using chemical science, 300 packs and 30 seconds." data-prompt-ru="Создай новую машину «Улучшенная электрическая печь» на основе электрической печи. Скорость крафта 4, энергопотребление 540 кВт, 4 слота модулей, размер стака 50. Рецепт: 10 стальных пластин, 5 улучшенных схем и 10 каменных кирпичей, время 5 секунд. Открой её новой технологией «Улучшенная электрическая печь» после Продвинутой обработки материалов 2, химический уровень науки, стоимость 300 пакетов, время 30 секунд.">
+            <span class="example-kicker" data-i18n="example.machine.kicker">NEW CONTENT</span>
+            <span data-i18n="example.machine.body">Create a new machine with its own recipe and technology</span>
+          </button>
+          <button type="button" class="example example-featured" data-prompt-en="Create a new intermediate item called Reinforced Plate based on the steel plate. Stack size 100. Recipe: 2 steel plates and 5 plastic bars make 1 Reinforced Plate in 2 seconds, unlocked by Advanced material processing 2. Then create a new machine called Reinforced Furnace based on the electric furnace: speed 4, energy use 500 kW, 4 module slots, stack size 50. Recipe: 1 electric furnace, 10 Reinforced Plates and 5 processing units, 6 seconds. Unlock it with Advanced material processing 2." data-prompt-ru="Создай новый промежуточный предмет «Усиленная пластина» на основе стальной пластины. Размер стака 100. Рецепт: 2 стальные пластины и 5 пластиковых брусков дают 1 Усиленную пластину за 2 секунды, открыть технологией «Продвинутая обработка материалов 2». Затем создай новую машину «Усиленная печь» на основе электрической печи: скорость 4, энергопотребление 500 кВт, 4 слота модулей, размер стака 50. Рецепт: 1 электрическая печь, 10 Усиленных пластин и 5 процессоров, 6 секунд. Открыть технологией «Продвинутая обработка материалов 2».">
+            <span class="example-kicker" data-i18n="example.chain.kicker">CONTENT CHAIN</span>
+            <span data-i18n="example.chain.body">Create a new material and use it in a new machine</span>
+          </button>
+          <button type="button" class="example" data-prompt-en="Create a new recipe called Steel Gears: 1 steel plate makes 5 iron gears in 1 second, unlocked by Steel processing." data-prompt-ru="Создай новый рецепт «Стальные шестерни»: 1 стальная пластина даёт 5 железных шестерён за 1 секунду, открыть технологией «Обработка стали».">
+            <span class="example-kicker" data-i18n="example.recipe.kicker">ALT RECIPE</span>
+            <span data-i18n="example.recipe.body">Add a new alternative recipe for an existing item</span>
+          </button>
           <button type="button" class="example" data-prompt-en="Make assembling machine 2 twice as fast, make steel furnaces 50% faster, make iron gears cost one iron plate, and halve Automation research cost" data-prompt-ru="Ускорь сборочный автомат 2 в 2 раза, стальные печи на 50%, сделай железные шестерни по 1 железной пластине и уменьши стоимость исследования Автоматизации вдвое">
             <span class="example-kicker" data-i18n="example.fast.kicker">FAST START</span>
             <span data-i18n="example.fast.body">Faster production, cheaper gears and research</span>
@@ -115,11 +127,11 @@ const INDEX_HTML = String.raw`<!doctype html>
           <div class="scope-grid">
             <div class="scope-card">
               <p class="scope-title" data-i18n="scope.yesTitle">Works well in this beta</p>
-              <p data-i18n="scope.yesBody">Selected furnace, assembler, mining drill, belt, inserter and lab speeds; selected recipe ingredients, crafting times and outputs; selected stack sizes; selected research costs and prerequisites.</p>
+              <p data-i18n="scope.yesBody">Selected rebalance changes, new intermediate materials, alternative item-only recipes, plus reviewed assemblers, electric furnaces, mining drills, labs, chemical plants, oil refineries and centrifuges. New materials can feed new recipes/machines in the same mod.</p>
             </div>
             <div class="scope-card muted-card">
               <p class="scope-title" data-i18n="scope.noTitle">Not supported yet</p>
-              <p data-i18n="scope.noBody">New entities or systems, runtime control.lua logic, graphics/assets, arbitrary recipes, Space Age-specific content, or Workshop publishing.</p>
+              <p data-i18n="scope.noBody">Arbitrary entity types or gameplay systems, runtime control.lua logic, custom graphics/assets, unreviewed item/entity types, fluid recipes, Space Age-specific content, or Workshop publishing.</p>
             </div>
           </div>
         </details>
@@ -257,7 +269,7 @@ input:focus,textarea:focus{border-color:#c28a35;box-shadow:0 0 0 3px rgba(244,16
 button{border:1px solid transparent;border-radius:10px;padding:11px 15px;font:inherit;font-size:14px;font-weight:760;cursor:pointer;background:#f0a62f;color:#19130a;transition:transform .12s,filter .12s,border-color .12s,background .12s}button:hover{filter:brightness(1.06)}button:active{transform:translateY(1px)}button:focus-visible{outline:3px solid rgba(244,167,44,.24);outline-offset:2px}button:disabled{opacity:.48;cursor:not-allowed;transform:none;filter:none}
 .primary-action{min-height:44px;padding-inline:20px}.secondary{background:#25313a;color:#eef2f5;border-color:#33424e}.ghost{background:transparent;color:#9eabb5;border-color:#2c3740}
 .hint,.muted{font-size:13px;color:var(--muted)}.hint{margin:9px 0 0}.access-state{font-size:12px;color:var(--faint);border:1px solid #2d3943;border-radius:999px;padding:6px 9px;white-space:nowrap}.access-state.ready{color:var(--good);border-color:#365b43;background:rgba(80,150,103,.08)}
-.examples{border-bottom:1px solid #28323b;padding-bottom:22px;margin-bottom:22px}.mini-title{font-size:13px;font-weight:760;color:#bac5cd;margin:0 0 10px}.example-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.example{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;background:#121a21;color:#dce3e8;border:1px solid #2d3943;padding:13px 14px;min-height:76px}.example:hover{background:#182129;border-color:#455560;filter:none}.example-kicker{font-size:10px;letter-spacing:.12em;color:#c58c35}
+.examples{border-bottom:1px solid #28323b;padding-bottom:22px;margin-bottom:22px}.mini-title{font-size:13px;font-weight:760;color:#bac5cd;margin:0 0 10px}.example-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.example{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;background:#121a21;color:#dce3e8;border:1px solid #2d3943;padding:13px 14px;min-height:76px}.example:hover{background:#182129;border-color:#455560;filter:none}.example-featured{grid-column:1/-1;border-color:rgba(244,167,44,.38);background:linear-gradient(135deg,rgba(244,167,44,.10),#121a21 55%)}.example-kicker{font-size:10px;letter-spacing:.12em;color:#c58c35}
 .prompt-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.scope-details{margin-top:12px;border:1px solid #29343e;border-radius:11px;background:#0f151a}.scope-details summary{cursor:pointer;padding:11px 13px;color:#aeb9c1;font-size:12px;font-weight:720}.scope-details[open] summary{border-bottom:1px solid #29343e}.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}.scope-card{border:1px solid #2d3943;background:#111920;border-radius:10px;padding:12px 13px}.scope-card p{margin:0;font-size:12px;line-height:1.55;color:#aeb9c1}.scope-card .scope-title{color:#dce3e8;font-weight:760;margin-bottom:4px}.muted-card{background:#10151a}.submit-row{min-height:46px}
 .history-list{display:grid;gap:8px}.history-item{display:grid;grid-template-columns:1fr auto;gap:6px 14px;width:100%;text-align:left;background:#10171d;color:#dce3e8;border:1px solid #2d3943;padding:11px 13px}.history-item:hover{background:#172027;border-color:#455560;filter:none}.history-prompt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}.history-meta{font-size:11px;color:#83919c;white-space:nowrap}
 .badge{border:1px solid #3a4857;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#bac4cc;white-space:nowrap}.badge.succeeded{border-color:#3f765b;color:#a8e2bf;background:rgba(63,118,91,.08)}.badge.failed{border-color:#874b4b;color:#f0aaaa;background:rgba(135,75,75,.08)}.badge.unsupported{border-color:#7f7047;color:#ead395;background:rgba(127,112,71,.08)}
@@ -277,18 +289,18 @@ const APP_JS = String.raw`(() => {
       "page.title":"Factorio Mod Beta",
       "hero.eyebrow":"FACTORIO 2.0 · PRIVATE BETA",
       "hero.title":"Make Factorio play your way.",
-      "hero.lede":"Describe the balance changes you want in normal language. Get one installable mod that has already been loaded and checked in Factorio.",
+      "hero.lede":"Describe the mod you want in normal language — rebalance the game, create reviewed machines, or add alternative recipes. Get one installable ZIP that has already been loaded and checked in Factorio.",
       "proof.noCode":"No Lua required","proof.multi":"Several tweaks in one mod","proof.validated":"Checked in real Factorio",
-      "workflow.describe.title":"Describe","workflow.describe.body":"Tell us what you want to rebalance.",
+      "workflow.describe.title":"Describe","workflow.describe.body":"Tell us what you want to change or add.",
       "workflow.build.title":"We build & check","workflow.build.body":"The service creates the mod and validates the requested changes.",
       "workflow.install.title":"Install","workflow.install.body":"Download one ZIP and put it in your Factorio mods folder.",
       "notice.title":"What this beta is good at",
-      "notice.body":"Personal base-game rebalance packs: selected machine speeds, recipes, stack sizes and research changes. If part of your request is outside the reviewed scope, we reject the whole request instead of pretending it worked.",
+      "notice.body":"Personal base-game mods: rebalance existing content or create a new reviewed assembling machine/electric furnace with its own item, recipe and technology unlock. If part of your request is outside the reviewed scope, we reject the whole request instead of pretending it worked.",
       "notice.boundary":"Validation runs in isolated base-game Factorio 2.0.77. Compatibility with Space Age or your third-party mod stack is not guaranteed yet.",
       "access.step":"01 · BETA ACCESS","access.title":"Paste your invite token","access.copy":"You only need to do this once per browser tab.","access.label":"Beta token","access.placeholder":"Paste beta token","access.save":"Use token","access.clear":"Clear","access.hint":"The token is kept only in this tab and disappears when the tab is closed.","access.ready":"Ready","access.empty":"Not saved",
       "request.step":"02 · DESCRIBE YOUR MOD","request.title":"What should change?","request.copy":"Write one change or combine several. You can refine the result later.","request.promptLabel":"Describe your tweak pack","request.placeholder":"Example: Double assembler 2 and mining drill speeds, halve Automation cost, and make gears cost one plate","request.generate":"Build my mod","request.ready":"Most supported requests finish in seconds.",
-      "examples.title":"Start with an example","example.fast.kicker":"FAST START","example.fast.body":"Faster production, cheaper gears and research","example.production.kicker":"PRODUCTION","example.production.body":"Double mining and lab speed","example.throughput.kicker":"THROUGHPUT","example.throughput.body":"Faster gears, more belts, larger stacks","example.tech.kicker":"RESEARCH","example.tech.body":"Change a reviewed technology prerequisite",
-      "scope.summary":"What can I change right now?","scope.yesTitle":"Works well in this beta","scope.yesBody":"Selected furnace, assembler, mining drill, belt, inserter and lab speeds; selected recipe ingredients, crafting times and outputs; selected stack sizes; selected research costs and prerequisites.","scope.noTitle":"Not supported yet","scope.noBody":"New entities or systems, runtime control.lua logic, graphics/assets, arbitrary recipes, Space Age-specific content, or Workshop publishing.",
+      "examples.title":"Start with an example","example.machine.kicker":"NEW CONTENT","example.machine.body":"Create a new machine with its own recipe and technology","example.recipe.kicker":"ALT RECIPE","example.recipe.body":"Add a new alternative recipe for an existing item","example.chain.kicker":"CONTENT CHAIN","example.chain.body":"Create a new material and use it in a new machine","example.fast.kicker":"FAST START","example.fast.body":"Faster production, cheaper gears and research","example.production.kicker":"PRODUCTION","example.production.body":"Double mining and lab speed","example.throughput.kicker":"THROUGHPUT","example.throughput.body":"Faster gears, more belts, larger stacks","example.tech.kicker":"RESEARCH","example.tech.body":"Change a reviewed technology prerequisite",
+      "scope.summary":"What can I change right now?","scope.yesTitle":"Works well in this beta","scope.yesBody":"Selected rebalance changes, new intermediate materials, alternative item-only recipes, plus reviewed assemblers, electric furnaces, mining drills, labs, chemical plants, oil refineries and centrifuges. New materials can feed new recipes/machines in the same mod.","scope.noTitle":"Not supported yet","scope.noBody":"Arbitrary entity types or gameplay systems, runtime control.lua logic, custom graphics/assets, unreviewed item/entity types, fluid recipes, Space Age-specific content, or Workshop publishing.",
       "history.step":"RECENT","history.title":"Your recent mods","history.refresh":"Refresh","history.none":"No generations yet.","history.token":"Use your beta token to load recent mods.",
       "result.step":"03 · YOUR MOD","result.title":"Generation result","result.changes":"What the mod changes","result.diff":"What changed in this revision","result.download":"Download mod ZIP","result.preparing":"Preparing download…","result.retry":"Try again","result.installNote":"<strong>Install:</strong> put the ZIP in your Factorio <code>mods</code> folder without unpacking it, then launch the game. This build was checked against isolated base-game Factorio 2.0.77; your own mod stack still needs an in-game check.",
       "progress.queued":"Queued","progress.running":"Build + check","progress.done":"Ready",
@@ -301,26 +313,26 @@ const APP_JS = String.raw`(() => {
       "state.example":"Example loaded. Edit it or build it as-is.","state.enterToken":"Paste your beta token first.","state.tokenSaved":"Beta access is ready for this tab.","state.tokenCleared":"Beta token cleared.","state.describe":"Describe the Factorio changes you want first.","state.submitting":"Sending request…","state.running":"Building your mod…","state.finished":"Finished.","state.retrying":"Starting a fresh generation…","state.revisionEmpty":"Describe what you want to change from this version.","state.revisionSubmitting":"Sending revision…","state.revisionRunning":"Building the revised mod…","state.feedbackSaving":"Saving…","state.feedbackSaved":"Feedback saved. Thank you.","state.surveySaved":"Answer saved. Thank you.",
       "error.auth":"Beta token is missing or invalid.","error.rate":"Rate limit reached. Try again after the cooldown.","error.generic":"Request failed",
       "meta.generation":"Generation","meta.capability":"Type","meta.totalTime":"Total time","meta.factorio":"Factorio check","meta.artifact":"File","meta.size":"ZIP size",
-      "cap.prototype_property":"Machine property","cap.recipe_ingredient":"Recipe ingredient","cap.recipe_crafting_time":"Crafting time","cap.recipe_result":"Recipe output","cap.item_stack_size":"Stack size","cap.technology_cost":"Research cost","cap.technology_prerequisite":"Research prerequisite","cap.mixed":"Tweak pack",
-      "change.ingredient":"ingredient","change.craftingTime":"crafting time","change.output":"output","change.stack":"stack size","change.researchCost":"research cost","change.prerequisite":"prerequisite","change.unknown":"Unknown change","diff.added":"added","diff.removed":"removed","diff.changed":"changed",
+      "cap.prototype_property":"Machine property","cap.recipe_ingredient":"Recipe ingredient","cap.recipe_crafting_time":"Crafting time","cap.recipe_result":"Recipe output","cap.item_stack_size":"Stack size","cap.technology_cost":"Research cost","cap.technology_prerequisite":"Research prerequisite","cap.new_machine":"New machine","cap.new_recipe":"New recipe","cap.new_item":"New material","cap.mixed":"Mod bundle",
+      "change.ingredient":"ingredient","change.craftingTime":"crafting time","change.output":"output","change.stack":"stack size","change.researchCost":"research cost","change.prerequisite":"prerequisite","change.newMachine":"create machine","change.machineSpeed":"speed","change.energy":"energy","change.modules":"module slots","change.newRecipe":"create recipe","change.newItem":"create material","change.stack":"stack","change.seconds":"s","change.unknown":"Unknown change","diff.added":"added","diff.removed":"removed","diff.changed":"changed",
       "operation.add":"add","operation.remove":"remove"
     },
     ru: {
       "page.title":"Factorio Mod Beta — Русский",
       "hero.eyebrow":"FACTORIO 2.0 · ЗАКРЫТАЯ БЕТА",
       "hero.title":"Настрой Factorio под себя.",
-      "hero.lede":"Опиши обычными словами, что хочешь изменить в балансе. Получи готовый мод, который уже загрузился и прошёл проверку в Factorio.",
+      "hero.lede":"Опиши обычными словами мод, который хочешь: измени баланс, добавь новую проверенную машину или альтернативный рецепт. Получи готовый ZIP, который уже загрузился и прошёл проверку в Factorio.",
       "proof.noCode":"Lua знать не нужно","proof.multi":"Несколько правок в одном моде","proof.validated":"Проверка в настоящей Factorio",
-      "workflow.describe.title":"Опиши","workflow.describe.body":"Напиши, что именно хочешь изменить в игре.",
+      "workflow.describe.title":"Опиши","workflow.describe.body":"Напиши, что хочешь изменить или добавить в игру.",
       "workflow.build.title":"Мы соберём и проверим","workflow.build.body":"Сервис создаст мод и проверит запрошенные изменения.",
       "workflow.install.title":"Установи","workflow.install.body":"Скачай один ZIP и положи его в папку mods игры.",
       "notice.title":"Для чего эта бета уже подходит",
-      "notice.body":"Персональные моды для ребаланса базовой игры: выбранные скорости машин, рецепты, размеры стаков и исследования. Если часть запроса пока не поддерживается, мы отклоним запрос целиком, а не сделаем вид, что всё сработало.",
+      "notice.body":"Персональные моды для базовой игры: можно менять баланс или создавать новую проверенную печь/сборочный автомат со своим предметом, рецептом и технологией. Если часть запроса пока не поддерживается, мы отклоним запрос целиком, а не сделаем вид, что всё сработало.",
       "notice.boundary":"Проверка запускается в изолированной базовой Factorio 2.0.77. Совместимость с Space Age и твоим набором сторонних модов пока не гарантируется.",
       "access.step":"01 · ДОСТУП К БЕТЕ","access.title":"Вставь токен приглашения","access.copy":"Это нужно сделать один раз для текущей вкладки.","access.label":"Бета-токен","access.placeholder":"Вставь бета-токен","access.save":"Использовать токен","access.clear":"Очистить","access.hint":"Токен хранится только в этой вкладке и удалится после её закрытия.","access.ready":"Готово","access.empty":"Не сохранён",
       "request.step":"02 · ОПИШИ МОД","request.title":"Что нужно изменить?","request.copy":"Можно попросить одну правку или сразу несколько. Потом результат можно доработать новым сообщением.","request.promptLabel":"Опиши свой набор изменений","request.placeholder":"Например: ускорь сборочный автомат 2 и электрический бур в 2 раза, удешеви Автоматизацию вдвое и сделай шестерни по 1 железной пластине","request.generate":"Собрать мой мод","request.ready":"Поддерживаемые запросы обычно готовы за несколько секунд.",
-      "examples.title":"Можно начать с примера","example.fast.kicker":"БЫСТРЫЙ СТАРТ","example.fast.body":"Быстрее производство, дешевле шестерни и исследования","example.production.kicker":"ПРОИЗВОДСТВО","example.production.body":"Ускорить добычу и исследования","example.throughput.kicker":"ПРОПУСКНАЯ СПОСОБНОСТЬ","example.throughput.body":"Быстрее шестерни, больше конвейеров, крупнее стаки","example.tech.kicker":"ИССЛЕДОВАНИЯ","example.tech.body":"Изменить проверенную зависимость технологии",
-      "scope.summary":"Что сейчас можно менять?","scope.yesTitle":"Хорошо работает в этой бете","scope.yesBody":"Выбранные скорости печей, сборочных автоматов, буров, конвейеров, манипуляторов и лабораторий; отдельные ингредиенты, время и результат рецептов; размеры стаков; стоимость и зависимости исследований.","scope.noTitle":"Пока не поддерживается","scope.noBody":"Новые сущности и игровые системы, логика control.lua, графика и ассеты, произвольные рецепты, контент только для Space Age и публикация в Workshop.",
+      "examples.title":"Можно начать с примера","example.machine.kicker":"НОВЫЙ КОНТЕНТ","example.machine.body":"Создать новую машину со своим рецептом и технологией","example.recipe.kicker":"НОВЫЙ РЕЦЕПТ","example.recipe.body":"Добавить альтернативный рецепт для существующего предмета","example.chain.kicker":"ЦЕПОЧКА КОНТЕНТА","example.chain.body":"Создать новый материал и использовать его в новой машине","example.fast.kicker":"БЫСТРЫЙ СТАРТ","example.fast.body":"Быстрее производство, дешевле шестерни и исследования","example.production.kicker":"ПРОИЗВОДСТВО","example.production.body":"Ускорить добычу и исследования","example.throughput.kicker":"ПРОПУСКНАЯ СПОСОБНОСТЬ","example.throughput.body":"Быстрее шестерни, больше конвейеров, крупнее стаки","example.tech.kicker":"ИССЛЕДОВАНИЯ","example.tech.body":"Изменить проверенную зависимость технологии",
+      "scope.summary":"Что сейчас можно менять?","scope.yesTitle":"Хорошо работает в этой бете","scope.yesBody":"Проверенные изменения баланса, новые промежуточные материалы и альтернативные item-рецепты, а также новые сборочные автоматы, электропечи, электрические буры, лаборатории, химзаводы, НПЗ и центрифуги. Новый материал можно использовать в новой машине/рецепте того же мода.","scope.noTitle":"Пока не поддерживается","scope.noBody":"Произвольные типы сущностей и игровые системы, логика control.lua, собственная графика/ассеты, непроверенные типы item/entity, fluid-рецепты, контент только для Space Age и публикация в Workshop.",
       "history.step":"НЕДАВНИЕ","history.title":"Твои последние моды","history.refresh":"Обновить","history.none":"Генераций пока нет.","history.token":"Используй бета-токен, чтобы загрузить последние моды.",
       "result.step":"03 · ТВОЙ МОД","result.title":"Результат","result.changes":"Что именно изменяет мод","result.diff":"Что изменилось в этой версии","result.download":"Скачать ZIP мода","result.preparing":"Готовим скачивание…","result.retry":"Попробовать ещё раз","result.installNote":"<strong>Установка:</strong> положи ZIP в папку <code>mods</code> Factorio, не распаковывая, и запусти игру. Эта сборка проверена в изолированной базовой Factorio 2.0.77; совместимость с твоими сторонними модами нужно проверить уже в игре.",
       "progress.queued":"В очереди","progress.running":"Сборка + проверка","progress.done":"Готово",
@@ -333,8 +345,8 @@ const APP_JS = String.raw`(() => {
       "state.example":"Пример загружен. Его можно изменить или сразу отправить.","state.enterToken":"Сначала вставь бета-токен.","state.tokenSaved":"Доступ к бете готов для этой вкладки.","state.tokenCleared":"Бета-токен очищен.","state.describe":"Сначала опиши, что хочешь изменить в Factorio.","state.submitting":"Отправляем запрос…","state.running":"Собираем мод…","state.finished":"Готово.","state.retrying":"Запускаем новую попытку…","state.revisionEmpty":"Опиши, что нужно изменить в этой версии.","state.revisionSubmitting":"Отправляем изменения…","state.revisionRunning":"Собираем новую версию…","state.feedbackSaving":"Сохраняем…","state.feedbackSaved":"Отзыв сохранён. Спасибо.","state.surveySaved":"Ответ сохранён. Спасибо.",
       "error.auth":"Бета-токен отсутствует или неверный.","error.rate":"Слишком много запросов. Попробуй позже.","error.generic":"Ошибка запроса",
       "meta.generation":"Генерация","meta.capability":"Тип","meta.totalTime":"Общее время","meta.factorio":"Проверка Factorio","meta.artifact":"Файл","meta.size":"Размер ZIP",
-      "cap.prototype_property":"Параметр машины","cap.recipe_ingredient":"Ингредиент рецепта","cap.recipe_crafting_time":"Время крафта","cap.recipe_result":"Результат рецепта","cap.item_stack_size":"Размер стака","cap.technology_cost":"Стоимость исследования","cap.technology_prerequisite":"Зависимость исследования","cap.mixed":"Набор правок",
-      "change.ingredient":"ингредиент","change.craftingTime":"время крафта","change.output":"результат","change.stack":"размер стака","change.researchCost":"стоимость исследования","change.prerequisite":"требование","change.unknown":"Неизвестное изменение","diff.added":"добавлено","diff.removed":"убрано","diff.changed":"изменено",
+      "cap.prototype_property":"Параметр машины","cap.recipe_ingredient":"Ингредиент рецепта","cap.recipe_crafting_time":"Время крафта","cap.recipe_result":"Результат рецепта","cap.item_stack_size":"Размер стака","cap.technology_cost":"Стоимость исследования","cap.technology_prerequisite":"Зависимость исследования","cap.new_machine":"Новая машина","cap.new_recipe":"Новый рецепт","cap.new_item":"Новый материал","cap.mixed":"Набор мода",
+      "change.ingredient":"ингредиент","change.craftingTime":"время крафта","change.output":"результат","change.stack":"размер стака","change.researchCost":"стоимость исследования","change.prerequisite":"требование","change.newMachine":"создать машину","change.machineSpeed":"скорость","change.energy":"энергия","change.modules":"слоты модулей","change.newRecipe":"создать рецепт","change.newItem":"создать материал","change.stack":"стак","change.seconds":"с","change.unknown":"Неизвестное изменение","diff.added":"добавлено","diff.removed":"убрано","diff.changed":"изменено",
       "operation.add":"добавить","operation.remove":"убрать"
     }
   };
@@ -487,6 +499,15 @@ const APP_JS = String.raw`(() => {
     if (change.type === "item_stack_size") return nameFor(change.itemName) + " · " + t("change.stack") + " " + operationText(change.operation);
     if (change.type === "technology_cost") return nameFor(change.technologyName) + " · " + t("change.researchCost") + " " + operationText(change.operation);
     if (change.type === "technology_prerequisite") return nameFor(change.technologyName) + " · " + t("change.prerequisite") + " " + operationText(change.operation) + " " + nameFor(change.prerequisiteName);
+    if (change.type === "new_machine") return t("change.newMachine") + " «" + change.displayName + "» · " + t("change.machineSpeed") + " " + String(change.speed) + " · " + String(change.energyUsageKw) + " kW · " + t("change.modules") + " " + String(change.moduleSlots);
+    if (change.type === "new_recipe") {
+      const ingredients = (change.ingredients || []).map((ingredient) => String(ingredient.amount) + " " + nameFor(ingredient.itemName)).join(" + ");
+      return t("change.newRecipe") + " «" + change.displayName + "»: " + ingredients + " → " + String(change.resultAmount) + " " + nameFor(change.resultItemName) + " · " + String(change.energyRequired) + t("change.seconds");
+    }
+    if (change.type === "new_item") {
+      const ingredients = (change.recipeIngredients || []).map((ingredient) => String(ingredient.amount) + " " + nameFor(ingredient.itemName)).join(" + ");
+      return t("change.newItem") + " «" + change.displayName + "» · " + t("change.stack") + " " + String(change.stackSize) + " · " + ingredients + " → " + String(change.recipeResultAmount);
+    }
     return humanize(change.type);
   }
 
@@ -501,7 +522,7 @@ const APP_JS = String.raw`(() => {
     diff.forEach((entry) => {
       const item = document.createElement("li"); const kind = document.createElement("span");
       kind.className = "diff-kind"; kind.textContent = t("diff." + entry.kind); item.append(kind);
-      if (entry.kind === "changed") item.append(document.createTextNode(describeChange(entry.before) + " → " + operationText(entry.after && entry.after.operation)));
+      if (entry.kind === "changed") item.append(document.createTextNode(describeChange(entry.before) + " → " + describeChange(entry.after)));
       else item.append(document.createTextNode(describeChange(entry.after || entry.before)));
       revisionDiffList.append(item);
     });

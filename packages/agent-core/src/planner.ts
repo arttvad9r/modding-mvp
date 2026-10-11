@@ -14,6 +14,9 @@ import {
   assertSupportedItemStackSize,
   assertSupportedTechnologyCost,
   assertSupportedTechnologyPrerequisite,
+  assertSupportedNewMachine,
+  assertSupportedNewRecipe,
+  assertSupportedNewItem,
   listFactorioCapabilities,
 } from "@project/factorio-knowledge";
 import {
@@ -47,6 +50,9 @@ export const SupportedPlannerDraftSchema = z
         "item_stack_size",
         "technology_cost",
         "technology_prerequisite",
+        "new_machine",
+        "new_recipe",
+        "new_item",
       ])
       .optional(),
   })
@@ -119,6 +125,9 @@ A supported request may contain multiple changes from different capability famil
 - item_stack_size: {"type":"item_stack_size","itemName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - technology_cost: {"type":"technology_cost","technologyName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - technology_prerequisite: {"type":"technology_prerequisite","technologyName":string,"prerequisiteName":string,"operation":{"type":"add"}|{"type":"remove"}}
+- new_machine: {"type":"new_machine","machineType":"assembling-machine"|"furnace"|"mining-drill"|"lab","basePrototypeName":"assembling-machine-2"|"assembling-machine-3"|"electric-furnace"|"electric-mining-drill"|"lab"|"chemical-plant"|"oil-refinery"|"centrifuge","name":string starting with "custom-","displayName":string,"speed":number,"energyUsageKw":number,"moduleSlots":integer,"itemStackSize":integer,"recipeCraftingTime":number,"recipeIngredients":[{"itemName":string,"amount":integer},...],"unlock":{"type":"existing_technology","technologyName":string}|{"type":"new_technology","displayName":string,"prerequisites":[string,...],"scienceTier":"automation"|"logistic"|"chemical"|"production"|"utility","count":integer,"time":number}}
+- new_recipe: {"type":"new_recipe","name":string starting with "custom-","displayName":string,"energyRequired":number,"ingredients":[{"itemName":string,"amount":integer},...],"resultItemName":string,"resultAmount":integer,"unlock":{"type":"existing_technology","technologyName":string}|{"type":"new_technology","displayName":string,"prerequisites":[string,...],"scienceTier":"automation"|"logistic"|"chemical"|"production"|"utility","count":integer,"time":number}}
+- new_item: {"type":"new_item","baseItemName":"iron-plate"|"copper-plate"|"steel-plate"|"iron-gear-wheel"|"electronic-circuit"|"advanced-circuit"|"processing-unit"|"plastic-bar"|"battery","name":string starting with "custom-","displayName":string,"stackSize":integer,"recipeCraftingTime":number,"recipeIngredients":[{"itemName":string,"amount":integer},...],"recipeResultAmount":integer,"unlock":{"type":"existing_technology","technologyName":string}|{"type":"new_technology","displayName":string,"prerequisites":[string,...],"scienceTier":"automation"|"logistic"|"chemical"|"production"|"utility","count":integer,"time":number}}
 Use identifiers exactly as listed in the capability registry. Preserve every supported change the user asks for. If any essential requested change is outside the registry, return unsupported rather than silently dropping it. Do not include capability, target, assertions, Lua, files, markdown, or additional keys.`;
 
 function plannerRegistryContext(): string {
@@ -145,6 +154,8 @@ export function buildPlannerSystemPrompt(): string {
     "If any essential part is outside the registry, return unsupported with a concise reason; never silently drop an unsupported part.",
     "Write any user-facing unsupported reason in the same language as the user request.",
     "For supported requests, return title, kebab-case slug, and all typed changes only.",
+    "For new_machine, numeric machine fields are absolute final values; when the user gives a relative value, compute it from the selected template baseline in the registry.",
+    "A custom item created by new_item in the same supported response may be referenced as an ingredient/result by new_machine/new_recipe; never reference an undeclared custom item.",
     "The application deterministically derives target metadata and semantic assertions.",
     "Capability registry:",
     plannerRegistryContext(),
@@ -190,6 +201,12 @@ function assertionForChange(change: ModChange): ModAssertion {
         prerequisiteName: change.prerequisiteName,
         expectation: change.operation,
       };
+    case "new_machine":
+      return { ...change, type: "new_machine_matches" };
+    case "new_recipe":
+      return { ...change, type: "new_recipe_matches" };
+    case "new_item":
+      return { ...change, type: "new_item_matches" };
   }
 }
 
@@ -208,29 +225,28 @@ function deriveModSpec(draft: z.infer<typeof SupportedPlannerDraftSchema>): ModS
 }
 
 function assertModSpecSupported(spec: ModSpec): void {
+  const contentNames = new Map<string, string>();
+  const customItems = new Set<string>();
+  for (const change of spec.changes) {
+    if (change.type === "new_item" || change.type === "new_machine" || change.type === "new_recipe") {
+      const previous = contentNames.get(change.name);
+      if (previous !== undefined) throw new ProjectError({ code: "unsupported_capability", stage: "planning", message: `Content name collision: ${change.name}` });
+      contentNames.set(change.name, change.type);
+    }
+    if (change.type === "new_item") customItems.add(change.name);
+  }
   for (const change of spec.changes) {
     switch (change.type) {
-      case "prototype_property":
-        assertSupportedPrototypeProperty(change);
-        break;
-      case "recipe_ingredient":
-        assertSupportedRecipeIngredient(change);
-        break;
-      case "recipe_crafting_time":
-        assertSupportedRecipeCraftingTime(change);
-        break;
-      case "recipe_result":
-        assertSupportedRecipeResult(change);
-        break;
-      case "item_stack_size":
-        assertSupportedItemStackSize(change);
-        break;
-      case "technology_cost":
-        assertSupportedTechnologyCost(change);
-        break;
-      case "technology_prerequisite":
-        assertSupportedTechnologyPrerequisite(change);
-        break;
+      case "prototype_property": assertSupportedPrototypeProperty(change); break;
+      case "recipe_ingredient": assertSupportedRecipeIngredient(change); break;
+      case "recipe_crafting_time": assertSupportedRecipeCraftingTime(change); break;
+      case "recipe_result": assertSupportedRecipeResult(change); break;
+      case "item_stack_size": assertSupportedItemStackSize(change); break;
+      case "technology_cost": assertSupportedTechnologyCost(change); break;
+      case "technology_prerequisite": assertSupportedTechnologyPrerequisite(change); break;
+      case "new_machine": assertSupportedNewMachine(change, customItems); break;
+      case "new_recipe": assertSupportedNewRecipe(change, customItems); break;
+      case "new_item": assertSupportedNewItem(change); break;
     }
   }
 }

@@ -56,14 +56,14 @@ const categoryRules: readonly CategoryRule[] = [
     labelRu: "рецепты",
     broadPattern: /(?:\brecipes\b|рецепты|рецептов)/iu,
     specificPattern: /(?:\b(?:iron gears?|gear wheels?|transport belts?|electronic circuits?|green circuits?|pipes?)\b|(?:железн\p{L}*\s+шестерн\p{L}*|конвейер\p{L}*|электронн\p{L}*\s+схем\p{L}*|зелён\p{L}*\s+схем\p{L}*|зелен\p{L}*\s+схем\p{L}*|труб\p{L}*))/iu,
-    changeTypes: ["recipe_ingredient", "recipe_crafting_time", "recipe_result"],
+    changeTypes: ["recipe_ingredient", "recipe_crafting_time", "recipe_result", "new_recipe"],
   },
   {
     label: "items",
     labelRu: "предметы",
     broadPattern: /(?:\bitems\b|предметы|предметов)/iu,
     specificPattern: /(?:\b(?:iron plates?|copper plates?|iron gears?|electronic circuits?|green circuits?|pipes?|transport belts?)\b|(?:железн\p{L}*\s+пластин\p{L}*|медн\p{L}*\s+пластин\p{L}*|железн\p{L}*\s+шестерн\p{L}*|электронн\p{L}*\s+схем\p{L}*|зелён\p{L}*\s+схем\p{L}*|зелен\p{L}*\s+схем\p{L}*|труб\p{L}*|конвейер\p{L}*))/iu,
-    changeTypes: ["item_stack_size"],
+    changeTypes: ["item_stack_size", "new_item"],
   },
   {
     label: "technologies",

@@ -190,6 +190,21 @@ Before starting M2:
 - [x] Add the exit-review adversarial prompts to regression/eval coverage and rerun the live Planner gate after fixing partial-fulfillment semantics.
 - [x] Re-run the M6A exit review; if green, start with a 5–10 player external cohort before scaling recruitment to the 30+ M6 target.
 
+## M6B — Content Mods before external beta — in progress
+- [x] Define typed `new_machine` ModSpec/assertion contracts for reviewed assembler/furnace creation.
+- [x] Add reviewed machine templates, recipe-item references, and technology references to `factorio-knowledge`.
+- [x] Deterministically generate a cloned entity + item + recipe + existing/new technology unlock without model-authored Lua.
+- [x] Add semantic assertions for the complete created machine bundle and prove it through real Factorio 2.0.77.
+- [x] Extend Planner and Revision Planner typed contracts/tests for `new_machine`.
+- [ ] Add EN/RU Planner golden cases and pass the live model eval.
+- [ ] Update bilingual tester UI/result/revision-diff copy for new-machine content creation.
+- [ ] Run repository/service release gates and deploy M6B privately.
+- [x] Add bounded `new_recipe` content creation for alternative item-only recipes with existing/new technology unlock and real-Factorio semantic validation.
+- [x] Add bounded `new_item` intermediate materials and context-aware same-bundle references from `new_machine` / `new_recipe`; reject undeclared custom references and content-name collisions.
+- [x] Prove a linked `Reinforced Plate -> Reinforced Furnace` content tree through live Planner and real Factorio without Repair.
+- [ ] Pass the final M6B EN/RU live Planner corpus after all content primitives/template expansion.
+- [ ] Run full repository/service release gates and deploy M6B privately.
+
 ## M6 — in progress
 
 ### Service boundary

@@ -8,10 +8,15 @@ import {
   listSupportedItemStackSizes,
   listSupportedTechnologyCosts,
   listSupportedTechnologyPrerequisites,
+  listSupportedNewMachineTemplates,
+  listSupportedNewMachineRecipeItems,
+  listSupportedNewMachineTechnologies,
+  listSupportedNewRecipeItems,
+  listSupportedNewItemTemplates,
 } from "./supported.js";
 
 export type FactorioCapabilityId = Exclude<ModSpec["capability"], "mixed">;
-export type FactorioCapabilityOperation = "set" | "multiply" | "add" | "remove";
+export type FactorioCapabilityOperation = "set" | "multiply" | "add" | "remove" | "create";
 
 export interface FactorioCapabilityTargetPolicy {
   readonly game: "factorio";
@@ -63,6 +68,24 @@ export type FactorioCapabilityTarget =
       readonly prerequisiteName: string;
       readonly basePresent: boolean;
       readonly allowedOperation: "add" | "remove";
+    }
+  | {
+      readonly kind: "new_machine_template";
+      readonly machineType: "assembling-machine" | "furnace" | "mining-drill" | "lab";
+      readonly basePrototypeName: "assembling-machine-2" | "assembling-machine-3" | "electric-furnace" | "electric-mining-drill" | "lab" | "chemical-plant" | "oil-refinery" | "centrifuge";
+      readonly baseItemName: string;
+      readonly speedProperty: "crafting_speed" | "mining_speed" | "researching_speed";
+      readonly baseSpeed: number;
+      readonly baseEnergyUsageKw: number;
+      readonly baseModuleSlots: number;
+    }
+  | {
+      readonly kind: "new_recipe_item";
+      readonly itemName: string;
+    }
+  | {
+      readonly kind: "new_item_template";
+      readonly itemName: string;
     };
 
 export interface FactorioCapabilityDescriptor {
@@ -166,6 +189,70 @@ export const factorioCapabilityRegistry = {
       kind: "technology_cost" as const,
       ...entry,
     })),
+  },
+  new_machine: {
+    id: "new_machine",
+    changeType: "new_machine",
+    target,
+    operations: ["create"],
+    summary: "Create a new placeable production/research machine by cloning a reviewed base-game prototype, with its own item, recipe, and technology unlock.",
+    constraints: [
+      "The internal name must start with custom- to avoid collisions with base-game prototypes.",
+      "Graphics and icons are inherited from the reviewed base prototype; generated/custom assets are not used.",
+      "Supported base templates are listed in targets with the exact speed property plus pinned speed, energy-usage, and module-slot baselines.",
+      `Allowed recipe ingredient item names: ${listSupportedNewMachineRecipeItems().join(", ")}.`,
+      `Allowed existing unlock/prerequisite technologies: ${listSupportedNewMachineTechnologies().join(", ")}.`,
+      "Unlock may use one existing reviewed technology or create one new technology derived from the machine name.",
+      "New technology scienceTier is one of automation, logistic, chemical, production, utility.",
+      "Recipe output is exactly one copy of the new machine item.",
+    ],
+    promptExamples: [
+      "Add a custom advanced electric furnace based on the electric furnace, twice as fast, using 540 kW, crafted from steel plates, advanced circuits and stone bricks, unlocked by Advanced material processing 2.",
+      "Create a custom assembler based on assembling machine 3 with speed 2.5 and a new research after Automation 2.",
+    ],
+    targets: listSupportedNewMachineTemplates().map((entry) => ({
+      kind: "new_machine_template" as const,
+      ...entry,
+    })),
+  },
+  new_recipe: {
+    id: "new_recipe",
+    changeType: "new_recipe",
+    target,
+    operations: ["create"],
+    summary: "Create a new alternative crafting recipe for one reviewed existing base-game item, with an existing or new technology unlock.",
+    constraints: [
+      "The internal recipe name must start with custom-.",
+      `Allowed ingredient/result item names: ${listSupportedNewRecipeItems().join(", ")}.`,
+      `Allowed existing unlock/prerequisite technologies: ${listSupportedNewMachineTechnologies().join(", ")}.`,
+      "The recipe has one reviewed item result and item-only ingredients; fluids and new result item prototypes are outside this capability.",
+      "Unlock may use one existing reviewed technology or create one new technology derived from the recipe name.",
+      "New technology scienceTier is one of automation, logistic, chemical, production, utility.",
+    ],
+    promptExamples: [
+      "Create an alternative Steel Gears recipe: 1 steel plate makes 5 iron gears in 1 second, unlocked by Steel processing.",
+      "Add a Precision Circuits recipe using copper plates and advanced circuits, unlocked by a new chemical-science technology.",
+    ],
+    targets: listSupportedNewRecipeItems().map((itemName) => ({ kind: "new_recipe_item" as const, itemName })),
+  },
+  new_item: {
+    id: "new_item",
+    changeType: "new_item",
+    target,
+    operations: ["create"],
+    summary: "Create a new intermediate item by cloning the icon/order of a reviewed base-game item, with its own recipe and technology unlock.",
+    constraints: [
+      "The internal item name must start with custom-.",
+      "The item icon/subgroup/order are inherited from one reviewed non-placeable base-game item template; generated/custom graphics are not used.",
+      `Allowed base recipe ingredient names: ${listSupportedNewMachineRecipeItems().join(", ")}.`,
+      `Allowed existing unlock/prerequisite technologies: ${listSupportedNewMachineTechnologies().join(", ")}.`,
+      "The new item may be referenced by new_machine/new_recipe changes in the same request; a new_item recipe itself currently uses reviewed base-game ingredients only.",
+      "Unlock may use one existing reviewed technology or create one new technology derived from the item name.",
+    ],
+    promptExamples: [
+      "Create a new intermediate item called Reinforced Plate based on the steel plate icon: 2 steel plates and 5 plastic bars make 1 Reinforced Plate, unlocked by Advanced material processing 2.",
+    ],
+    targets: listSupportedNewItemTemplates().map((itemName) => ({ kind: "new_item_template" as const, itemName })),
   },
   technology_prerequisite: {
     id: "technology_prerequisite",

@@ -81,6 +81,81 @@ function mixedFastStartDraft() {
 }
 
 
+function contentTreeDraft() {
+  return {
+    status: "supported",
+    title: "Reinforced furnace progression",
+    slug: "reinforced-furnace-progression",
+    changes: [
+      { type: "new_item", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+      { type: "new_machine", machineType: "furnace", basePrototypeName: "electric-furnace", name: "custom-reinforced-furnace", displayName: "Reinforced Furnace", speed: 4, energyUsageKw: 500, moduleSlots: 4, itemStackSize: 50, recipeCraftingTime: 6, recipeIngredients: [{ itemName: "electric-furnace", amount: 1 }, { itemName: "custom-reinforced-plate", amount: 10 }, { itemName: "processing-unit", amount: 5 }], unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } },
+    ],
+  } as const;
+}
+
+
+function newRecipeDraft() {
+  return {
+    status: "supported",
+    title: "Steel gears recipe",
+    slug: "steel-gears-recipe",
+    changes: [{
+      type: "new_recipe",
+      name: "custom-steel-gears",
+      displayName: "Steel Gears",
+      energyRequired: 1,
+      ingredients: [{ itemName: "steel-plate", amount: 1 }],
+      resultItemName: "iron-gear-wheel",
+      resultAmount: 5,
+      unlock: { type: "existing_technology", technologyName: "steel-processing" },
+    }],
+  } as const;
+}
+
+
+function newMachineDraft() {
+  return {
+    status: "supported",
+    title: "Advanced electric furnace",
+    slug: "advanced-electric-furnace",
+    changes: [{
+      type: "new_machine",
+      machineType: "furnace",
+      basePrototypeName: "electric-furnace",
+      name: "custom-advanced-electric-furnace",
+      displayName: "Advanced Electric Furnace",
+      speed: 4,
+      energyUsageKw: 540,
+      moduleSlots: 4,
+      itemStackSize: 50,
+      recipeCraftingTime: 5,
+      recipeIngredients: [
+        { itemName: "steel-plate", amount: 10 },
+        { itemName: "advanced-circuit", amount: 5 },
+        { itemName: "stone-brick", amount: 10 },
+      ],
+      unlock: {
+        type: "new_technology",
+        displayName: "Advanced Electric Furnace",
+        prerequisites: ["advanced-material-processing-2"],
+        scienceTier: "chemical",
+        count: 300,
+        time: 30,
+      },
+    }],
+  } as const;
+}
+
+const newMachineSpec = {
+  title: "Advanced electric furnace",
+  slug: "advanced-electric-furnace",
+  target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+  capability: "new_machine",
+  changes: [{ ...newMachineDraft().changes[0] }],
+  assertions: [{ ...newMachineDraft().changes[0], type: "new_machine_matches" }],
+} as unknown as ModSpec;
+
+
 const acceptedSpec: ModSpec = {
   title: "Fast start",
   slug: "fast-start",
@@ -124,8 +199,14 @@ describe("Planner prompt contract", () => {
     expect(prompt).toContain("recipe_crafting_time");
     expect(prompt).toContain("recipe_result");
     expect(prompt).toContain("item_stack_size");
+    expect(prompt).toContain("new_machine");
+    expect(prompt).toContain("new_recipe");
+    expect(prompt).toContain("new_item");
+    expect(prompt).toContain("new_item");
     expect(prompt).toContain("technology_cost");
     expect(prompt).toContain("technology_prerequisite");
+    expect(prompt).toContain("new_machine");
+    expect(prompt).toContain("custom-");
     expect(prompt).toContain("steel-furnace");
     expect(prompt).toContain("Do not approximate");
   });
@@ -192,6 +273,62 @@ describe("planFactorioPrompt", () => {
       { type: "recipe_result_matches", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", expectation: { type: "set", value: 4 } },
       { type: "item_stack_size_matches", itemName: "electronic-circuit", expectation: { type: "set", value: 500 } },
     ]);
+  });
+
+  it("derives a fully asserted new machine content bundle", async () => {
+    const provider = new SequenceProvider([response(newMachineDraft())]);
+    const result = await planFactorioPrompt({
+      provider,
+      prompt: "Add an advanced electric furnace based on the electric furnace, twice as fast, using 540 kW, with a new technology after Advanced material processing 2",
+    });
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported result");
+    expect(result.modSpec.capability).toBe("new_machine");
+    expect(result.modSpec.changes[0]).toMatchObject({
+      type: "new_machine",
+      name: "custom-advanced-electric-furnace",
+      speed: 4,
+    });
+    expect(result.modSpec.assertions[0]).toMatchObject({
+      type: "new_machine_matches",
+      name: "custom-advanced-electric-furnace",
+      speed: 4,
+    });
+  });
+
+  it("derives a fully asserted alternative recipe", async () => {
+    const provider = new SequenceProvider([response(newRecipeDraft())]);
+    const result = await planFactorioPrompt({
+      provider,
+      prompt: "Create a Steel Gears recipe where one steel plate makes five iron gears in one second, unlocked by Steel processing",
+    });
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported result");
+    expect(result.modSpec.capability).toBe("new_recipe");
+    expect(result.modSpec.changes[0]).toMatchObject({ type: "new_recipe", name: "custom-steel-gears", resultAmount: 5 });
+    expect(result.modSpec.assertions[0]).toMatchObject({ type: "new_recipe_matches", name: "custom-steel-gears", resultAmount: 5 });
+  });
+
+  it("accepts a content tree where a declared custom item feeds a new machine", async () => {
+    const provider = new SequenceProvider([response(contentTreeDraft())]);
+    const result = await planFactorioPrompt({ provider, prompt: "Create Reinforced Plate from steel and plastic, then use it to craft a Reinforced Furnace" });
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported result");
+    expect(result.modSpec.capability).toBe("mixed");
+    expect(result.modSpec.changes).toHaveLength(2);
+    expect(result.modSpec.changes[0]).toMatchObject({ type: "new_item", name: "custom-reinforced-plate" });
+    expect(result.modSpec.changes[1]).toMatchObject({ type: "new_machine", recipeIngredients: expect.arrayContaining([{ itemName: "custom-reinforced-plate", amount: 10 }]) });
+  });
+
+  it("rejects an undeclared custom item reference", async () => {
+    const invalid = contentTreeDraft();
+    const provider = new SequenceProvider([
+      response({ status: "supported", title: invalid.title, slug: invalid.slug, changes: [invalid.changes[1]] }),
+      response({ status: "unsupported", reason: "The custom ingredient is not declared in this request." }),
+    ]);
+    const result = await planFactorioPrompt({ provider, prompt: "Create a furnace that uses my made-up custom plate" });
+    expect(result).toMatchObject({ status: "unsupported" });
+    expect(provider.requests).toHaveLength(2);
   });
 
   it("rejects explicit universal category scopes before calling the model", async () => {
@@ -427,6 +564,25 @@ describe("planFactorioRevision", () => {
     expect(result.modSpec.changes).toEqual([acceptedSpec.changes[0]]);
   });
 
+  it("revises a created machine while preserving the rest of its content definition", async () => {
+    const current = newMachineSpec.changes[0];
+    if (!current || current.type !== "new_machine") throw new Error("expected new machine fixture");
+    const provider = new SequenceProvider([response({
+      status: "supported",
+      changes: [{ ...current, speed: 5 }],
+    })]);
+    const result = await planFactorioRevision({
+      provider,
+      baseModSpec: newMachineSpec,
+      prompt: "Keep everything else but make the new furnace 25% faster",
+    });
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported revision");
+    expect(result.modSpec.capability).toBe("new_machine");
+    expect(result.modSpec.changes[0]).toMatchObject({ type: "new_machine", speed: 5, energyUsageKw: 540 });
+    expect(result.modSpec.assertions[0]).toMatchObject({ type: "new_machine_matches", speed: 5 });
+  });
+
   it("rejects broad category follow-ups before calling the revision model", async () => {
     const provider = new SequenceProvider([]);
     const result = await planFactorioRevision({
@@ -459,5 +615,8 @@ describe("planFactorioRevision", () => {
     expect(prompt).toContain("recipe_crafting_time");
     expect(prompt).toContain("recipe_result");
     expect(prompt).toContain("item_stack_size");
+    expect(prompt).toContain("new_machine");
+    expect(prompt).toContain("new_recipe");
+    expect(prompt).toContain("new_item");
   });
 });

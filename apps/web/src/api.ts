@@ -130,6 +130,12 @@ function changeKey(change: ModChange): string {
       return `${change.type}:${change.technologyName}`;
     case "technology_prerequisite":
       return `${change.type}:${change.technologyName}:${change.prerequisiteName}`;
+    case "new_machine":
+      return `${change.type}:${change.name}`;
+    case "new_recipe":
+      return `${change.type}:${change.name}`;
+    case "new_item":
+      return `${change.type}:${change.name}`;
   }
 }
 

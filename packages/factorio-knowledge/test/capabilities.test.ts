@@ -11,6 +11,9 @@ import {
   listSupportedItemStackSizes,
   listSupportedTechnologyCosts,
   listSupportedTechnologyPrerequisites,
+  listSupportedNewMachineTemplates,
+  listSupportedNewRecipeItems,
+  listSupportedNewItemTemplates,
 } from "../src/index.js";
 
 const expectedIds = [
@@ -21,6 +24,9 @@ const expectedIds = [
   "item_stack_size",
   "technology_cost",
   "technology_prerequisite",
+  "new_machine",
+  "new_recipe",
+  "new_item",
 ] as const;
 
 describe("Factorio capability registry", () => {
@@ -64,6 +70,15 @@ describe("Factorio capability registry", () => {
     );
     expect(getFactorioCapability("technology_prerequisite").targets).toHaveLength(
       listSupportedTechnologyPrerequisites().length,
+    );
+    expect(getFactorioCapability("new_machine").targets).toHaveLength(
+      listSupportedNewMachineTemplates().length,
+    );
+    expect(getFactorioCapability("new_recipe").targets).toHaveLength(
+      listSupportedNewRecipeItems().length,
+    );
+    expect(getFactorioCapability("new_item").targets).toHaveLength(
+      listSupportedNewItemTemplates().length,
     );
   });
 

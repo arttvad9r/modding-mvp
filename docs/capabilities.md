@@ -20,9 +20,12 @@ The registry publishes, for each capability:
 - `recipe_result` — `set` / `multiply` existing reviewed item result amounts;
 - `item_stack_size` — `set` / `multiply` stack size for reviewed base-game items;
 - `technology_cost` — `set` / `multiply` finite allow-listed technology `unit.count`;
-- `technology_prerequisite` — reviewed `add` / `remove` prerequisite edges.
+- `technology_prerequisite` — reviewed `add` / `remove` prerequisite edges;
+- `new_machine` — `create` a new assembling machine or electric furnace from a reviewed base-game template, including its item, recipe, and existing/new technology unlock; custom graphics are not generated and the inherited base assets are reused;
+- `new_recipe` — `create` a new alternative item-only recipe for a reviewed existing base-game result item or a `new_item` declared in the same bundle, with reviewed/same-bundle ingredients and an existing/new technology unlock;
+- `new_item` — `create` a new intermediate item cloned from a reviewed non-placeable base item template, including its own item-only recipe and existing/new technology unlock; same-bundle `new_machine` / `new_recipe` changes may consume it.
 
-All current entries target Factorio stable `2.0` and are validated against the pinned development runtime `2.0.77`. A ModSpec may compose two or more of these primitive families under the root `mixed` marker; `mixed` itself is intentionally not a capability-registry entry. Every contained change is checked against its primitive registry entry independently.
+All current entries target Factorio stable `2.0` and are validated against the pinned development runtime `2.0.77`. A ModSpec may compose two or more of these typed families under the root `mixed` marker; `mixed` itself is intentionally not a capability-registry entry. Every contained change is checked against its primitive registry entry independently.
 
 ## Code boundaries
 - `packages/factorio-knowledge/src/supported.ts` owns exact supported targets, baseline values, and lookup/assert functions.

@@ -303,3 +303,90 @@ describe("generateFactorioMod M6A rebalance primitives", () => {
     expect(() => generateFactorioMod(invalid)).toThrow("Item stack size must be an integer in range 1..65535");
   });
 });
+
+
+describe("generateFactorioMod new_machine", () => {
+  const spec: ModSpec = {
+    title: "Advanced electric furnace",
+    slug: "advanced-electric-furnace",
+    target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+    capability: "new_machine",
+    changes: [{
+      type: "new_machine", machineType: "furnace", basePrototypeName: "electric-furnace",
+      name: "custom-advanced-electric-furnace", displayName: "Advanced Electric Furnace",
+      speed: 4, energyUsageKw: 540, moduleSlots: 4, itemStackSize: 50,
+      recipeCraftingTime: 5,
+      recipeIngredients: [{ itemName: "steel-plate", amount: 10 }, { itemName: "advanced-circuit", amount: 5 }, { itemName: "stone-brick", amount: 10 }],
+      unlock: { type: "new_technology", displayName: "Advanced Electric Furnace", prerequisites: ["advanced-material-processing-2"], scienceTier: "chemical", count: 300, time: 30 },
+    }],
+    assertions: [{
+      type: "new_machine_matches", machineType: "furnace", basePrototypeName: "electric-furnace",
+      name: "custom-advanced-electric-furnace", displayName: "Advanced Electric Furnace",
+      speed: 4, energyUsageKw: 540, moduleSlots: 4, itemStackSize: 50,
+      recipeCraftingTime: 5,
+      recipeIngredients: [{ itemName: "steel-plate", amount: 10 }, { itemName: "advanced-circuit", amount: 5 }, { itemName: "stone-brick", amount: 10 }],
+      unlock: { type: "new_technology", displayName: "Advanced Electric Furnace", prerequisites: ["advanced-material-processing-2"], scienceTier: "chemical", count: 300, time: 30 },
+    }],
+  };
+
+  it("creates entity, item, recipe, and technology deterministically", () => {
+    const generated = generateFactorioMod(spec);
+    const lua = generatedContent("data.lua", spec);
+    expect(lua).toContain('data.raw["furnace"]["electric-furnace"]');
+    expect(lua).toContain('entity.name = "custom-advanced-electric-furnace"');
+    expect(lua).toContain('entity.energy_usage = "540kW"');
+    expect(lua).toContain('technology.name = "custom-advanced-electric-furnace-technology"');
+    expect(lua).toContain('recipe="custom-advanced-electric-furnace"');
+    expect(generated.semanticAssertionLua).toContain("new-machine.custom-advanced-electric-furnace.speed|expected=4");
+  });
+
+  it("rejects unreviewed recipe ingredients", () => {
+    const invalid = structuredClone(spec);
+    invalid.changes[0]!.recipeIngredients = [{ itemName: "uranium-ore", amount: 1 }];
+    invalid.assertions[0]!.recipeIngredients = [{ itemName: "uranium-ore", amount: 1 }];
+    expect(() => generateFactorioMod(invalid)).toThrow("Unsupported new machine recipe ingredient: uranium-ore");
+  });
+});
+
+
+describe("generateFactorioMod new_recipe", () => {
+  const spec: ModSpec = {
+    title: "Steel gears recipe", slug: "steel-gears-recipe",
+    target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "new_recipe",
+    changes: [{ type: "new_recipe", name: "custom-steel-gears", displayName: "Steel Gears", energyRequired: 1, ingredients: [{ itemName: "steel-plate", amount: 1 }], resultItemName: "iron-gear-wheel", resultAmount: 5, unlock: { type: "existing_technology", technologyName: "steel-processing" } }],
+    assertions: [{ type: "new_recipe_matches", name: "custom-steel-gears", displayName: "Steel Gears", energyRequired: 1, ingredients: [{ itemName: "steel-plate", amount: 1 }], resultItemName: "iron-gear-wheel", resultAmount: 5, unlock: { type: "existing_technology", technologyName: "steel-processing" } }],
+  };
+
+  it("creates an alternative recipe and unlock effect deterministically", () => {
+    const lua = generatedContent("data.lua", spec);
+    expect(lua).toContain('name = "custom-steel-gears"');
+    expect(lua).toContain('name="iron-gear-wheel", amount=5');
+    expect(lua).toContain('data.raw["technology"]["steel-processing"]');
+    expect(generateFactorioMod(spec).semanticAssertionLua).toContain("new-recipe.custom-steel-gears.result.iron-gear-wheel|expected=5");
+  });
+
+  it("rejects an unreviewed result item", () => {
+    const invalid = structuredClone(spec);
+    invalid.changes[0]!.resultItemName = "uranium-ore";
+    invalid.assertions[0]!.resultItemName = "uranium-ore";
+    expect(() => generateFactorioMod(invalid)).toThrow("Unsupported new recipe result item: uranium-ore");
+  });
+});
+
+
+describe("generateFactorioMod new_item", () => {
+  const spec: ModSpec = {
+    title: "Reinforced plate", slug: "reinforced-plate",
+    target: { game: "factorio", channel: "stable", versionLine: "2.0" }, capability: "new_item",
+    changes: [{ type: "new_item", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } }],
+    assertions: [{ type: "new_item_matches", baseItemName: "steel-plate", name: "custom-reinforced-plate", displayName: "Reinforced Plate", stackSize: 100, recipeCraftingTime: 2, recipeIngredients: [{ itemName: "steel-plate", amount: 2 }, { itemName: "plastic-bar", amount: 5 }], recipeResultAmount: 1, unlock: { type: "existing_technology", technologyName: "advanced-material-processing-2" } }],
+  };
+  it("creates a cloned item, its recipe, and unlock", () => {
+    const generated = generateFactorioMod(spec);
+    const lua = generatedContent("data.lua", spec);
+    expect(lua).toContain('data.raw["item"]["steel-plate"]');
+    expect(lua).toContain('item.name = "custom-reinforced-plate"');
+    expect(lua).toContain('name="custom-reinforced-plate", amount=1');
+    expect(generated.semanticAssertionLua).toContain("new-item.custom-reinforced-plate.stack_size|expected=100");
+  });
+});

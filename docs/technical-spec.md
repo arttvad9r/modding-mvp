@@ -25,7 +25,10 @@ Implemented capability-specific ModSpec variants:
 - `recipe_result` — amount mutation of an existing allow-listed item result in an existing base-game recipe;
 - `item_stack_size` — stack-size mutation for an allow-listed base-game item;
 - `technology_cost` — mutation of finite research `unit.count` for an allow-listed base-game technology;
-- `technology_prerequisite` — add/remove one reviewed prerequisite edge between base-game technologies.
+- `technology_prerequisite` — add/remove one reviewed prerequisite edge between base-game technologies;
+- `new_machine` — create a new reviewed assembling-machine/furnace prototype by cloning a pinned base-game template, plus a new placeable item, recipe, and existing/new technology unlock;
+- `new_recipe` — create a new alternative item-only recipe for a reviewed existing base-game result item or same-bundle custom item, with an existing/new technology unlock;
+- `new_item` — create a new intermediate item from a reviewed base item template, plus its item-only recipe and existing/new technology unlock.
 
 Legacy single-family ModSpec variants remain valid. A `mixed` ModSpec may compose two or more primitive families in one specification while keeping each change and assertion typed. `mixed` is not a registry capability: every contained change must pass the support rules of its primitive family. Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned. See ADR-0015.
 
@@ -42,6 +45,12 @@ For `item_stack_size`, M6A supports only reviewed base-game item prototypes. The
 For `technology_cost`, M2 supports allow-listed technologies with a finite numeric `unit.count`. Baselines are read from the pinned Factorio 2.0.77 base data. `set` and `multiply` are accepted only when the resulting count is a positive safe integer. Technologies using `count_formula` are intentionally outside this first technology capability.
 
 For `technology_prerequisite`, M2 supports only reviewed technology/prerequisite pairs. Each pair permits exactly one baseline-aware `add` or `remove` operation; arbitrary graph edits are rejected before Factorio execution.
+
+For `new_machine`, M6B supports reviewed templates `assembling-machine-2`, `assembling-machine-3`, and `electric-furnace`. The new internal ID must use the `custom-` namespace. Entity/item graphics and icons are inherited through `table.deepcopy`; generated media is not part of this capability. The typed change carries final crafting speed, energy usage, module slots, stack size, recipe time/ingredients, and an unlock policy. Recipe ingredients and referenced technologies are registry allow-listed. Unlocking may append an effect to one existing reviewed technology or create one technology cloned from a reviewed base template with an application-derived ID, exact prerequisites, science tier, count, and time. Semantic validation checks existence and all requested machine/item/recipe/unlock fields in real Factorio.
+
+For `new_recipe`, M6B creates one new disabled `recipe` prototype whose internal ID uses the `custom-` namespace. Ingredients and the single result are item-only and may reference reviewed base-game items or a `new_item` declared in the same ModSpec. The change carries display name, exact crafting time, ingredients, result amount, and the same bounded existing/new technology unlock policy. Semantic validation checks the complete ingredient/result definition and unlock effect. Fluid recipes remain outside this capability.
+
+For `new_item`, M6B clones one reviewed non-placeable base `item` template to inherit icon/subgroup/order, assigns a `custom-` internal ID/display name/stack size, creates its item-only recipe, and attaches an existing/new technology unlock. Its own recipe currently consumes reviewed base-game items only. The application collects the accepted `new_item` names and permits those exact identifiers as ingredients/results of `new_machine` and `new_recipe` in the same ModSpec; undeclared custom references and cross-content name collisions are rejected before Factorio execution. The generator renders new items before dependent content and real-Factorio assertions validate item, recipe, and research definition.
 
 Official prototype references: `RecipePrototype::ingredients`, `ItemIngredientPrototype::amount`, and `TechnologyUnit::count` in the Factorio prototype documentation.
 
@@ -136,11 +145,13 @@ Examples:
 - expected prototype exists;
 - expected scalar property equals/matches the ModSpec result;
 - expected recipe ingredients/results match the specification;
-- expected technology prerequisites/cost match the specification.
+- expected technology prerequisites/cost match the specification;
+- newly created machine/entity, item, recipe, ingredient amounts, and unlock technology/effect match the `new_machine` specification;
+- newly created custom intermediate items, their recipes/results, and unlock technology/effect match the `new_item` specification, including same-bundle references used by dependent content.
 
 For the current deterministic capabilities, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment.
 
-`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `recipe_crafting_time` assertions compare final `recipe.energy_required`; `recipe_result` assertions find the reviewed result and compare its amount; `item_stack_size` assertions compare final item `stack_size`. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
+`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `recipe_crafting_time` assertions compare final `recipe.energy_required`; `recipe_result` assertions find the reviewed result and compare its amount; `item_stack_size` assertions compare final item `stack_size`. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. `new_machine` assertions verify the new entity/item/recipe and technology unlock, including requested scalar fields, exact recipe ingredients, and new-technology research definition when applicable. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
 
 ## Deterministic local build command
 `pnpm mod:build -- <mod-spec.json> [output-directory]` performs:

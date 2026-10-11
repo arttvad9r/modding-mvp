@@ -47,6 +47,11 @@ M6A requirements:
 
 `mixed` is a ModSpec composition marker, not an unconstrained generation mode: every contained change must still be an allow-listed typed primitive. Follow-up editing uses the same rule: the Revision Planner returns the complete resulting typed bundle, while the application preserves metadata and revalidates the whole result.
 
+## M6B content-value expansion before external beta
+Before public recruitment, the product should also support a bounded form of **new content creation**, not only edits to existing prototypes. M6B has three bounded content primitives: `new_item` creates a new intermediate item by cloning a reviewed base-game item visual/template plus its recipe and technology unlock; `new_recipe` creates an alternative item-only recipe for a reviewed existing or same-bundle custom item; `new_machine` clones a reviewed production/research machine and creates its placeable item, recipe, and technology unlock. A `new_item` may be consumed by `new_recipe`/`new_machine` in the same bundle, enabling small validated content trees. The user controls the machine display name, reviewed template, crafting speed, energy use, module slots, stack size, recipe ingredients/time, and either an existing reviewed unlock technology or one new technology with reviewed prerequisites/science tier/cost. Graphics/icons are inherited from the base prototype so the feature remains deterministic and asset-free. Every created component must be semantically asserted in real Factorio before ZIP publication.
+
+This changes the product promise from only “rebalance my game” to “rebalance existing content **or create a small reviewed content progression with new materials, recipes, machines and research**”, while retaining typed intent and deterministic generation. Arbitrary entity/item prototype classes outside the reviewed templates, fluids, runtime scripting/gameplay systems, and generated media remain outside this slice. Cross-content references are accepted only for `custom-*` items actually declared by `new_item` in the same accepted ModSpec.
+
 ## Explicit non-goals for the first MVP
 - runtime `control.lua` gameplay systems;
 - generated textures, sound, 3D assets, or other media;

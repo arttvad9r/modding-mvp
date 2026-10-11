@@ -157,6 +157,116 @@ export const TechnologyPrerequisiteAssertionSchema = z.strictObject({
   expectation: PrerequisiteOperationSchema,
 });
 
+const boundedPositiveInt = z.number().int().min(1).max(65_535);
+
+export const NewMachineRecipeIngredientSchema = z.strictObject({
+  itemName: z.string().min(1).max(160).regex(factorioIdentifier),
+  amount: boundedPositiveInt,
+});
+
+export const NewMachineScienceTierSchema = z.enum([
+  "automation",
+  "logistic",
+  "chemical",
+  "production",
+  "utility",
+]);
+
+export const NewMachineUnlockSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("existing_technology"),
+    technologyName: z.string().min(1).max(160).regex(factorioIdentifier),
+  }),
+  z.strictObject({
+    type: z.literal("new_technology"),
+    displayName: z.string().trim().min(1).max(120),
+    prerequisites: z.array(z.string().min(1).max(160).regex(factorioIdentifier)).min(1).max(4),
+    scienceTier: NewMachineScienceTierSchema,
+    count: z.number().int().min(1).max(1_000_000),
+    time: finiteNumber.refine((value) => value >= 1 && value <= 600, "Research time must be in range 1..600"),
+  }),
+]);
+
+const newMachineDefinitionFields = {
+  machineType: z.enum(["assembling-machine", "furnace", "mining-drill", "lab"]),
+  basePrototypeName: z.enum(["assembling-machine-2", "assembling-machine-3", "electric-furnace", "electric-mining-drill", "lab", "chemical-plant", "oil-refinery", "centrifuge"]),
+  name: z.string().min(1).max(120).regex(factorioIdentifier),
+  displayName: z.string().trim().min(1).max(120),
+  speed: finiteNumber.refine((value) => value > 0 && value <= 100, "Machine speed must be in range (0, 100]"),
+  energyUsageKw: finiteNumber.refine((value) => value > 0 && value <= 1_000_000, "Energy usage must be in range (0, 1000000] kW"),
+  moduleSlots: z.number().int().min(0).max(16),
+  itemStackSize: boundedPositiveInt,
+  recipeCraftingTime: finiteNumber.refine((value) => value >= 0.001 && value <= 3_600, "Recipe crafting time must be in range 0.001..3600"),
+  recipeIngredients: z.array(NewMachineRecipeIngredientSchema).min(1).max(12),
+  unlock: NewMachineUnlockSchema,
+} as const;
+
+export const NewMachineChangeSchema = z.strictObject({
+  type: z.literal("new_machine"),
+  ...newMachineDefinitionFields,
+});
+
+export const NewMachineAssertionSchema = z.strictObject({
+  type: z.literal("new_machine_matches"),
+  ...newMachineDefinitionFields,
+});
+
+function newMachineSemanticKey(value: z.infer<typeof NewMachineChangeSchema> | z.infer<typeof NewMachineAssertionSchema>): string {
+  const { type: _type, ...definition } = value;
+  return JSON.stringify(definition);
+}
+
+const newRecipeDefinitionFields = {
+  name: z.string().min(1).max(120).regex(factorioIdentifier),
+  displayName: z.string().trim().min(1).max(120),
+  energyRequired: finiteNumber.refine((value) => value >= 0.001 && value <= 3_600, "Recipe crafting time must be in range 0.001..3600"),
+  ingredients: z.array(NewMachineRecipeIngredientSchema).min(1).max(12),
+  resultItemName: z.string().min(1).max(160).regex(factorioIdentifier),
+  resultAmount: boundedPositiveInt,
+  unlock: NewMachineUnlockSchema,
+} as const;
+
+export const NewRecipeChangeSchema = z.strictObject({
+  type: z.literal("new_recipe"),
+  ...newRecipeDefinitionFields,
+});
+
+export const NewRecipeAssertionSchema = z.strictObject({
+  type: z.literal("new_recipe_matches"),
+  ...newRecipeDefinitionFields,
+});
+
+function newRecipeSemanticKey(value: z.infer<typeof NewRecipeChangeSchema> | z.infer<typeof NewRecipeAssertionSchema>): string {
+  const { type: _type, ...definition } = value;
+  return JSON.stringify(definition);
+}
+
+const newItemDefinitionFields = {
+  baseItemName: z.enum(["iron-plate", "copper-plate", "steel-plate", "iron-gear-wheel", "electronic-circuit", "advanced-circuit", "processing-unit", "plastic-bar", "battery"]),
+  name: z.string().min(1).max(120).regex(factorioIdentifier),
+  displayName: z.string().trim().min(1).max(120),
+  stackSize: boundedPositiveInt,
+  recipeCraftingTime: finiteNumber.refine((value) => value >= 0.001 && value <= 3_600, "Recipe crafting time must be in range 0.001..3600"),
+  recipeIngredients: z.array(NewMachineRecipeIngredientSchema).min(1).max(12),
+  recipeResultAmount: boundedPositiveInt,
+  unlock: NewMachineUnlockSchema,
+} as const;
+
+export const NewItemChangeSchema = z.strictObject({
+  type: z.literal("new_item"),
+  ...newItemDefinitionFields,
+});
+
+export const NewItemAssertionSchema = z.strictObject({
+  type: z.literal("new_item_matches"),
+  ...newItemDefinitionFields,
+});
+
+function newItemSemanticKey(value: z.infer<typeof NewItemChangeSchema> | z.infer<typeof NewItemAssertionSchema>): string {
+  const { type: _type, ...definition } = value;
+  return JSON.stringify(definition);
+}
+
 export const ModChangeSchema = z.discriminatedUnion("type", [
   PrototypePropertyChangeSchema,
   RecipeIngredientChangeSchema,
@@ -165,6 +275,9 @@ export const ModChangeSchema = z.discriminatedUnion("type", [
   ItemStackSizeChangeSchema,
   TechnologyCostChangeSchema,
   TechnologyPrerequisiteChangeSchema,
+  NewMachineChangeSchema,
+  NewRecipeChangeSchema,
+  NewItemChangeSchema,
 ]);
 
 export const ModAssertionSchema = z.discriminatedUnion("type", [
@@ -175,6 +288,9 @@ export const ModAssertionSchema = z.discriminatedUnion("type", [
   ItemStackSizeAssertionSchema,
   TechnologyCostAssertionSchema,
   TechnologyPrerequisiteAssertionSchema,
+  NewMachineAssertionSchema,
+  NewRecipeAssertionSchema,
+  NewItemAssertionSchema,
 ]);
 
 function operationKey(operation: z.infer<typeof ScalarOperationSchema>) {
@@ -385,6 +501,89 @@ export const TechnologyPrerequisiteModSpecSchema = z
     }
   });
 
+export const NewMachineModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("new_machine"),
+    changes: z.array(NewMachineChangeSchema).min(1).max(4),
+    assertions: z.array(NewMachineAssertionSchema).min(1).max(4),
+  })
+  .superRefine((spec, ctx) => {
+    const names = new Set<string>();
+    const expected = new Set<string>();
+    for (const [index, change] of spec.changes.entries()) {
+      if (names.has(change.name)) {
+        ctx.addIssue({ code: "custom", path: ["changes", index], message: "Duplicate new machine name" });
+      }
+      names.add(change.name);
+      expected.add(newMachineSemanticKey(change));
+    }
+    const seen = new Set<string>();
+    for (const [index, assertion] of spec.assertions.entries()) {
+      const key = newMachineSemanticKey(assertion);
+      if (seen.has(key)) ctx.addIssue({ code: "custom", path: ["assertions", index], message: "Duplicate semantic assertion" });
+      seen.add(key);
+      if (!expected.has(key)) ctx.addIssue({ code: "custom", path: ["assertions", index], message: "Assertion does not match a requested change" });
+    }
+    for (const [index, change] of spec.changes.entries()) {
+      if (!seen.has(newMachineSemanticKey(change))) ctx.addIssue({ code: "custom", path: ["assertions"], message: `Missing matching assertion for change ${index}` });
+    }
+  });
+
+export const NewRecipeModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("new_recipe"),
+    changes: z.array(NewRecipeChangeSchema).min(1).max(8),
+    assertions: z.array(NewRecipeAssertionSchema).min(1).max(8),
+  })
+  .superRefine((spec, ctx) => {
+    const names = new Set<string>();
+    const expected = new Set<string>();
+    for (const [index, change] of spec.changes.entries()) {
+      if (names.has(change.name)) ctx.addIssue({ code: "custom", path: ["changes", index], message: "Duplicate new recipe name" });
+      names.add(change.name);
+      expected.add(newRecipeSemanticKey(change));
+    }
+    const seen = new Set<string>();
+    for (const [index, assertion] of spec.assertions.entries()) {
+      const key = newRecipeSemanticKey(assertion);
+      if (seen.has(key)) ctx.addIssue({ code: "custom", path: ["assertions", index], message: "Duplicate semantic assertion" });
+      seen.add(key);
+      if (!expected.has(key)) ctx.addIssue({ code: "custom", path: ["assertions", index], message: "Assertion does not match a requested change" });
+    }
+    for (const [index, change] of spec.changes.entries()) {
+      if (!seen.has(newRecipeSemanticKey(change))) ctx.addIssue({ code: "custom", path: ["assertions"], message: `Missing matching assertion for change ${index}` });
+    }
+  });
+
+export const NewItemModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("new_item"),
+    changes: z.array(NewItemChangeSchema).min(1).max(8),
+    assertions: z.array(NewItemAssertionSchema).min(1).max(8),
+  })
+  .superRefine((spec, ctx) => {
+    const names = new Set<string>();
+    const expected = new Set<string>();
+    for (const [index, change] of spec.changes.entries()) {
+      if (names.has(change.name)) ctx.addIssue({ code: "custom", path: ["changes", index], message: "Duplicate new item name" });
+      names.add(change.name);
+      expected.add(newItemSemanticKey(change));
+    }
+    const seen = new Set<string>();
+    for (const [index, assertion] of spec.assertions.entries()) {
+      const key = newItemSemanticKey(assertion);
+      if (seen.has(key)) ctx.addIssue({ code: "custom", path: ["assertions", index], message: "Duplicate semantic assertion" });
+      seen.add(key);
+      if (!expected.has(key)) ctx.addIssue({ code: "custom", path: ["assertions", index], message: "Assertion does not match a requested change" });
+    }
+    for (const [index, change] of spec.changes.entries()) {
+      if (!seen.has(newItemSemanticKey(change))) ctx.addIssue({ code: "custom", path: ["assertions"], message: `Missing matching assertion for change ${index}` });
+    }
+  });
+
 function mixedChangeAddress(change: z.infer<typeof ModChangeSchema>): string {
   switch (change.type) {
     case "prototype_property":
@@ -401,10 +600,19 @@ function mixedChangeAddress(change: z.infer<typeof ModChangeSchema>): string {
       return `${change.type}\u0000${change.technologyName}`;
     case "technology_prerequisite":
       return `${change.type}\u0000${change.technologyName}\u0000${change.prerequisiteName}`;
+    case "new_machine":
+      return `${change.type}\u0000${change.name}`;
+    case "new_recipe":
+      return `${change.type}\u0000${change.name}`;
+    case "new_item":
+      return `${change.type}\u0000${change.name}`;
   }
 }
 
 function mixedChangeSemanticKey(change: z.infer<typeof ModChangeSchema>): string {
+  if (change.type === "new_machine") return `${mixedChangeAddress(change)}\u0000${newMachineSemanticKey(change)}`;
+  if (change.type === "new_recipe") return `${mixedChangeAddress(change)}\u0000${newRecipeSemanticKey(change)}`;
+  if (change.type === "new_item") return `${mixedChangeAddress(change)}\u0000${newItemSemanticKey(change)}`;
   const operation = change.operation;
   const operationPart =
     operation.type === "add" || operation.type === "remove"
@@ -429,6 +637,12 @@ function mixedAssertionSemanticKey(assertion: z.infer<typeof ModAssertionSchema>
       return `technology_cost\u0000${assertion.technologyName}\u0000${operationKey(assertion.expectation)}`;
     case "technology_prerequisite_matches":
       return `technology_prerequisite\u0000${assertion.technologyName}\u0000${assertion.prerequisiteName}\u0000${assertion.expectation.type}`;
+    case "new_machine_matches":
+      return `new_machine\u0000${assertion.name}\u0000${newMachineSemanticKey(assertion)}`;
+    case "new_recipe_matches":
+      return `new_recipe\u0000${assertion.name}\u0000${newRecipeSemanticKey(assertion)}`;
+    case "new_item_matches":
+      return `new_item\u0000${assertion.name}\u0000${newItemSemanticKey(assertion)}`;
   }
 }
 
@@ -494,6 +708,9 @@ export const ModSpecSchema = z.union([
   ItemStackSizeModSpecSchema,
   TechnologyCostModSpecSchema,
   TechnologyPrerequisiteModSpecSchema,
+  NewMachineModSpecSchema,
+  NewRecipeModSpecSchema,
+  NewItemModSpecSchema,
   MixedModSpecSchema,
 ]);
 
@@ -514,6 +731,15 @@ export type TechnologyCostAssertion = z.infer<typeof TechnologyCostAssertionSche
 export type PrerequisiteOperation = z.infer<typeof PrerequisiteOperationSchema>;
 export type TechnologyPrerequisiteChange = z.infer<typeof TechnologyPrerequisiteChangeSchema>;
 export type TechnologyPrerequisiteAssertion = z.infer<typeof TechnologyPrerequisiteAssertionSchema>;
+export type NewMachineRecipeIngredient = z.infer<typeof NewMachineRecipeIngredientSchema>;
+export type NewMachineScienceTier = z.infer<typeof NewMachineScienceTierSchema>;
+export type NewMachineUnlock = z.infer<typeof NewMachineUnlockSchema>;
+export type NewMachineChange = z.infer<typeof NewMachineChangeSchema>;
+export type NewMachineAssertion = z.infer<typeof NewMachineAssertionSchema>;
+export type NewRecipeChange = z.infer<typeof NewRecipeChangeSchema>;
+export type NewRecipeAssertion = z.infer<typeof NewRecipeAssertionSchema>;
+export type NewItemChange = z.infer<typeof NewItemChangeSchema>;
+export type NewItemAssertion = z.infer<typeof NewItemAssertionSchema>;
 export type ModChange = z.infer<typeof ModChangeSchema>;
 export type ModAssertion = z.infer<typeof ModAssertionSchema>;
 export type PrototypePropertyModSpec = z.infer<typeof PrototypePropertyModSpecSchema>;
@@ -523,5 +749,8 @@ export type RecipeResultModSpec = z.infer<typeof RecipeResultModSpecSchema>;
 export type ItemStackSizeModSpec = z.infer<typeof ItemStackSizeModSpecSchema>;
 export type TechnologyCostModSpec = z.infer<typeof TechnologyCostModSpecSchema>;
 export type TechnologyPrerequisiteModSpec = z.infer<typeof TechnologyPrerequisiteModSpecSchema>;
+export type NewMachineModSpec = z.infer<typeof NewMachineModSpecSchema>;
+export type NewRecipeModSpec = z.infer<typeof NewRecipeModSpecSchema>;
+export type NewItemModSpec = z.infer<typeof NewItemModSpecSchema>;
 export type MixedModSpec = z.infer<typeof MixedModSpecSchema>;
 export type ModSpec = z.infer<typeof ModSpecSchema>;
