@@ -14,12 +14,12 @@ The registry publishes, for each capability:
 - exact allow-listed targets and pinned baseline values needed by deterministic generation/validation.
 
 ## Current capabilities
-- `prototype_property` — `set` / `multiply` allow-listed numeric prototype properties;
+- `prototype_property` — `set` / `multiply` reviewed numeric speed properties on furnaces, assembling machines, mining drills, transport belts, inserters, and labs;
 - `recipe_ingredient` — `set` / `multiply` existing allow-listed item ingredient amounts;
 - `technology_cost` — `set` / `multiply` finite allow-listed technology `unit.count`;
 - `technology_prerequisite` — reviewed `add` / `remove` prerequisite edges.
 
-All current entries target Factorio stable `2.0` and are validated against the pinned development runtime `2.0.77`.
+All current entries target Factorio stable `2.0` and are validated against the pinned development runtime `2.0.77`. A ModSpec may compose two or more of these primitive families under the root `mixed` marker; `mixed` itself is intentionally not a capability-registry entry. Every contained change is checked against its primitive registry entry independently.
 
 ## Code boundaries
 - `packages/factorio-knowledge/src/supported.ts` owns exact supported targets, baseline values, and lookup/assert functions.
@@ -28,4 +28,4 @@ All current entries target Factorio stable `2.0` and are validated against the p
 
 Adding a capability or supported target requires updating the knowledge catalog and tests. Planner prompts must not introduce support that is absent from this registry.
 
-See ADR-0007.
+See ADR-0007 and ADR-0015.

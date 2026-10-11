@@ -1,10 +1,9 @@
 import {
+  ModChangeSchema,
   ModSpecSchema,
   ProjectError,
-  PrototypePropertyChangeSchema,
-  RecipeIngredientChangeSchema,
-  TechnologyCostChangeSchema,
-  TechnologyPrerequisiteChangeSchema,
+  type ModAssertion,
+  type ModChange,
   type ModSpec,
 } from "@project/domain";
 import {
@@ -28,44 +27,32 @@ const safeSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const titleSchema = z.string().trim().min(1).max(120);
 const slugSchema = z.string().min(1).max(80).regex(safeSlug);
 
-const PrototypePlannerDraftSchema = z.strictObject({
-  status: z.literal("supported"),
-  title: titleSchema,
-  slug: slugSchema,
-  capability: z.literal("prototype_property"),
-  changes: z.array(PrototypePropertyChangeSchema).min(1).max(16),
-});
-
-const RecipePlannerDraftSchema = z.strictObject({
-  status: z.literal("supported"),
-  title: titleSchema,
-  slug: slugSchema,
-  capability: z.literal("recipe_ingredient"),
-  changes: z.array(RecipeIngredientChangeSchema).min(1).max(16),
-});
-
-const TechnologyCostPlannerDraftSchema = z.strictObject({
-  status: z.literal("supported"),
-  title: titleSchema,
-  slug: slugSchema,
-  capability: z.literal("technology_cost"),
-  changes: z.array(TechnologyCostChangeSchema).min(1).max(16),
-});
-
-const TechnologyPrerequisitePlannerDraftSchema = z.strictObject({
-  status: z.literal("supported"),
-  title: titleSchema,
-  slug: slugSchema,
-  capability: z.literal("technology_prerequisite"),
-  changes: z.array(TechnologyPrerequisiteChangeSchema).min(1).max(16),
-});
-
-export const SupportedPlannerDraftSchema = z.discriminatedUnion("capability", [
-  PrototypePlannerDraftSchema,
-  RecipePlannerDraftSchema,
-  TechnologyCostPlannerDraftSchema,
-  TechnologyPrerequisitePlannerDraftSchema,
-]);
+export const SupportedPlannerDraftSchema = z
+  .strictObject({
+    status: z.literal("supported"),
+    title: titleSchema,
+    slug: slugSchema,
+    changes: z.array(ModChangeSchema).min(1).max(32),
+    capability: z
+      .enum([
+        "prototype_property",
+        "recipe_ingredient",
+        "technology_cost",
+        "technology_prerequisite",
+      ])
+      .optional(),
+  })
+  .superRefine((draft, ctx) => {
+    if (draft.capability === undefined) return;
+    const types = new Set(draft.changes.map((change) => change.type));
+    if (types.size !== 1 || !types.has(draft.capability)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["capability"],
+        message: "Legacy capability field must match the single change family",
+      });
+    }
+  });
 
 export const UnsupportedPlannerDraftSchema = z.strictObject({
   status: z.literal("unsupported"),
@@ -114,14 +101,14 @@ export interface PlanFactorioPromptOptions {
 const DEFAULT_MAX_ATTEMPTS = 2;
 const DEFAULT_MAX_PROMPT_CHARS = 4_000;
 const PLANNER_SCHEMA_DESCRIPTION = `Return exactly one JSON object in one of these shapes:
-1. Supported root: {"status":"supported","title":string,"slug":kebab-case string,"capability":one registry capability id,"changes":[...]}
+1. Supported root: {"status":"supported","title":string,"slug":kebab-case string,"changes":[...]}
 2. Unsupported root: {"status":"unsupported","reason":string}
-For supported roots, every change must use exactly the shape for its capability:
+A supported request may contain multiple changes from different capability families. Every change must use exactly one of these shapes:
 - prototype_property: {"type":"prototype_property","prototypeType":string,"prototypeName":string,"property":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - recipe_ingredient: {"type":"recipe_ingredient","recipeName":string,"ingredientType":"item","ingredientName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - technology_cost: {"type":"technology_cost","technologyName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - technology_prerequisite: {"type":"technology_prerequisite","technologyName":string,"prerequisiteName":string,"operation":{"type":"add"}|{"type":"remove"}}
-Use identifiers exactly as listed in the capability registry. Do not include target, assertions, Lua, files, markdown, or additional keys.`;
+Use identifiers exactly as listed in the capability registry. Preserve every supported change the user asks for. If any essential requested change is outside the registry, return unsupported rather than silently dropping it. Do not include capability, target, assertions, Lua, files, markdown, or additional keys.`;
 
 function plannerRegistryContext(): string {
   return JSON.stringify(
@@ -142,10 +129,10 @@ export function buildPlannerSystemPrompt(): string {
   return [
     "You are a constrained Factorio mod planner.",
     "Classify the user's request as supported or unsupported using ONLY the capability registry below.",
-    "A supported request must be representable exactly by one capability family and only listed targets/operations.",
+    "A supported request may combine multiple capability families, but every requested change must use only listed targets and operations.",
     "Do not approximate, invent identifiers, broaden scope, write Lua, or propose files.",
-    "If any essential part is outside the registry, return unsupported with a concise reason.",
-    "For supported requests, return title, kebab-case slug, capability, and typed changes only.",
+    "If any essential part is outside the registry, return unsupported with a concise reason; never silently drop an unsupported part.",
+    "For supported requests, return title, kebab-case slug, and all typed changes only.",
     "The application deterministically derives target metadata and semantic assertions.",
     "Capability registry:",
     plannerRegistryContext(),
@@ -154,86 +141,73 @@ export function buildPlannerSystemPrompt(): string {
   ].join("\n\n");
 }
 
+function assertionForChange(change: ModChange): ModAssertion {
+  switch (change.type) {
+    case "prototype_property":
+      return {
+        type: "prototype_property_matches",
+        prototypeType: change.prototypeType,
+        prototypeName: change.prototypeName,
+        property: change.property,
+        expectation: change.operation,
+      };
+    case "recipe_ingredient":
+      return {
+        type: "recipe_ingredient_matches",
+        recipeName: change.recipeName,
+        ingredientType: change.ingredientType,
+        ingredientName: change.ingredientName,
+        expectation: change.operation,
+      };
+    case "technology_cost":
+      return {
+        type: "technology_cost_matches",
+        technologyName: change.technologyName,
+        expectation: change.operation,
+      };
+    case "technology_prerequisite":
+      return {
+        type: "technology_prerequisite_matches",
+        technologyName: change.technologyName,
+        prerequisiteName: change.prerequisiteName,
+        expectation: change.operation,
+      };
+  }
+}
+
 function deriveModSpec(draft: z.infer<typeof SupportedPlannerDraftSchema>): ModSpec {
   const target = { game: "factorio", channel: "stable", versionLine: "2.0" } as const;
-
-  switch (draft.capability) {
-    case "prototype_property":
-      return ModSpecSchema.parse({
-        title: draft.title,
-        slug: draft.slug,
-        target,
-        capability: draft.capability,
-        changes: draft.changes,
-        assertions: draft.changes.map((change) => ({
-          type: "prototype_property_matches" as const,
-          prototypeType: change.prototypeType,
-          prototypeName: change.prototypeName,
-          property: change.property,
-          expectation: change.operation,
-        })),
-      });
-    case "recipe_ingredient":
-      return ModSpecSchema.parse({
-        title: draft.title,
-        slug: draft.slug,
-        target,
-        capability: draft.capability,
-        changes: draft.changes,
-        assertions: draft.changes.map((change) => ({
-          type: "recipe_ingredient_matches" as const,
-          recipeName: change.recipeName,
-          ingredientType: change.ingredientType,
-          ingredientName: change.ingredientName,
-          expectation: change.operation,
-        })),
-      });
-    case "technology_cost":
-      return ModSpecSchema.parse({
-        title: draft.title,
-        slug: draft.slug,
-        target,
-        capability: draft.capability,
-        changes: draft.changes,
-        assertions: draft.changes.map((change) => ({
-          type: "technology_cost_matches" as const,
-          technologyName: change.technologyName,
-          expectation: change.operation,
-        })),
-      });
-    case "technology_prerequisite":
-      return ModSpecSchema.parse({
-        title: draft.title,
-        slug: draft.slug,
-        target,
-        capability: draft.capability,
-        changes: draft.changes,
-        assertions: draft.changes.map((change) => ({
-          type: "technology_prerequisite_matches" as const,
-          technologyName: change.technologyName,
-          prerequisiteName: change.prerequisiteName,
-          expectation: change.operation,
-        })),
-      });
-  }
+  const capabilityTypes = [...new Set(draft.changes.map((change) => change.type))];
+  const capability = capabilityTypes.length === 1 ? capabilityTypes[0]! : "mixed";
+  return ModSpecSchema.parse({
+    title: draft.title,
+    slug: draft.slug,
+    target,
+    capability,
+    changes: draft.changes,
+    assertions: draft.changes.map(assertionForChange),
+  });
 }
 
 function assertModSpecSupported(spec: ModSpec): void {
-  switch (spec.capability) {
-    case "prototype_property":
-      for (const change of spec.changes) assertSupportedPrototypeProperty(change);
-      return;
-    case "recipe_ingredient":
-      for (const change of spec.changes) assertSupportedRecipeIngredient(change);
-      return;
-    case "technology_cost":
-      for (const change of spec.changes) assertSupportedTechnologyCost(change);
-      return;
-    case "technology_prerequisite":
-      for (const change of spec.changes) assertSupportedTechnologyPrerequisite(change);
-      return;
+  for (const change of spec.changes) {
+    switch (change.type) {
+      case "prototype_property":
+        assertSupportedPrototypeProperty(change);
+        break;
+      case "recipe_ingredient":
+        assertSupportedRecipeIngredient(change);
+        break;
+      case "technology_cost":
+        assertSupportedTechnologyCost(change);
+        break;
+      case "technology_prerequisite":
+        assertSupportedTechnologyPrerequisite(change);
+        break;
+    }
   }
 }
+
 
 function compactValidationError(error: unknown): string {
   if (error instanceof ProjectError) return `${error.code}: ${error.message}`;
@@ -300,7 +274,7 @@ export async function planFactorioPrompt(
         messages,
         schemaName: "factorio_planner_decision",
         schemaDescription: PLANNER_SCHEMA_DESCRIPTION,
-        maxOutputTokens: 1_500,
+        maxOutputTokens: 2_500,
       });
     } catch (error) {
       if (

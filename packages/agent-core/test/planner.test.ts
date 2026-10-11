@@ -53,6 +53,28 @@ function fasterSteelDraft() {
   } as const;
 }
 
+function mixedFastStartDraft() {
+  return {
+    status: "supported",
+    title: "Fast start",
+    slug: "fast-start",
+    changes: [
+      {
+        type: "prototype_property",
+        prototypeType: "assembling-machine",
+        prototypeName: "assembling-machine-2",
+        property: "crafting_speed",
+        operation: { type: "multiply", factor: 2 },
+      },
+      {
+        type: "technology_cost",
+        technologyName: "automation",
+        operation: { type: "multiply", factor: 0.5 },
+      },
+    ],
+  } as const;
+}
+
 describe("Planner prompt contract", () => {
   it("builds supported scope from the Factorio capability registry", () => {
     const prompt = buildPlannerSystemPrompt();
@@ -87,6 +109,20 @@ describe("planFactorioPrompt", () => {
     ]);
     expect(result.attempts).toHaveLength(1);
     expect(result.usage.totalTokens).toBe(30);
+  });
+
+  it("composes multiple capability families into one mixed ModSpec", async () => {
+    const provider = new SequenceProvider([response(mixedFastStartDraft())]);
+    const result = await planFactorioPrompt({
+      provider,
+      prompt: "Double assembling machine 2 speed and halve Automation research cost",
+    });
+
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported result");
+    expect(result.modSpec.capability).toBe("mixed");
+    expect(result.modSpec.changes).toHaveLength(2);
+    expect(result.modSpec.assertions).toHaveLength(2);
   });
 
   it("returns an explicit unsupported decision without inventing a ModSpec", async () => {

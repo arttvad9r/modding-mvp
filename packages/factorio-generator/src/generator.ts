@@ -4,6 +4,8 @@ import {
   ProjectError,
   normalizeProjectError,
   type GeneratedFileManifest,
+  type ModAssertion,
+  type ModChange,
   type ModSpec,
   type PrototypePropertyAssertion,
   type PrototypePropertyChange,
@@ -334,34 +336,55 @@ function renderTechnologyCostAssertion(assertion: TechnologyCostAssertion): stri
   ].join("\n");
 }
 
+function assertSupportedModChange(change: ModChange): void {
+  switch (change.type) {
+    case "prototype_property":
+      assertSupportedPrototypeProperty(change);
+      return;
+    case "recipe_ingredient":
+      assertSupportedRecipeIngredient(change);
+      return;
+    case "technology_cost":
+      assertSupportedTechnologyCost(change);
+      return;
+    case "technology_prerequisite":
+      assertSupportedTechnologyPrerequisite(change);
+      return;
+  }
+}
+
+function renderModChange(change: ModChange): string {
+  switch (change.type) {
+    case "prototype_property":
+      return renderPrototypePropertyChange(change);
+    case "recipe_ingredient":
+      return renderRecipeIngredientChange(change);
+    case "technology_cost":
+      return renderTechnologyCostChange(change);
+    case "technology_prerequisite":
+      return renderTechnologyPrerequisiteChange(change);
+  }
+}
+
+function renderModAssertion(assertion: ModAssertion): string {
+  switch (assertion.type) {
+    case "prototype_property_matches":
+      return renderPrototypePropertyAssertion(assertion);
+    case "recipe_ingredient_matches":
+      return renderRecipeIngredientAssertion(assertion);
+    case "technology_cost_matches":
+      return renderTechnologyCostAssertion(assertion);
+    case "technology_prerequisite_matches":
+      return renderTechnologyPrerequisiteAssertion(assertion);
+  }
+}
+
 function generateFactorioModInternal(input: ModSpec): GeneratedFactorioMod {
   const spec = ModSpecSchema.parse(input);
 
-  let dataLua: string;
-  let semanticAssertionLua: string;
-
-  switch (spec.capability) {
-    case "prototype_property":
-      for (const change of spec.changes) assertSupportedPrototypeProperty(change);
-      dataLua = `${spec.changes.map(renderPrototypePropertyChange).join("\n\n")}\n`;
-      semanticAssertionLua = `${spec.assertions.map(renderPrototypePropertyAssertion).join("\n\n")}\n`;
-      break;
-    case "recipe_ingredient":
-      for (const change of spec.changes) assertSupportedRecipeIngredient(change);
-      dataLua = `${spec.changes.map(renderRecipeIngredientChange).join("\n\n")}\n`;
-      semanticAssertionLua = `${spec.assertions.map(renderRecipeIngredientAssertion).join("\n\n")}\n`;
-      break;
-    case "technology_cost":
-      for (const change of spec.changes) assertSupportedTechnologyCost(change);
-      dataLua = `${spec.changes.map(renderTechnologyCostChange).join("\n\n")}\n`;
-      semanticAssertionLua = `${spec.assertions.map(renderTechnologyCostAssertion).join("\n\n")}\n`;
-      break;
-    case "technology_prerequisite":
-      for (const change of spec.changes) assertSupportedTechnologyPrerequisite(change);
-      dataLua = `${spec.changes.map(renderTechnologyPrerequisiteChange).join("\n\n")}\n`;
-      semanticAssertionLua = `${spec.assertions.map(renderTechnologyPrerequisiteAssertion).join("\n\n")}\n`;
-      break;
-  }
+  for (const change of spec.changes) assertSupportedModChange(change);
+  const dataLua = `${spec.changes.map(renderModChange).join("\n\n")}\n`;
+  const semanticAssertionLua = `${spec.assertions.map(renderModAssertion).join("\n\n")}\n`;
 
   const info = {
     name: spec.slug,

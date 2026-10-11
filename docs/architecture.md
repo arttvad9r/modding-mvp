@@ -1,9 +1,9 @@
-# Architecture v0.11
+# Architecture v0.12
 
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 through M5 are complete. The deterministic core has four capability families, a Planner-facing Factorio capability registry, 20 real-runtime E2E fixtures, and a typed cross-pipeline error taxonomy. Planner and Repair are provider-agnostic and pass their live eval gates on Z.ai `glm-5.3-flash`. M5 exposes the complete prompt-to-validated-ZIP flow locally. M6 is in progress: `packages/service-core` defines the durable generation lifecycle, `packages/factorio-service-executor` connects it to M5, and `packages/service-postgres` now provides real PostgreSQL persistence/pg-boss queueing with atomic submission. The executable pg-boss worker, generation heartbeat/stale recovery, and Docker-backed Postgres/S3-compatible service E2E are implemented. The authenticated HTTP API, per-user ownership, PostgreSQL rate limits, and operator token provisioning are implemented. Hosted SeaweedFS smoke, product KPI instrumentation, and the first Helsinki VPS deployment are complete; public off-tailnet ingress and real tester recruitment remain.
+M1 through M5 are complete and the M6 private-beta service foundation is operational. M6A is now the active product-value gate before public recruitment. The deterministic core still has four reviewed primitive capability families, but a backward-compatible `mixed` ModSpec can compose those primitives into one tweak bundle. The generator dispatches each typed change independently, while semantic assertions and real Factorio 2.0.77 remain authoritative. The reviewed prototype-property catalog now includes speed parameters for furnaces, assembling machines, mining drills, transport belts, inserters, and labs. The service, PostgreSQL/pg-boss queue, object storage, auth/rate limits, tester UI, hosted deployment, and KPI instrumentation remain in place; public off-tailnet ingress and 30+ tester recruitment are deferred until the M6A product-value gate is satisfied.
 
 ## Target product pipeline
 
@@ -29,7 +29,7 @@ See ADR-0003 for why real Factorio is the validation authority.
 The current deterministic core provides:
 - `packages/domain` for typed ModSpec, generated-file manifest, and shared `ProjectError` contracts;
 - `packages/factorio-knowledge` for versioned Factorio allow-lists/baselines plus machine-readable Planner capability metadata;
-- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation across prototype property, recipe ingredient, technology cost, and reviewed technology prerequisite changes;
+- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation across prototype property, recipe ingredient, technology cost, and reviewed technology prerequisite changes, including composition of those primitives in a `mixed` ModSpec;
 - semantic assertion Lua generated separately from the user artifact;
 - `packages/factorio-harness` temporary companion validator mod and structured semantic failure classification;
 - temporary-only manifest materialization;
@@ -43,13 +43,13 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `packages/llm` defines a provider-agnostic `generateJson` contract and usage metadata.
 - `packages/llm` provides OpenAI Responses and reusable OpenAI-compatible Chat Completions transports without leaking provider HTTP shapes into orchestration.
 - `packages/agent-core` builds Planner scope from `factorioCapabilityRegistry`.
-- The LLM returns only supported/unsupported plus title/slug/capability/typed changes.
-- Fixed target metadata and semantic assertions are derived deterministically before `ModSpecSchema` validation.
+- The LLM returns only supported/unsupported plus title/slug and typed changes; multiple primitive families may be returned in one supported decision.
+- The application derives the single-family or `mixed` root marker, fixed target metadata, and semantic assertions deterministically before `ModSpecSchema` validation.
 - Unsupported/invented registry targets are rejected before deterministic generation.
 - Planner structured-output correction is bounded to two attempts by default.
 - `evals/planner/golden.json` and `pnpm planner:eval` provide repeatable model evaluation.
 - For Ollama reasoning models used as JSON planners, the adapter can request `reasoning_effort: none`; this avoids reasoning/content splits while application-side Zod validation remains authoritative.
-- Recorded live baselines include Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`; both reach 100% classification and 100% supported ModSpec accuracy on the 24-case corpus.
+- The original M3 live baselines reached 100% classification and supported ModSpec accuracy on the 24-case corpus with Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`; after the M6A mixed/assembler expansion, Z.ai `glm-5.3-flash` again passed 24/24 classification and 14/14 exact supported ModSpecs on the updated corpus.
 
 ## Implemented Repair boundary
 - `packages/agent-core` accepts the original immutable ModSpec, previous bounded manifest, normalized runtime error, provider, and candidate validator.
@@ -67,6 +67,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - Planner and Repair attempt metadata, aggregate token/cost metadata, validation timing, progress history, ModSpec, and terminal status are persisted to git-ignored `.runs/<generation-id>.json`.
 - `pnpm prompt:feedback -- <generation-id> <up|down> [note]` updates the matching local run report. This JSON persistence is a disposable M5 prototype, not the M6 service data model.
 - Recorded live smoke on Z.ai Coding Plan `glm-5.3-flash`: direct supported request completed in about 5.4 seconds with one Planner attempt, 2,215 model tokens, 1.54 seconds of Factorio validation, and a validated ZIP under root `dist/`.
+- M6A mixed smoke: one natural-language four-change rebalance produced a `mixed` ModSpec on the first attempt and a real-Factorio-validated ZIP in about 8.1 seconds with no Repair.
 
 
 ## Implemented private-beta service core boundary

@@ -77,7 +77,7 @@ function makeRecipeSpec(
   };
 }
 
-function generatedContent(path: string, spec: PrototypePropertyModSpec | RecipeIngredientModSpec): string {
+function generatedContent(path: string, spec: ModSpec): string {
   const file = generateFactorioMod(spec).manifest.files.find((entry) => entry.path === path);
   if (!file) throw new Error(`Missing generated file: ${path}`);
   return file.content;
@@ -198,5 +198,52 @@ describe("generateFactorioMod error taxonomy", () => {
     const error = captureProjectError(() => generateFactorioMod(invalid));
     expect(error.code).toBe("schema_error");
     expect(error.stage).toBe("input");
+  });
+});
+
+
+describe("generateFactorioMod mixed bundle", () => {
+  it("renders heterogeneous changes and assertions into one deterministic mod", () => {
+    const spec: ModSpec = {
+      title: "Fast start bundle",
+      slug: "fast-start-bundle",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+      capability: "mixed",
+      changes: [
+        {
+          type: "prototype_property",
+          prototypeType: "assembling-machine",
+          prototypeName: "assembling-machine-2",
+          property: "crafting_speed",
+          operation: { type: "multiply", factor: 2 },
+        },
+        {
+          type: "technology_cost",
+          technologyName: "automation",
+          operation: { type: "multiply", factor: 0.5 },
+        },
+      ],
+      assertions: [
+        {
+          type: "prototype_property_matches",
+          prototypeType: "assembling-machine",
+          prototypeName: "assembling-machine-2",
+          property: "crafting_speed",
+          expectation: { type: "multiply", factor: 2 },
+        },
+        {
+          type: "technology_cost_matches",
+          technologyName: "automation",
+          expectation: { type: "multiply", factor: 0.5 },
+        },
+      ],
+    };
+
+    const generated = generateFactorioMod(spec);
+    const dataLua = generatedContent("data.lua", spec);
+    expect(dataLua).toContain('data.raw["assembling-machine"]["assembling-machine-2"]');
+    expect(dataLua).toContain('technology.unit.count = technology.unit.count * 0.5');
+    expect(generated.semanticAssertionLua).toContain("assembling-machine.assembling-machine-2.crafting_speed|expected=1.5");
+    expect(generated.semanticAssertionLua).toContain("technology.automation.unit.count|expected=5");
   });
 });

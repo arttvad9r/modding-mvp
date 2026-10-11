@@ -1,4 +1,4 @@
-# Technical specification v0.1
+# Technical specification v0.2
 
 ## System goal
 Implement a bounded pipeline that converts a user request into a Factorio mod artifact and validates the artifact with the real game runtime before reporting success.
@@ -16,7 +16,7 @@ Minimum fields planned for M1:
 - target game and supported game version line;
 - one or more typed changes;
 - expected assertions/tests;
-- capability identifier.
+- capability summary identifier (`mixed` when multiple primitive families are composed).
 
 Implemented capability-specific ModSpec variants:
 - `prototype_property` — scalar mutation of an allow-listed prototype property;
@@ -24,9 +24,9 @@ Implemented capability-specific ModSpec variants:
 - `technology_cost` — mutation of finite research `unit.count` for an allow-listed base-game technology;
 - `technology_prerequisite` — add/remove one reviewed prerequisite edge between base-game technologies.
 
-A single ModSpec uses exactly one capability family. Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned.
+Legacy single-family ModSpec variants remain valid. A `mixed` ModSpec may compose two or more primitive families in one specification while keeping each change and assertion typed. `mixed` is not a registry capability: every contained change must pass the support rules of its primitive family. Runtime validation for these contracts lives in `packages/domain` and uses Zod schemas; TypeScript types are inferred from the runtime schemas so validation and static types stay aligned. See ADR-0015.
 
-For `prototype_property`, `packages/factorio-generator` supports `crafting_speed` on the base-game stone, steel, and electric furnace prototypes. The allow-list stores the pinned base value for each supported address so relative operations such as `multiply` can be converted into an absolute semantic expectation.
+For `prototype_property`, `packages/factorio-generator` supports reviewed numeric speed properties on base-game furnaces, assembling machines, mining drills, transport belts, inserters, and labs. The allow-list stores the pinned Factorio 2.0.77 base value for each supported address so relative operations such as `multiply` can be converted into an absolute semantic expectation.
 
 For `recipe_ingredient`, M2 initially supports existing item ingredients only. The versioned allow-list stores the recipe, ingredient type/name, and base amount. `set` and `multiply` are supported only when the resulting item amount is an integer in `1..65535`; invalid amounts fail before Factorio execution. The generator locates the named ingredient inside `data.raw["recipe"][recipe].ingredients` and mutates only its `amount`. New ingredients, ingredient removal, fluids, and recipe products are outside this first recipe capability.
 
@@ -54,13 +54,13 @@ Ollama Cloud uses JSON mode plus application-side Zod validation/retry; strict p
 ### Planner contract
 `packages/agent-core` owns natural-language planning. It consumes the machine-readable Factorio registry and a provider-agnostic `LlmProvider` from `packages/llm`. The model must not emit Lua, file manifests, target metadata, or semantic assertions.
 
-A supported model response contains only title, kebab-case slug, one capability family, and typed changes. An unsupported response contains a reason. The application derives the fixed Factorio stable 2.0 target and matching semantic assertions, validates the result through `ModSpecSchema`, then verifies every change against `packages/factorio-knowledge`.
+A supported model response contains only title, kebab-case slug, and typed changes; those changes may span multiple reviewed primitive families. An unsupported response contains a reason. The application derives the single-family or `mixed` ModSpec root, fixed Factorio stable 2.0 target, and matching semantic assertions, validates the result through `ModSpecSchema`, then verifies every change against `packages/factorio-knowledge`. Compound prompts are all-or-unsupported: the Planner must not silently drop an unsupported requested part.
 
 Malformed or registry-invalid model output receives at most one correction retry by default. Planner calls retain provider, model, token, duration, and optional estimated-cost metadata. The first provider adapter uses the OpenAI Responses API JSON response format through native `fetch`; provider/model choice is configuration. See ADR-0009.
 
 Golden Planner evals live under `evals/planner/`. The initial gate is >=90% supported/unsupported classification accuracy and >=80% exact semantic change accuracy on supported cases. These thresholds are development gates, not product KPI claims. The Planner schema prompt explicitly enumerates the exact JSON shape for each capability-specific change so model quality is measured against a fully specified typed contract rather than implicit TypeScript knowledge.
 
-Recorded M3 live baselines on 2026-10-11: Ollama Cloud `deepseek-v4.1-flash:cloud` passed 24/24 classification and 12/12 supported semantic ModSpec cases. Z.ai Coding Plan `glm-5.3-flash` also passed 24/24 and 12/12 (53,822 total tokens) when routed to `https://api.z.ai/api/coding/paas/v4`. The earlier Z.ai HTTP 429/code 1113 result came from sending a Coding Plan key to the general endpoint, whose quota is separate.
+Recorded Planner baselines on 2026-10-11: the original M3 corpus passed 24/24 classification and 12/12 supported semantic ModSpec cases on both Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`. After the M6A mixed-bundle/assembler expansion, Z.ai Coding Plan `glm-5.3-flash` passed the updated 24-case corpus at 24/24 classification and 14/14 exact supported semantic ModSpecs (74,458 total tokens), including the new heterogeneous mixed request. The earlier Z.ai HTTP 429/code 1113 result came from sending a Coding Plan key to the general endpoint, whose quota is separate.
 
 For M3 development/evaluation, provider presets use `glm-5.3-flash` on Z.ai and `deepseek-v4.1-flash:cloud` on Ollama Cloud by default. These are dev/eval defaults only; provider/model selection remains runtime configuration and is not a production architecture commitment.
 
@@ -133,6 +133,7 @@ Reference deterministic inputs:
 - `examples/cheaper-iron-gears.json` — M2 `recipe_ingredient`;
 - `examples/double-automation-research-cost.json` — M2 `technology_cost`;
 - `examples/remove-steel-prerequisite.json` — M2 `technology_prerequisite`.
+- `examples/fast-start-bundle.json` — M6A `mixed` bundle combining reviewed machine/belt/mining/lab speed, recipe ingredient, and technology cost changes.
 
 ## Repair loop
 `packages/agent-core` implements bounded Repair around an immutable accepted ModSpec. A Repair call receives:
@@ -166,6 +167,8 @@ Repair regression evals live under `evals/repair/`. `pnpm repair:eval` injects k
 Each run gets a generation ID and a git-ignored `.runs/<generation-id>.json` report containing the original prompt, accepted ModSpec when present, progress, Planner/Repair attempt metadata, aggregate token/optional configured cost metadata, total duration, validation metadata, final ZIP path or terminal typed failure, and optional user feedback. `pnpm prompt:feedback -- <generation-id> <up|down> [note]` updates only the matching bounded report. These local JSON reports are prototype telemetry and must not be treated as the M6 production persistence model.
 
 Recorded M5 live smoke on 2026-10-11 using Z.ai Coding Plan `glm-5.3-flash`: direct supported prompt completed in 5,401 ms, one Planner attempt, 2,215 tokens, 1,540 ms Factorio validation, no Repair, and a validated ZIP under root `dist/`.
+
+Recorded M6A live mixed smoke on 2026-10-11 using the same provider: a four-change prompt (assembling-machine speed, furnace speed, gear ingredient cost, and Automation research cost) produced an exact `mixed` ModSpec on the first Planner attempt and a validated ZIP in 8,086 ms; Factorio validation took 1,599 ms, total model usage was 3,337 tokens, and no Repair was needed.
 
 
 ## Private-beta service boundary

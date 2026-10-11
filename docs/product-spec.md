@@ -1,4 +1,4 @@
-# Product specification v0.1
+# Product specification v0.2
 
 ## Purpose
 Build a service that turns a natural-language request into a validated, installable Factorio mod for a user who does not need to know Lua or the Factorio mod API.
@@ -28,6 +28,18 @@ The first usable MVP should cover a narrow set of deterministic changes:
 - similarly structured changes that can be represented safely in a typed ModSpec.
 
 Exact properties and prototype types are allow-listed as capabilities are implemented and tested.
+
+## Minimum interesting product before external beta
+The first service implementation proved the generation/validation infrastructure but was too narrow to justify external recruitment. Before the 30+ tester beta, the product should behave as a personal tweak-pack builder rather than a one-property code generator.
+
+M6A requirements:
+- one prompt may contain multiple supported typed changes across different capability families;
+- the result is one installable ZIP with semantic validation for every requested change;
+- supported prototype-property scope includes reviewed speed parameters for furnaces, assembling machines, mining drills, transport belts, inserters, and labs, in addition to the existing recipe/research primitives;
+- unsupported parts of a compound request must cause an explicit unsupported result rather than silent partial fulfillment;
+- the next M6A slice should let a user revise an accepted tweak bundle through a follow-up request without learning or editing Lua.
+
+`mixed` is a ModSpec composition marker, not an unconstrained generation mode: every contained change must still be an allow-listed typed primitive.
 
 ## Explicit non-goals for the first MVP
 - runtime `control.lua` gameplay systems;

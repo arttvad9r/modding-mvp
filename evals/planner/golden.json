@@ -60,7 +60,7 @@
     "expected": {"status":"supported","capability":"technology_prerequisite","changes":[{"type":"technology_prerequisite","technologyName":"automation-2","prerequisiteName":"logistics","operation":{"type":"add"}}]}
   },
   {"id":"unsupported-new-ore","prompt":"Add a brand-new titanium ore with mining and smelting recipes.","expected":{"status":"unsupported"}},
-  {"id":"unsupported-assembler-speed","prompt":"Make assembling machine 2 twice as fast.","expected":{"status":"unsupported"}},
+  {"id":"prototype-assembler-2-double","prompt":"Make assembling machine 2 twice as fast.","expected":{"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"assembling-machine","prototypeName":"assembling-machine-2","property":"crafting_speed","operation":{"type":"multiply","factor":2}}]}},
   {"id":"unsupported-remove-ingredient","prompt":"Remove iron plates entirely from the electronic circuit recipe.","expected":{"status":"unsupported"}},
   {"id":"unsupported-add-ingredient","prompt":"Add stone as a new ingredient to transport belts.","expected":{"status":"unsupported"}},
   {"id":"unsupported-fluid-ingredient","prompt":"Double the sulfuric acid ingredient of a recipe.","expected":{"status":"unsupported"}},
@@ -68,7 +68,7 @@
   {"id":"unsupported-runtime-control","prompt":"Every time the player crafts an item, spawn a biter next to them.","expected":{"status":"unsupported"}},
   {"id":"unsupported-new-technology","prompt":"Create a new research technology called Super Automation.","expected":{"status":"unsupported"}},
   {"id":"unsupported-prerequisite-edge","prompt":"Make Steel processing a prerequisite for Logistics.","expected":{"status":"unsupported"}},
-  {"id":"unsupported-mixed-capabilities","prompt":"Double steel furnace speed and also double Automation research cost in the same mod.","expected":{"status":"unsupported"}},
+  {"id":"mixed-furnace-and-research","prompt":"Double steel furnace speed and also double Automation research cost in the same mod.","expected":{"status":"supported","capability":"mixed","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"steel-furnace","property":"crafting_speed","operation":{"type":"multiply","factor":2}},{"type":"technology_cost","technologyName":"automation","operation":{"type":"multiply","factor":2}}]}},
   {"id":"unsupported-version","prompt":"Build this mod specifically for experimental Factorio 2.1.","expected":{"status":"unsupported"}},
   {"id":"unsupported-assets","prompt":"Replace the steel furnace sprite with a newly generated neon texture.","expected":{"status":"unsupported"}}
 ]

@@ -5,7 +5,7 @@ const INDEX_HTML = String.raw`<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Private beta for generating small, validated Factorio 2.0 mods from plain-English requests.">
+  <meta name="description" content="Private beta for building personal, validated Factorio 2.0 tweak bundles from plain-English requests.">
   <title>Factorio Mod Generator — Private Beta</title>
   <link rel="stylesheet" href="/app.css">
 </head>
@@ -13,18 +13,18 @@ const INDEX_HTML = String.raw`<!doctype html>
   <main class="shell">
     <header class="hero">
       <p class="eyebrow">FACTORIO 2.0 · PRIVATE BETA</p>
-      <h1>Describe the tweak.<br>Get a tested mod.</h1>
-      <p class="lede">No Lua required. For supported requests, the service builds an installable mod and checks it in a real Factorio 2.0.77 runtime before giving you the ZIP.</p>
+      <h1>Describe the rebalance.<br>Get one tested mod.</h1>
+      <p class="lede">No Lua required. Combine several supported tweaks in one request; the service builds one installable mod and checks every requested change in a real Factorio 2.0.77 runtime before giving you the ZIP.</p>
       <div class="proof-row" aria-label="Beta guarantees">
         <span>Real Factorio validation</span>
-        <span>Installable ZIP</span>
+        <span>Multi-change tweak bundles</span>
         <span>Explicit unsupported results</span>
       </div>
     </header>
 
     <section class="notice" aria-label="Beta scope notice">
-      <strong>This beta is intentionally narrow.</strong>
-      <span>It is for small base-game prototype changes. If a request is outside the supported scope, it will be rejected instead of returning an unverified mod.</span>
+      <strong>This beta focuses on personal base-game tweak packs.</strong>
+      <span>Combine supported machine-speed, recipe, and research changes in one request. If any essential part is outside the current scope, the whole request is rejected instead of silently dropping it.</span>
     </section>
 
     <section class="panel access-panel" aria-labelledby="auth-title">
@@ -53,19 +53,19 @@ const INDEX_HTML = String.raw`<!doctype html>
       </div>
 
       <div class="examples" aria-labelledby="examples-title">
-        <p id="examples-title" class="mini-title">Try a known-good example</p>
+        <p id="examples-title" class="mini-title">Try a known-good tweak bundle</p>
         <div class="example-grid">
-          <button type="button" class="example" data-prompt="Make steel furnaces twice as fast">
-            <span class="example-kicker">Furnace</span>
-            <span>Make steel furnaces twice as fast</span>
+          <button type="button" class="example" data-prompt="Make assembling machine 2 twice as fast, make steel furnaces 50% faster, make iron gears cost one iron plate, and halve Automation research cost">
+            <span class="example-kicker">Fast-start bundle</span>
+            <span>Faster assemblers + furnaces, cheaper gears, cheaper Automation</span>
           </button>
-          <button type="button" class="example" data-prompt="Make iron gears cost one iron plate">
-            <span class="example-kicker">Recipe</span>
-            <span>Make iron gears cost one iron plate</span>
+          <button type="button" class="example" data-prompt="Double electric mining drill speed and double lab research speed">
+            <span class="example-kicker">Production</span>
+            <span>Double mining drill and lab speeds</span>
           </button>
-          <button type="button" class="example" data-prompt="Double the research cost of Automation">
-            <span class="example-kicker">Research</span>
-            <span>Double the research cost of Automation</span>
+          <button type="button" class="example" data-prompt="Make iron gears cost one iron plate and set Logistics research cost to 40 science packs">
+            <span class="example-kicker">Recipe + research</span>
+            <span>Cheaper gears with a custom Logistics research cost</span>
           </button>
           <button type="button" class="example" data-prompt="Remove Steel processing as a prerequisite for Automation 2">
             <span class="example-kicker">Prerequisite</span>
@@ -76,14 +76,14 @@ const INDEX_HTML = String.raw`<!doctype html>
 
       <form id="generation-form">
         <div class="prompt-label-row">
-          <label for="prompt">Or describe your own change</label>
+          <label for="prompt">Or describe your own tweak bundle</label>
           <span id="prompt-count" class="muted">0 / 4000</span>
         </div>
-        <textarea id="prompt" maxlength="4000" required placeholder="Example: Set stone furnace crafting speed to 1.5"></textarea>
+        <textarea id="prompt" maxlength="4000" required placeholder="Example: Make my early game faster: double assembler 2 and mining drill speeds, halve Automation cost, and make gears cost one plate"></textarea>
         <div class="scope-grid">
           <div class="scope-card">
             <p class="scope-title">Good beta requests</p>
-            <p>Furnace crafting speed, selected recipe ingredient amounts, selected research costs, and reviewed research prerequisites.</p>
+            <p>Combine reviewed speeds for furnaces, assemblers, mining drills, belts, inserters and labs with selected recipe ingredient amounts, research costs, and reviewed prerequisites.</p>
           </div>
           <div class="scope-card muted-card">
             <p class="scope-title">Not supported yet</p>
@@ -92,7 +92,7 @@ const INDEX_HTML = String.raw`<!doctype html>
         </div>
         <div class="actions submit-row">
           <button id="generate" type="submit">Generate &amp; validate</button>
-          <span id="request-state" class="muted" role="status" aria-live="polite">Usually finishes in seconds for supported requests.</span>
+          <span id="request-state" class="muted" role="status" aria-live="polite">Supported tweak bundles usually finish in seconds.</span>
         </div>
       </form>
     </section>
@@ -369,6 +369,7 @@ const APP_JS = String.raw`(() => {
       recipe_ingredient: "Recipe ingredient",
       technology_cost: "Research cost",
       technology_prerequisite: "Research prerequisite",
+      mixed: "Tweak bundle",
     };
     return labels[value] || value;
   }
@@ -423,12 +424,12 @@ const APP_JS = String.raw`(() => {
     if (record.status === "queued") {
       resultMessage.textContent = "Request received. It is waiting for the generation worker.";
     } else if (record.status === "running") {
-      resultMessage.textContent = "Building the mod and checking the requested change in real Factorio…";
+      resultMessage.textContent = "Building the mod and checking every requested change in real Factorio…";
     } else if (record.status === "succeeded") {
       resultMessage.textContent = "Validated successfully in Factorio. Your installable ZIP is ready.";
     } else if (record.status === "unsupported") {
       const reason = record.reason || "This request is outside the current supported scope.";
-      resultMessage.textContent = reason + " Try a smaller prototype-stage change or one of the examples above.";
+      resultMessage.textContent = reason + " Try a supported tweak bundle or one of the examples above.";
     } else if (record.status === "failed") {
       const message = record.error && record.error.message ? record.error.message : "Generation failed.";
       resultMessage.textContent = canRetry ? message + " This failure is retryable; you can start a fresh generation below." : message;

@@ -45,6 +45,66 @@ const supportedPrototypeProperties = new Map<string, SupportedPrototypeProperty>
     "furnace\u0000electric-furnace\u0000crafting_speed",
     { prototypeType: "furnace", prototypeName: "electric-furnace", property: "crafting_speed", baseValue: 2 },
   ],
+  [
+    "assembling-machine\u0000assembling-machine-1\u0000crafting_speed",
+    { prototypeType: "assembling-machine", prototypeName: "assembling-machine-1", property: "crafting_speed", baseValue: 0.5 },
+  ],
+  [
+    "assembling-machine\u0000assembling-machine-2\u0000crafting_speed",
+    { prototypeType: "assembling-machine", prototypeName: "assembling-machine-2", property: "crafting_speed", baseValue: 0.75 },
+  ],
+  [
+    "assembling-machine\u0000assembling-machine-3\u0000crafting_speed",
+    { prototypeType: "assembling-machine", prototypeName: "assembling-machine-3", property: "crafting_speed", baseValue: 1.25 },
+  ],
+  [
+    "mining-drill\u0000burner-mining-drill\u0000mining_speed",
+    { prototypeType: "mining-drill", prototypeName: "burner-mining-drill", property: "mining_speed", baseValue: 0.25 },
+  ],
+  [
+    "mining-drill\u0000electric-mining-drill\u0000mining_speed",
+    { prototypeType: "mining-drill", prototypeName: "electric-mining-drill", property: "mining_speed", baseValue: 0.5 },
+  ],
+  [
+    "transport-belt\u0000transport-belt\u0000speed",
+    { prototypeType: "transport-belt", prototypeName: "transport-belt", property: "speed", baseValue: 0.03125 },
+  ],
+  [
+    "transport-belt\u0000fast-transport-belt\u0000speed",
+    { prototypeType: "transport-belt", prototypeName: "fast-transport-belt", property: "speed", baseValue: 0.0625 },
+  ],
+  [
+    "transport-belt\u0000express-transport-belt\u0000speed",
+    { prototypeType: "transport-belt", prototypeName: "express-transport-belt", property: "speed", baseValue: 0.09375 },
+  ],
+  [
+    "inserter\u0000inserter\u0000extension_speed",
+    { prototypeType: "inserter", prototypeName: "inserter", property: "extension_speed", baseValue: 0.035 },
+  ],
+  [
+    "inserter\u0000inserter\u0000rotation_speed",
+    { prototypeType: "inserter", prototypeName: "inserter", property: "rotation_speed", baseValue: 0.014 },
+  ],
+  [
+    "inserter\u0000fast-inserter\u0000extension_speed",
+    { prototypeType: "inserter", prototypeName: "fast-inserter", property: "extension_speed", baseValue: 0.1 },
+  ],
+  [
+    "inserter\u0000fast-inserter\u0000rotation_speed",
+    { prototypeType: "inserter", prototypeName: "fast-inserter", property: "rotation_speed", baseValue: 0.04 },
+  ],
+  [
+    "inserter\u0000bulk-inserter\u0000extension_speed",
+    { prototypeType: "inserter", prototypeName: "bulk-inserter", property: "extension_speed", baseValue: 0.1 },
+  ],
+  [
+    "inserter\u0000bulk-inserter\u0000rotation_speed",
+    { prototypeType: "inserter", prototypeName: "bulk-inserter", property: "rotation_speed", baseValue: 0.04 },
+  ],
+  [
+    "lab\u0000lab\u0000researching_speed",
+    { prototypeType: "lab", prototypeName: "lab", property: "researching_speed", baseValue: 1 },
+  ],
 ]);
 
 const supportedRecipeIngredients = new Map<string, SupportedRecipeIngredient>([

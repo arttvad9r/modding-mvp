@@ -182,3 +182,44 @@ describe("recipe_ingredient ModSpec", () => {
     expect(ModSpecSchema.safeParse({ ...validRecipeSpec, prompt: "ignore schema" }).success).toBe(false);
   });
 });
+
+
+describe("mixed ModSpec", () => {
+  const mixedSpec = {
+    title: "Fast start bundle",
+    slug: "fast-start-bundle",
+    target,
+    capability: "mixed",
+    changes: [
+      validPrototypeSpec.changes[0],
+      {
+        type: "technology_cost",
+        technologyName: "automation",
+        operation: { type: "multiply", factor: 0.5 },
+      },
+    ],
+    assertions: [
+      validPrototypeSpec.assertions[0],
+      {
+        type: "technology_cost_matches",
+        technologyName: "automation",
+        expectation: { type: "multiply", factor: 0.5 },
+      },
+    ],
+  } as const;
+
+  it("accepts multiple capability families in one immutable specification", () => {
+    expect(ModSpecSchema.parse(mixedSpec)).toEqual(mixedSpec);
+  });
+
+  it("rejects mixed roots that contain only one family or lose semantic coverage", () => {
+    expect(
+      ModSpecSchema.safeParse({
+        ...mixedSpec,
+        changes: [validPrototypeSpec.changes[0], { ...validPrototypeSpec.changes[0], prototypeName: "stone-furnace" }],
+        assertions: [validPrototypeSpec.assertions[0], { ...validPrototypeSpec.assertions[0], prototypeName: "stone-furnace" }],
+      }).success,
+    ).toBe(false);
+    expect(ModSpecSchema.safeParse({ ...mixedSpec, assertions: [mixedSpec.assertions[0]] }).success).toBe(false);
+  });
+});

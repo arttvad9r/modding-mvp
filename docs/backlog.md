@@ -170,6 +170,17 @@ Before starting M2:
 - [x] Feedback is locally capturable by generation ID.
 - [x] ZIP publication remains downstream of real Factorio + semantic validation.
 
+## M6A — Minimum Interesting Product — in progress
+- [x] Add backward-compatible mixed ModSpec composition across multiple primitive capability families.
+- [x] Make Planner preserve multiple heterogeneous supported changes in one request.
+- [x] Dispatch mixed changes/assertions deterministically without adding an arbitrary-Lua path.
+- [x] Expand reviewed numeric prototype speed targets to assembling machines, mining drills, transport belts, inserters, and labs using pinned 2.0.77 baselines.
+- [x] Add real-Factorio validation for a multi-family fast-start bundle.
+- [ ] Add iterative follow-up editing of an accepted tweak bundle.
+- [ ] Add the next high-value reviewed tweak primitives with semantic assertions.
+- [x] Finalize the first mixed-request golden eval slice and rerun the live Planner gate (24/24 classification, 14/14 exact supported ModSpecs on Z.ai `glm-5.3-flash`).
+- [ ] Deploy the compound-request beta UX before external recruitment.
+
 ## M6 — in progress
 
 ### Service boundary

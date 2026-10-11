@@ -136,3 +136,49 @@ describe("deterministic ModSpec to validated ZIP", () => {
     60_000,
   );
 });
+
+
+describe("mixed tweak bundle through real Factorio", () => {
+  it(
+    "validates a multi-family fast-start bundle with expanded prototype targets",
+    async () => {
+      const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-mixed-bundle-output-"));
+      const spec: ModSpec = {
+        title: "Fast start bundle",
+        slug: "fast-start-bundle",
+        target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+        capability: "mixed",
+        changes: [
+          { type: "prototype_property", prototypeType: "assembling-machine", prototypeName: "assembling-machine-2", property: "crafting_speed", operation: { type: "multiply", factor: 2 } },
+          { type: "prototype_property", prototypeType: "transport-belt", prototypeName: "transport-belt", property: "speed", operation: { type: "multiply", factor: 1.5 } },
+          { type: "prototype_property", prototypeType: "mining-drill", prototypeName: "electric-mining-drill", property: "mining_speed", operation: { type: "multiply", factor: 2 } },
+          { type: "prototype_property", prototypeType: "lab", prototypeName: "lab", property: "researching_speed", operation: { type: "multiply", factor: 2 } },
+          { type: "recipe_ingredient", recipeName: "iron-gear-wheel", ingredientType: "item", ingredientName: "iron-plate", operation: { type: "set", value: 1 } },
+          { type: "technology_cost", technologyName: "automation", operation: { type: "multiply", factor: 0.5 } },
+        ],
+        assertions: [
+          { type: "prototype_property_matches", prototypeType: "assembling-machine", prototypeName: "assembling-machine-2", property: "crafting_speed", expectation: { type: "multiply", factor: 2 } },
+          { type: "prototype_property_matches", prototypeType: "transport-belt", prototypeName: "transport-belt", property: "speed", expectation: { type: "multiply", factor: 1.5 } },
+          { type: "prototype_property_matches", prototypeType: "mining-drill", prototypeName: "electric-mining-drill", property: "mining_speed", expectation: { type: "multiply", factor: 2 } },
+          { type: "prototype_property_matches", prototypeType: "lab", prototypeName: "lab", property: "researching_speed", expectation: { type: "multiply", factor: 2 } },
+          { type: "recipe_ingredient_matches", recipeName: "iron-gear-wheel", ingredientType: "item", ingredientName: "iron-plate", expectation: { type: "set", value: 1 } },
+          { type: "technology_cost_matches", technologyName: "automation", expectation: { type: "multiply", factor: 0.5 } },
+        ],
+      };
+
+      try {
+        const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+        expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+        expect(result.validation.errorType).toBeNull();
+        const zipBytes = await readFile(result.zipPath);
+        expect(Object.keys(unzipSync(zipBytes)).sort()).toEqual([
+          `${result.directoryName}/data.lua`,
+          `${result.directoryName}/info.json`,
+        ]);
+      } finally {
+        await rm(outputDirectory, { recursive: true, force: true });
+      }
+    },
+    60_000,
+  );
+});

@@ -27,6 +27,7 @@ const SupportedExpectationSchema = z.strictObject({
     "recipe_ingredient",
     "technology_cost",
     "technology_prerequisite",
+    "mixed",
   ]),
   changes: z.array(EvalChangeSchema).min(1).max(16),
 });

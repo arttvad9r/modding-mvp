@@ -107,6 +107,20 @@ export const TechnologyPrerequisiteAssertionSchema = z.strictObject({
   expectation: PrerequisiteOperationSchema,
 });
 
+export const ModChangeSchema = z.discriminatedUnion("type", [
+  PrototypePropertyChangeSchema,
+  RecipeIngredientChangeSchema,
+  TechnologyCostChangeSchema,
+  TechnologyPrerequisiteChangeSchema,
+]);
+
+export const ModAssertionSchema = z.discriminatedUnion("type", [
+  PrototypePropertyAssertionSchema,
+  RecipeIngredientAssertionSchema,
+  TechnologyCostAssertionSchema,
+  TechnologyPrerequisiteAssertionSchema,
+]);
+
 function operationKey(operation: z.infer<typeof ScalarOperationSchema>) {
   return operation.type === "set"
     ? `set:${operation.value}`
@@ -282,11 +296,101 @@ export const TechnologyPrerequisiteModSpecSchema = z
     }
   });
 
+function mixedChangeAddress(change: z.infer<typeof ModChangeSchema>): string {
+  switch (change.type) {
+    case "prototype_property":
+      return `${change.type}\u0000${change.prototypeType}\u0000${change.prototypeName}\u0000${change.property}`;
+    case "recipe_ingredient":
+      return `${change.type}\u0000${change.recipeName}\u0000${change.ingredientType}\u0000${change.ingredientName}`;
+    case "technology_cost":
+      return `${change.type}\u0000${change.technologyName}`;
+    case "technology_prerequisite":
+      return `${change.type}\u0000${change.technologyName}\u0000${change.prerequisiteName}`;
+  }
+}
+
+function mixedChangeSemanticKey(change: z.infer<typeof ModChangeSchema>): string {
+  const operation = change.operation;
+  const operationPart =
+    operation.type === "add" || operation.type === "remove"
+      ? operation.type
+      : operationKey(operation);
+  return `${mixedChangeAddress(change)}\u0000${operationPart}`;
+}
+
+function mixedAssertionSemanticKey(assertion: z.infer<typeof ModAssertionSchema>): string {
+  switch (assertion.type) {
+    case "prototype_property_matches":
+      return `prototype_property\u0000${assertion.prototypeType}\u0000${assertion.prototypeName}\u0000${assertion.property}\u0000${operationKey(assertion.expectation)}`;
+    case "recipe_ingredient_matches":
+      return `recipe_ingredient\u0000${assertion.recipeName}\u0000${assertion.ingredientType}\u0000${assertion.ingredientName}\u0000${operationKey(assertion.expectation)}`;
+    case "technology_cost_matches":
+      return `technology_cost\u0000${assertion.technologyName}\u0000${operationKey(assertion.expectation)}`;
+    case "technology_prerequisite_matches":
+      return `technology_prerequisite\u0000${assertion.technologyName}\u0000${assertion.prerequisiteName}\u0000${assertion.expectation.type}`;
+  }
+}
+
+export const MixedModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("mixed"),
+    changes: z.array(ModChangeSchema).min(2).max(32),
+    assertions: z.array(ModAssertionSchema).min(2).max(32),
+  })
+  .superRefine((spec, ctx) => {
+    if (new Set(spec.changes.map((change) => change.type)).size < 2) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["changes"],
+        message: "Mixed ModSpec must contain at least two capability families",
+      });
+    }
+
+    const addresses = new Set<string>();
+    const expectedSemantics = new Set<string>();
+    for (const [index, change] of spec.changes.entries()) {
+      const address = mixedChangeAddress(change);
+      if (addresses.has(address)) {
+        ctx.addIssue({ code: "custom", path: ["changes", index], message: "Duplicate mixed change" });
+      }
+      addresses.add(address);
+      expectedSemantics.add(mixedChangeSemanticKey(change));
+    }
+
+    const seenAssertions = new Set<string>();
+    for (const [index, assertion] of spec.assertions.entries()) {
+      const key = mixedAssertionSemanticKey(assertion);
+      if (seenAssertions.has(key)) {
+        ctx.addIssue({ code: "custom", path: ["assertions", index], message: "Duplicate semantic assertion" });
+      }
+      seenAssertions.add(key);
+      if (!expectedSemantics.has(key)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["assertions", index],
+          message: "Assertion does not match a requested change",
+        });
+      }
+    }
+
+    for (const [index, change] of spec.changes.entries()) {
+      if (!seenAssertions.has(mixedChangeSemanticKey(change))) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["assertions"],
+          message: `Missing matching assertion for change ${index}`,
+        });
+      }
+    }
+  });
+
 export const ModSpecSchema = z.union([
   PrototypePropertyModSpecSchema,
   RecipeIngredientModSpecSchema,
   TechnologyCostModSpecSchema,
   TechnologyPrerequisiteModSpecSchema,
+  MixedModSpecSchema,
 ]);
 
 export type GameTarget = z.infer<typeof GameTargetSchema>;
@@ -300,8 +404,11 @@ export type TechnologyCostAssertion = z.infer<typeof TechnologyCostAssertionSche
 export type PrerequisiteOperation = z.infer<typeof PrerequisiteOperationSchema>;
 export type TechnologyPrerequisiteChange = z.infer<typeof TechnologyPrerequisiteChangeSchema>;
 export type TechnologyPrerequisiteAssertion = z.infer<typeof TechnologyPrerequisiteAssertionSchema>;
+export type ModChange = z.infer<typeof ModChangeSchema>;
+export type ModAssertion = z.infer<typeof ModAssertionSchema>;
 export type PrototypePropertyModSpec = z.infer<typeof PrototypePropertyModSpecSchema>;
 export type RecipeIngredientModSpec = z.infer<typeof RecipeIngredientModSpecSchema>;
 export type TechnologyCostModSpec = z.infer<typeof TechnologyCostModSpecSchema>;
 export type TechnologyPrerequisiteModSpec = z.infer<typeof TechnologyPrerequisiteModSpecSchema>;
+export type MixedModSpec = z.infer<typeof MixedModSpecSchema>;
 export type ModSpec = z.infer<typeof ModSpecSchema>;

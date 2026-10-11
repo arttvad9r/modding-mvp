@@ -34,10 +34,11 @@ describe("private-beta tester UI", () => {
       expect(page.status).toBe(200);
       expect(page.headers.get("content-security-policy")).toContain("default-src 'none'");
       const html = await page.text();
-      expect(html).toContain("Describe the tweak.");
+      expect(html).toContain("Describe the rebalance.");
       expect(html).toContain("Real Factorio validation");
-      expect(html).toContain("Try a known-good example");
-      expect(html).toContain("Make steel furnaces twice as fast");
+      expect(html).toContain("Try a known-good tweak bundle");
+      expect(html).toContain("Fast-start bundle");
+      expect(html).toContain("assembling machine 2 twice as fast");
       expect(html).toContain("Not supported yet");
       expect(html).toContain('id="token"');
       expect(html).toContain('id="clear-token"');
@@ -49,6 +50,7 @@ describe("private-beta tester UI", () => {
       expect(javascript).toContain("sessionStorage");
       expect(javascript).toContain("sessionStorage.removeItem");
       expect(javascript).toContain("[data-prompt]");
+      expect(javascript).toContain('mixed: "Tweak bundle"');
       expect(javascript).toContain('Accept: "application/json"');
       expect(javascript).toContain("/feedback");
       expect(javascript).toContain("/retry");

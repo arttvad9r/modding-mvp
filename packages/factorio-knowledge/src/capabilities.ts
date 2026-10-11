@@ -7,7 +7,7 @@ import {
   listSupportedTechnologyPrerequisites,
 } from "./supported.js";
 
-export type FactorioCapabilityId = ModSpec["capability"];
+export type FactorioCapabilityId = Exclude<ModSpec["capability"], "mixed">;
 export type FactorioCapabilityOperation = "set" | "multiply" | "add" | "remove";
 
 export interface FactorioCapabilityTargetPolicy {
@@ -72,12 +72,14 @@ export const factorioCapabilityRegistry = {
     summary: "Change an allow-listed numeric property on an existing base-game prototype.",
     constraints: [
       "Only explicitly allow-listed prototype/property addresses are supported.",
-      "The first slice supports furnace crafting_speed only.",
+      "Reviewed numeric speed properties are supported on furnaces, assembling machines, mining drills, transport belts, inserters, and labs.",
       "Relative operations use a pinned Factorio 2.0.77 baseline.",
     ],
     promptExamples: [
       "Make steel furnaces twice as fast.",
-      "Set stone furnace crafting speed to 1.5.",
+      "Make assembling machine 2 twice as fast.",
+      "Increase basic transport belt speed by 50%.",
+      "Double electric mining drill speed.",
     ],
     targets: listSupportedPrototypeProperties().map((entry) => ({
       kind: "prototype_property" as const,

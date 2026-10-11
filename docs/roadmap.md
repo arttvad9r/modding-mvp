@@ -114,10 +114,36 @@ Exit criteria:
 - local telemetry captures duration, attempts, token usage/optional configured cost, and validation metadata;
 - ZIP is exposed only after real Factorio + semantic validation succeeds.
 
-## M6 — Private beta service
+## M6A — Minimum Interesting Product
 Status: in progress.
 
-Goal: validate product usefulness with real Factorio players.
+Goal: make the already-working service materially more useful than asking a general chat model for one tiny Lua edit before recruiting external testers.
+
+Completed first slice:
+- backward-compatible `mixed` ModSpec composition across existing typed capability families;
+- Planner support for extracting multiple heterogeneous changes from one prompt without exposing Lua/files;
+- deterministic per-change generator dispatch and semantic assertions for mixed bundles;
+- reviewed `prototype_property` expansion to assembler, mining-drill, transport-belt, inserter, lab, and furnace speed properties using Factorio 2.0.77 baselines;
+- real-Factorio integration proving a six-change fast-start bundle across prototype, recipe, and research families;
+- updated live Z.ai Planner gate: 24/24 classification and 14/14 exact supported ModSpecs on the 24-case corpus;
+- live natural-language four-change mixed smoke: one Planner attempt -> real Factorio validation -> ZIP in 8.1 s, no Repair.
+
+Remaining scope before external recruitment:
+- add iterative follow-up editing of an accepted tweak bundle without asking the user to edit Lua;
+- add the next high-value safe primitives based on tweak-pack usefulness (candidate areas: recipe crafting time/results and item stack sizes), with real-runtime semantic coverage;
+- extend the mixed-request golden corpus as new primitives are added and keep the live Planner gate green;
+- deploy the beta UI around compound tweak-pack requests.
+
+Exit criteria:
+- one natural-language request can express a useful multi-change rebalance and produce one validated ZIP;
+- all requested supported changes are preserved exactly and unsupported compound requests are never silently partially fulfilled;
+- a user can revise an accepted bundle through the product rather than starting from source code;
+- Planner mixed-request eval remains above the existing classification/semantic development gates.
+
+## M6 — Private beta service
+Status: infrastructure ready; external recruitment gated on M6A.
+
+Goal: validate product usefulness with real Factorio players after the M6A product-value gate.
 
 Completed slices:
 - `packages/service-core` runtime schemas for generation records/jobs/telemetry/artifact refs;
@@ -146,7 +172,7 @@ Completed slices:
 - hosted SeaweedFS smoke proving upload -> presigned GET -> byte comparison -> delete;
 - deployed live Z.ai `glm-5.3-flash` E2E proving API -> pg-boss -> worker -> real Factorio -> private object storage -> presigned ZIP -> feedback/survey; the first server smoke succeeded directly in 19.1 s using 2,205 tokens.
 
-Remaining scope:
+Remaining scope after M6A exits:
 - enable public HTTPS ingress for testers outside the tailnet (Tailscale Funnel requires tailnet-admin approval, or use a conventional public domain/reverse proxy);
 - recruit 30+ active testers and evaluate the product hypotheses from observed beta data.
 
