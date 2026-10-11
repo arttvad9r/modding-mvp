@@ -1,14 +1,12 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 import { createServicePostgresClient } from "./db.js";
+import { serviceMigrationsFolder } from "./migrations.js";
 
 async function main(): Promise<void> {
   const connectionString = process.env.DATABASE_URL?.trim();
   if (!connectionString) throw new Error("DATABASE_URL is required");
-  const migrationsFolder = path.resolve(fileURLToPath(new URL("../drizzle/", import.meta.url)));
+  const migrationsFolder = serviceMigrationsFolder();
   const database = createServicePostgresClient({ connectionString });
   try {
     await migrate(database.db, { migrationsFolder });

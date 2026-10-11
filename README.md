@@ -29,6 +29,7 @@ Key documents:
 - [`docs/backlog.md`](docs/backlog.md) — actionable engineering backlog;
 - [`docs/capabilities.md`](docs/capabilities.md) — Factorio capability registry;
 - [`docs/service-contract.md`](docs/service-contract.md) — private-beta API/worker contract;
+- [`docs/deployment.md`](docs/deployment.md) — private-beta build/deployment runbook;
 - [`docs/adr/README.md`](docs/adr/README.md) — architecture decision records.
 
 AI coding agents must also follow [`AGENTS.md`](AGENTS.md).
@@ -131,6 +132,8 @@ pnpm web:start
 `beta:user:create` prints the opaque access token only when it is created; only its SHA-256 hash is persisted. `web:start` serves the tester UI at `/` and the authenticated `/v1` API from the same origin. Required PostgreSQL, S3, LLM, Factorio, and API security environment variables are listed in `.env.example`. The beta token entered in the UI is kept only in the current browser tab's `sessionStorage`.
 
 For a reproducible backend regression using Docker PostgreSQL + S3Mock and real Factorio, run `pnpm test:service-integration`. This does not replace the required smoke against the eventual hosted S3-compatible provider.
+
+Deployment packaging can be checked with `pnpm test:container-images`. The provider-neutral `infra/Dockerfile` has separate `web` and `worker` targets; the worker image downloads the checksum-pinned official Factorio headless archive at startup into `/app/.tools` rather than embedding the game binary. Run `pnpm s3:smoke` (or the compiled container command in `docs/deployment.md`) against the actual hosted bucket before beta.
 
 ## Build from a natural-language prompt
 

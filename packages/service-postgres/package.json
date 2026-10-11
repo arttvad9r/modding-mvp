@@ -3,7 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": {
+      "production": "./dist/src/index.js",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -11,7 +17,9 @@
     "test:integration": "vitest run test/postgres.integration.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/migrate-cli.ts",
-    "kpis": "tsx src/kpi-cli.ts"
+    "kpis": "tsx src/kpi-cli.ts",
+    "db:migrate:prod": "node --conditions=production dist/src/migrate-cli.js",
+    "kpis:prod": "node --conditions=production dist/src/kpi-cli.js"
   },
   "dependencies": {
     "@project/service-core": "workspace:*",

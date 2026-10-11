@@ -26,3 +26,4 @@ Avoid copying the same detailed rule into several files. Link to the owning docu
 
 ## Change discipline
 Documentation is part of the implementation. A code change that alters a documented public contract, milestone scope, or accepted architecture decision is incomplete until the corresponding document is updated.
+- [`deployment.md`](deployment.md) — provider-neutral private-beta build, migration, S3 smoke, web/worker startup, and rollback runbook.

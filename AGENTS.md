@@ -32,6 +32,8 @@ M0 through M5 are complete and should be treated as stable boundaries unless a t
 - HTTP/API handlers must not run Planner, Factorio, or Repair inline; use the service queue/worker boundary from ADR-0011.
 - Service queue payloads contain only the versioned generation ID; persisted generation state is authoritative.
 - Private-beta infrastructure defaults to PostgreSQL + Drizzle/node-postgres + pg-boss and private S3-compatible artifact storage per ADR-0012.
+- Production Node entrypoints must use compiled `dist` exports via the `production` package condition; do not deploy `tsx` source execution as the private-beta runtime.
+- Do not bake or redistribute the Factorio binary in project container images; the worker runtime may fetch the official checksum-pinned headless archive into a writable cache volume.
 - Planner-supported Factorio scope must come from `@project/factorio-knowledge`; do not duplicate a separate capability list in prompts.
 - Planner LLM output is limited to classification plus typed changes; target/assertions/Lua/files are application-owned.
 - Planner/Repair control flow must branch on typed `ProjectError.code`, not parse human error-message text.
@@ -73,6 +75,9 @@ Small refactors, implementation details, and patch dependency upgrades normally 
 - `pnpm prompt:build -- "<request>"`
 - `pnpm prompt:feedback -- <generation-id> <up|down> [note]`
 - `pnpm test:service-integration`
+- `pnpm test:container-images`
+- `pnpm s3:smoke`
+- `pnpm beta:kpis`
 - `pnpm worker:start`
 - `pnpm api:start`
 - `pnpm db:migrate`

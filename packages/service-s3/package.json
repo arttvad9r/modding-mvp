@@ -3,13 +3,21 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": {
+      "production": "./dist/src/index.js",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run test/artifact-store.test.ts",
     "test:integration": "vitest run test/s3-http.integration.test.ts",
-    "test:service-integration": "vitest run test/s3-compatible.integration.test.ts"
+    "test:service-integration": "vitest run test/s3-compatible.integration.test.ts test/provider-smoke.integration.test.ts",
+    "smoke": "tsx src/smoke-cli.ts",
+    "smoke:prod": "node --conditions=production dist/src/smoke-cli.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1149.0",

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "packageManager": "pnpm@10.34.6",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "pnpm -r build && bash scripts/test-production-build.sh",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "test:integration": "pnpm -r --if-present test:integration",
@@ -24,7 +24,17 @@
     "db:migrate": "pnpm --filter @project/service-postgres db:migrate",
     "api:start": "pnpm --filter @project/web start",
     "beta:user:create": "pnpm --filter @project/web user:create --",
-    "beta:kpis": "pnpm --filter @project/service-postgres kpis"
+    "beta:kpis": "pnpm --filter @project/service-postgres kpis",
+    "worker:start:prod": "pnpm --filter @project/worker start:prod",
+    "web:start:prod": "pnpm --filter @project/web start:prod",
+    "db:migrate:prod": "pnpm --filter @project/service-postgres db:migrate:prod",
+    "beta:kpis:prod": "pnpm --filter @project/service-postgres kpis:prod",
+    "beta:user:create:prod": "pnpm --filter @project/web user:create:prod --",
+    "s3:smoke": "pnpm --filter @project/service-s3 smoke",
+    "s3:smoke:prod": "pnpm --filter @project/service-s3 smoke:prod",
+    "container:build:web": "docker build -f infra/Dockerfile --target web -t modding-mvp-web:local .",
+    "container:build:worker": "docker build -f infra/Dockerfile --target worker -t modding-mvp-worker:local .",
+    "test:container-images": "bash scripts/test-container-images.sh"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

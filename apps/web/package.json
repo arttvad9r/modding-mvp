@@ -9,7 +9,9 @@
     "test": "vitest run test/api.test.ts test/ui.test.ts",
     "test:service-integration": "vitest run test/api.integration.test.ts",
     "start": "tsx src/main.ts",
-    "user:create": "tsx src/user-create-cli.ts"
+    "user:create": "tsx src/user-create-cli.ts",
+    "start:prod": "node --conditions=production dist/src/main.js",
+    "user:create:prod": "node --conditions=production dist/src/user-create-cli.js"
   },
   "dependencies": {
     "@project/domain": "workspace:*",

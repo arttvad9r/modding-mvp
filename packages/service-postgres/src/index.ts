@@ -6,3 +6,4 @@ export * from "./schema.js";
 export * from "./submission.js";
 export * from "./survey.js";
 export * from "./kpis.js";
+export * from "./migrations.js";

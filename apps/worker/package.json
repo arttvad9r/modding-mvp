@@ -8,7 +8,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run test/runtime.test.ts",
     "start": "tsx src/main.ts",
-    "test:service-integration": "vitest run test/service.integration.test.ts"
+    "test:service-integration": "vitest run test/service.integration.test.ts",
+    "start:prod": "node --conditions=production dist/src/main.js"
   },
   "dependencies": {
     "@project/factorio-service-executor": "workspace:*",
@@ -20,5 +21,11 @@
   "devDependencies": {
     "drizzle-orm": "0.45.4"
   },
-  "exports": "./src/index.ts"
+  "exports": {
+    ".": {
+      "production": "./dist/src/index.js",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  }
 }

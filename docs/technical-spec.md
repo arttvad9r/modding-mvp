@@ -243,6 +243,13 @@ Private-beta KPI reporting is computed directly from PostgreSQL. Repeat usage re
 - Unsupported online-cheat, anti-cheat, DRM, or binary-patching requests are outside product scope.
 - Secrets and API credentials never enter generated mod source or prompts unnecessarily.
 
+## Deployment packaging
+- Development/test workspace imports resolve to TypeScript source; production Node processes run with `--conditions=production` and resolve compiled `dist` exports.
+- `pnpm build` must include a compiled-runtime resolution smoke for web, worker, migration/KPI, S3 smoke, and repo-local runtime paths.
+- Private-beta web and worker are separate Docker targets. The worker image must not embed the Factorio binary; it downloads the official pinned archive with checksum verification into a writable `/app/.tools` path at runtime.
+- Hosted S3 compatibility must be proven with upload + presigned download + byte comparison + cleanup against the actual deployment bucket before beta.
+- TLS termination and public routing remain outside the Node process; the web process is intended to sit behind a controlled reverse proxy/load balancer.
+
 ## Version policy
 - Support stable Factorio 2.0.x only during the first MVP.
 - A concrete headless patch version is pinned for deterministic development/testing.

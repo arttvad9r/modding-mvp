@@ -204,6 +204,7 @@ Before starting M2:
 - [x] Add explicit retry policy: no automatic pg-boss retries; retryable failures create a new generation through owner-scoped `/retry`.
 
 ### Private deployment/beta
+- [x] Add production JS package exports, Docker web/worker targets, container smoke, hosted S3 smoke command, and deployment runbook.
 - [ ] Deploy API, worker, PostgreSQL, and private object storage.
 - [x] Instrument private-beta KPI report plus explicit willingness-to-pay survey.
 - [ ] Recruit 30+ testers and evaluate the M6 product hypotheses from observed data.

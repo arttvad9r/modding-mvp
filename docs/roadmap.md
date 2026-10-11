@@ -140,6 +140,7 @@ Completed first slice:
 - Docker-backed HTTP integration proving bearer auth -> API -> queue -> worker -> real Factorio -> download -> feedback;
 - same-origin tester UI with explicit retry and willingness-to-pay survey;
 - `pnpm beta:kpis` report for active/repeat testers, success/direct-success, duration/Factorio validation, feedback/false-success proxy, WTP, tokens/cost, and Repair attempts.
+- production-conditional workspace exports, compiled-runtime smoke, separate web/worker Docker targets, provider-neutral deployment runbook, and hosted S3 smoke command.
 
 Remaining scope:
 - private deployment and smoke against the selected hosted S3-compatible provider;

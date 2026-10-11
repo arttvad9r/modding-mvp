@@ -42,9 +42,11 @@ const SEMANTIC_MARKER = '__PROJECT_SEMANTIC_ASSERTION__|';
 const VALIDATOR_MOD_NAME = 'zz-project-semantic-validator';
 const VALIDATOR_MOD_VERSION = '0.0.0';
 
-function bundledFactorioPath(): string {
-  const currentFile = fileURLToPath(import.meta.url);
-  return path.resolve(path.dirname(currentFile), '../../../.tools/factorio/bin/x64/factorio');
+export function defaultFactorioBinPath(): string {
+  const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+  const sourceLayout = path.resolve(currentDirectory, '../../../.tools/factorio/bin/x64/factorio');
+  const compiledLayout = path.resolve(currentDirectory, '../../../../.tools/factorio/bin/x64/factorio');
+  return currentDirectory.includes(`${path.sep}dist${path.sep}`) ? compiledLayout : sourceLayout;
 }
 
 async function requireFile(filePath: string, label: string): Promise<void> {
@@ -135,7 +137,7 @@ export function classifyHarnessError(
 
 export async function runFactorioModTest(options: HarnessOptions): Promise<HarnessResult> {
   const startedAt = Date.now();
-  const factorioBin = path.resolve(options.factorioBin ?? process.env.FACTORIO_BIN ?? bundledFactorioPath());
+  const factorioBin = path.resolve(options.factorioBin ?? process.env.FACTORIO_BIN ?? defaultFactorioBinPath());
   const sourceModPath = path.resolve(options.modPath);
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
