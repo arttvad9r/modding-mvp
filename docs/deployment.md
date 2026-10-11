@@ -56,6 +56,7 @@ Deployment evidence from 2026-10-11:
 - runtime images were upgraded to the slim production layout introduced in `fc00697`: web 528 MB and worker 551 MB locally versus 758/781 MB before slimming. The current `b80e518` images preserve those sizes and restarted successfully on the VPS with the Factorio cache preserved.
 - migration `0003` added `service_users.metrics_eligible`; the existing deployment-smoke user was marked ineligible, a second live `glm-5.3-flash` E2E succeeded in 20,692 ms using 2,213 tokens with no Repair, and `beta:kpis` remained at a zero real-tester baseline.
 - a compressed PostgreSQL baseline dump is stored on the VPS at `/opt/modding-mvp/backups/post-beta-baseline-20261011.sql.gz` with mode `0600`.
+- home-server runtime `f2f1ae6` now uses Ollama Cloud `glm-5.3-flash` primary with Z.ai Coding Plan `glm-5.3-flash` fallback; READY metadata reports both. A live production-container Ollama prompt produced a Factorio-validated ZIP in 3,773 ms (Factorio 1,389 ms, no Repair, estimated model cost $0.001167), and an isolated forced Ollama endpoint failure returned successfully through Z.ai.
 
 ## Preconditions
 

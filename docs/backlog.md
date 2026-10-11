@@ -252,7 +252,7 @@ Before starting M2:
 - [x] Benchmark Ollama Cloud `glm-5.3-flash` against Z.ai on the final 53/34 Planner corpus and five-case Repair corpus; both reach 100% accuracy, while Ollama is materially faster and cheaper on the measured workload.
 - [x] Add provider-level Ollama -> Z.ai failover limited to network/rate-limit/auth/quota availability failures; do not fail over product `unsupported` or Planner schema/semantic errors.
 - [x] Deploy the failover-capable runtime from source `f2f1ae6`; verify container health, apps-health, and host network checks while retaining Z.ai as the active provider until the Ollama production credential is installed.
-- [ ] Install the Ollama Cloud credential in the root-only production env, switch worker routing to Ollama primary / Z.ai fallback, then verify READY metadata plus one live generation and one forced provider-failover smoke.
+- [x] Install the Ollama Cloud credential in the root-only production env, switch worker routing to Ollama primary / Z.ai fallback, verify READY metadata, run a live Ollama → Factorio → ZIP generation (3.773 s, no Repair), and prove forced provider failover to Z.ai.
 - [x] Exclude explicit internal/operator smoke accounts and all of their activity from product KPI reporting.
 - [ ] Recruit 30+ testers and evaluate the M6 product hypotheses from observed data.
 
