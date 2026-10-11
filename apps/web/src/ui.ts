@@ -6,13 +6,13 @@ const INDEX_HTML = String.raw`<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Private beta for building personal, validated Factorio 2.0 tweak bundles from natural-language requests.">
-  <title>Factorio Mod Beta</title>
+  <title>MyModz Beta</title>
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
   <main class="shell">
     <nav class="topbar" aria-label="Page controls">
-      <span class="product-mark">FACTORIO MOD BETA</span>
+      <span class="product-mark">MYMODZ · FACTORIO BETA</span>
       <div class="language-switch" role="group" aria-label="Language">
         <button type="button" class="lang-button" data-lang-select="en" aria-pressed="true">EN</button>
         <button type="button" class="lang-button" data-lang-select="ru" aria-pressed="false">RU</button>
@@ -202,12 +202,38 @@ const INDEX_HTML = String.raw`<!doctype html>
       </div>
 
       <div id="feedback" class="feedback hidden">
-        <p class="feedback-title" data-i18n="feedback.title">Did the result match what you wanted?</p>
+        <p class="feedback-title" data-i18n="feedback.title">Quick beta feedback</p>
+        <div class="feedback-question">
+          <p data-i18n="feedback.intentQuestion">Did MyModz understand what you wanted?</p>
+          <div class="feedback-choices" role="group" aria-label="Intent match">
+            <button type="button" class="secondary feedback-choice" data-intent="yes" data-i18n="feedback.intentYes" aria-pressed="false">Yes</button>
+            <button type="button" class="secondary feedback-choice" data-intent="partial" data-i18n="feedback.intentPartial" aria-pressed="false">Partly</button>
+            <button type="button" class="secondary feedback-choice" data-intent="no" data-i18n="feedback.intentNo" aria-pressed="false">No</button>
+          </div>
+        </div>
+        <div class="feedback-question">
+          <p data-i18n="feedback.gameQuestion">What happened when you tried the ZIP in Factorio?</p>
+          <div class="feedback-choices" role="group" aria-label="In-game result">
+            <button type="button" class="secondary feedback-choice" data-game="worked" data-i18n="feedback.gameWorked" aria-pressed="false">Worked</button>
+            <button type="button" class="secondary feedback-choice" data-game="partly" data-i18n="feedback.gamePartly" aria-pressed="false">Partly worked</button>
+            <button type="button" class="secondary feedback-choice" data-game="failed" data-i18n="feedback.gameFailed" aria-pressed="false">Did not work</button>
+            <button type="button" class="secondary feedback-choice" data-game="not_tested" data-i18n="feedback.gameNotTested" aria-pressed="false">Not tested yet</button>
+          </div>
+        </div>
+        <label for="feedback-issue" data-i18n="feedback.issueLabel">Main issue (optional)</label>
+        <select id="feedback-issue">
+          <option value="" data-i18n="feedback.issueNone">No issue selected</option>
+          <option value="misunderstood" data-i18n="feedback.issueMisunderstood">My request was misunderstood</option>
+          <option value="did_not_load" data-i18n="feedback.issueLoad">The mod did not load</option>
+          <option value="wrong_behavior" data-i18n="feedback.issueBehavior">It loaded but behaved incorrectly</option>
+          <option value="missing_capability" data-i18n="feedback.issueMissing">The capability I needed is missing</option>
+          <option value="mod_conflict" data-i18n="feedback.issueConflict">Conflict with my other mods</option>
+          <option value="other" data-i18n="feedback.issueOther">Other</option>
+        </select>
         <label for="feedback-note" data-i18n="feedback.label">Optional note</label>
         <textarea id="feedback-note" maxlength="2000" placeholder="Tell us what worked or what should have been different" data-i18n-placeholder="feedback.placeholder"></textarea>
         <div class="actions">
-          <button type="button" class="secondary" data-rating="up" data-i18n="feedback.up">Yes</button>
-          <button type="button" class="secondary" data-rating="down" data-i18n="feedback.down">No / needs work</button>
+          <button id="save-feedback" type="button" class="secondary" data-i18n="feedback.save">Save feedback</button>
           <span id="feedback-state" class="muted" role="status" aria-live="polite"></span>
         </div>
       </div>
@@ -263,8 +289,8 @@ h2{font-size:23px;letter-spacing:-.025em;margin:0}
 .panel{background:rgba(17,23,29,.95);border:1px solid var(--line);border-radius:18px;padding:24px;margin:14px 0;box-shadow:0 24px 70px rgba(0,0,0,.22);backdrop-filter:blur(8px)}
 .section-head,.result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}.compact-head{margin-bottom:14px}
 .section-copy{margin:7px 0 0;color:#8796a1;font-size:13px;line-height:1.45}
-label{display:block;font-size:14px;font-weight:700;margin:0 0 8px}input,textarea{width:100%;border:1px solid #35434f;background:#0c1116;color:#f2f5f7;border-radius:11px;padding:13px 14px;font:inherit;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
-input:focus,textarea:focus{border-color:#c28a35;box-shadow:0 0 0 3px rgba(244,167,44,.10);background:#0e141a}textarea{min-height:138px;resize:vertical;line-height:1.48}#feedback-note{min-height:86px}
+label{display:block;font-size:14px;font-weight:700;margin:0 0 8px}input,textarea,select{width:100%;border:1px solid #35434f;background:#0c1116;color:#f2f5f7;border-radius:11px;padding:13px 14px;font:inherit;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+input:focus,textarea:focus,select:focus{border-color:#c28a35;box-shadow:0 0 0 3px rgba(244,167,44,.10);background:#0e141a}textarea{min-height:138px;resize:vertical;line-height:1.48}#feedback-note{min-height:86px}.feedback-question{margin:0 0 14px}.feedback-question p{margin:0 0 8px;color:#aeb9c1;font-size:13px}.feedback-choices{display:flex;gap:7px;flex-wrap:wrap}.feedback-choice[aria-pressed="true"]{border-color:#c28a35;background:rgba(244,167,44,.16);color:#f1c16f}#feedback-issue{margin:0 0 13px;background:#0c1116;color:#f2f5f7;border:1px solid #35434f;border-radius:11px;padding:11px 13px;font:inherit}
 .row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:9px}.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
 button{border:1px solid transparent;border-radius:10px;padding:11px 15px;font:inherit;font-size:14px;font-weight:760;cursor:pointer;background:#f0a62f;color:#19130a;transition:transform .12s,filter .12s,border-color .12s,background .12s}button:hover{filter:brightness(1.06)}button:active{transform:translateY(1px)}button:focus-visible{outline:3px solid rgba(244,167,44,.24);outline-offset:2px}button:disabled{opacity:.48;cursor:not-allowed;transform:none;filter:none}
 .primary-action{min-height:44px;padding-inline:20px}.secondary{background:#25313a;color:#eef2f5;border-color:#33424e}.ghost{background:transparent;color:#9eabb5;border-color:#2c3740}
@@ -286,7 +312,7 @@ const APP_JS = String.raw`(() => {
   const LANGUAGE_KEY = "project.language";
   const dictionaries = {
     en: {
-      "page.title":"Factorio Mod Beta",
+      "page.title":"MyModz Beta",
       "hero.eyebrow":"FACTORIO 2.0 · PRIVATE BETA",
       "hero.title":"Make Factorio play your way.",
       "hero.lede":"Describe the mod you want in normal language — rebalance the game, create reviewed machines, or add alternative recipes. Get one installable ZIP that has already been loaded and checked in Factorio.",
@@ -305,12 +331,12 @@ const APP_JS = String.raw`(() => {
       "result.step":"03 · YOUR MOD","result.title":"Generation result","result.changes":"What the mod changes","result.diff":"What changed in this revision","result.download":"Download mod ZIP","result.preparing":"Preparing download…","result.retry":"Try again","result.installNote":"<strong>Install:</strong> put the ZIP in your Factorio <code>mods</code> folder without unpacking it, then launch the game. This build was checked against isolated base-game Factorio 2.0.77; your own mod stack still needs an in-game check.",
       "progress.queued":"Queued","progress.running":"Build + check","progress.done":"Ready",
       "revision.title":"Want to change it?","revision.label":"Describe the next version in normal language","revision.placeholder":"Example: Keep everything else, but make steel furnaces another 25% faster and restore Automation research cost to normal","revision.button":"Update & check again",
-      "feedback.title":"Did the result match what you wanted?","feedback.label":"Optional note","feedback.placeholder":"Tell us what worked or what should have been different","feedback.up":"Yes","feedback.down":"No / needs work",
+      "feedback.title":"Quick beta feedback","feedback.intentQuestion":"Did MyModz understand what you wanted?","feedback.intentYes":"Yes","feedback.intentPartial":"Partly","feedback.intentNo":"No","feedback.gameQuestion":"What happened when you tried the ZIP in Factorio?","feedback.gameWorked":"Worked","feedback.gamePartly":"Partly worked","feedback.gameFailed":"Did not work","feedback.gameNotTested":"Not tested yet","feedback.issueLabel":"Main issue (optional)","feedback.issueNone":"No issue selected","feedback.issueMisunderstood":"My request was misunderstood","feedback.issueLoad":"The mod did not load","feedback.issueBehavior":"It loaded but behaved incorrectly","feedback.issueMissing":"The capability I needed is missing","feedback.issueConflict":"Conflict with my other mods","feedback.issueOther":"Other","feedback.label":"Optional note","feedback.placeholder":"Tell us what worked or what should have been different","feedback.save":"Save feedback",
       "survey.title":"One product question","survey.question":"If this reliably made the personal mods you wanted, would you pay for it?","survey.yes":"Yes","survey.maybe":"Maybe","survey.no":"No",
       "footer":"Private beta · Factorio stable 2.0.x · ZIPs are offered only after automated runtime validation.",
       "status.queued":"queued","status.running":"building","status.succeeded":"ready","status.unsupported":"unsupported","status.failed":"failed",
       "message.queued":"Request received. It is waiting for the generation worker.","message.running":"Building the mod and checking every requested change in real Factorio…","message.succeeded":"Validated successfully. Your installable ZIP is ready.","message.unsupportedSuffix":"Try a supported tweak pack or one of the examples above.","message.failed":"Generation failed.","message.retryable":"You can try again with a fresh generation.",
-      "state.example":"Example loaded. Edit it or build it as-is.","state.enterToken":"Paste your beta token first.","state.tokenSaved":"Beta access is ready for this tab.","state.tokenCleared":"Beta token cleared.","state.describe":"Describe the Factorio changes you want first.","state.submitting":"Sending request…","state.running":"Building your mod…","state.finished":"Finished.","state.retrying":"Starting a fresh generation…","state.revisionEmpty":"Describe what you want to change from this version.","state.revisionSubmitting":"Sending revision…","state.revisionRunning":"Building the revised mod…","state.feedbackSaving":"Saving…","state.feedbackSaved":"Feedback saved. Thank you.","state.surveySaved":"Answer saved. Thank you.",
+      "state.example":"Example loaded. Edit it or build it as-is.","state.enterToken":"Paste your beta token first.","state.tokenSaved":"Beta access is ready for this tab.","state.tokenCleared":"Beta token cleared.","state.describe":"Describe the Factorio changes you want first.","state.submitting":"Sending request…","state.running":"Building your mod…","state.finished":"Finished.","state.retrying":"Starting a fresh generation…","state.revisionEmpty":"Describe what you want to change from this version.","state.revisionSubmitting":"Sending revision…","state.revisionRunning":"Building the revised mod…","state.feedbackSaving":"Saving…","state.feedbackNeedIntent":"Choose whether MyModz understood your request.","state.feedbackSaved":"Feedback saved. Thank you.","state.surveySaved":"Answer saved. Thank you.",
       "error.auth":"Beta token is missing or invalid.","error.rate":"Rate limit reached. Try again after the cooldown.","error.generic":"Request failed",
       "meta.generation":"Generation","meta.capability":"Type","meta.totalTime":"Total time","meta.factorio":"Factorio check","meta.artifact":"File","meta.size":"ZIP size",
       "cap.prototype_property":"Machine property","cap.recipe_ingredient":"Recipe ingredient","cap.recipe_crafting_time":"Crafting time","cap.recipe_result":"Recipe output","cap.item_stack_size":"Stack size","cap.technology_cost":"Research cost","cap.technology_prerequisite":"Research prerequisite","cap.new_machine":"New machine","cap.new_recipe":"New recipe","cap.new_item":"New material","cap.mixed":"Mod bundle",
@@ -318,7 +344,7 @@ const APP_JS = String.raw`(() => {
       "operation.add":"add","operation.remove":"remove"
     },
     ru: {
-      "page.title":"Factorio Mod Beta — Русский",
+      "page.title":"MyModz Beta — Русский",
       "hero.eyebrow":"FACTORIO 2.0 · ЗАКРЫТАЯ БЕТА",
       "hero.title":"Настрой Factorio под себя.",
       "hero.lede":"Опиши обычными словами мод, который хочешь: измени баланс, добавь новую проверенную машину или альтернативный рецепт. Получи готовый ZIP, который уже загрузился и прошёл проверку в Factorio.",
@@ -337,12 +363,12 @@ const APP_JS = String.raw`(() => {
       "result.step":"03 · ТВОЙ МОД","result.title":"Результат","result.changes":"Что именно изменяет мод","result.diff":"Что изменилось в этой версии","result.download":"Скачать ZIP мода","result.preparing":"Готовим скачивание…","result.retry":"Попробовать ещё раз","result.installNote":"<strong>Установка:</strong> положи ZIP в папку <code>mods</code> Factorio, не распаковывая, и запусти игру. Эта сборка проверена в изолированной базовой Factorio 2.0.77; совместимость с твоими сторонними модами нужно проверить уже в игре.",
       "progress.queued":"В очереди","progress.running":"Сборка + проверка","progress.done":"Готово",
       "revision.title":"Хочешь что-то изменить?","revision.label":"Опиши следующую версию обычными словами","revision.placeholder":"Например: оставь всё остальное, но ускорь стальные печи ещё на 25% и верни стоимость Автоматизации к обычной","revision.button":"Изменить и проверить снова",
-      "feedback.title":"Результат совпал с тем, что ты хотел?","feedback.label":"Комментарий необязателен","feedback.placeholder":"Напиши, что сработало или что получилось не так","feedback.up":"Да","feedback.down":"Нет / нужно исправить",
+      "feedback.title":"Короткая обратная связь","feedback.intentQuestion":"MyModz правильно понял, что ты хотел?","feedback.intentYes":"Да","feedback.intentPartial":"Частично","feedback.intentNo":"Нет","feedback.gameQuestion":"Что произошло, когда ты попробовал ZIP в Factorio?","feedback.gameWorked":"Работает","feedback.gamePartly":"Работает частично","feedback.gameFailed":"Не работает","feedback.gameNotTested":"Пока не проверял","feedback.issueLabel":"Главная проблема (необязательно)","feedback.issueNone":"Проблема не выбрана","feedback.issueMisunderstood":"Неверно понят запрос","feedback.issueLoad":"Мод не загрузился","feedback.issueBehavior":"Загрузился, но работает неправильно","feedback.issueMissing":"Не хватает нужной возможности","feedback.issueConflict":"Конфликт с другими модами","feedback.issueOther":"Другое","feedback.label":"Комментарий необязателен","feedback.placeholder":"Напиши, что сработало или что получилось не так","feedback.save":"Сохранить отзыв",
       "survey.title":"Один вопрос о продукте","survey.question":"Если сервис стабильно будет делать нужные тебе персональные моды, ты бы платил за него?","survey.yes":"Да","survey.maybe":"Возможно","survey.no":"Нет",
       "footer":"Закрытая бета · Factorio stable 2.0.x · ZIP выдаётся только после автоматической проверки запуска.",
       "status.queued":"в очереди","status.running":"собирается","status.succeeded":"готово","status.unsupported":"не поддерживается","status.failed":"ошибка",
       "message.queued":"Запрос принят и ждёт свободный worker.","message.running":"Собираем мод и проверяем каждое запрошенное изменение в Factorio…","message.succeeded":"Проверка прошла успешно. ZIP мода готов.","message.unsupportedSuffix":"Попробуй поддерживаемый набор изменений или один из примеров выше.","message.failed":"Не удалось собрать мод.","message.retryable":"Можно запустить новую попытку.",
-      "state.example":"Пример загружен. Его можно изменить или сразу отправить.","state.enterToken":"Сначала вставь бета-токен.","state.tokenSaved":"Доступ к бете готов для этой вкладки.","state.tokenCleared":"Бета-токен очищен.","state.describe":"Сначала опиши, что хочешь изменить в Factorio.","state.submitting":"Отправляем запрос…","state.running":"Собираем мод…","state.finished":"Готово.","state.retrying":"Запускаем новую попытку…","state.revisionEmpty":"Опиши, что нужно изменить в этой версии.","state.revisionSubmitting":"Отправляем изменения…","state.revisionRunning":"Собираем новую версию…","state.feedbackSaving":"Сохраняем…","state.feedbackSaved":"Отзыв сохранён. Спасибо.","state.surveySaved":"Ответ сохранён. Спасибо.",
+      "state.example":"Пример загружен. Его можно изменить или сразу отправить.","state.enterToken":"Сначала вставь бета-токен.","state.tokenSaved":"Доступ к бете готов для этой вкладки.","state.tokenCleared":"Бета-токен очищен.","state.describe":"Сначала опиши, что хочешь изменить в Factorio.","state.submitting":"Отправляем запрос…","state.running":"Собираем мод…","state.finished":"Готово.","state.retrying":"Запускаем новую попытку…","state.revisionEmpty":"Опиши, что нужно изменить в этой версии.","state.revisionSubmitting":"Отправляем изменения…","state.revisionRunning":"Собираем новую версию…","state.feedbackSaving":"Сохраняем…","state.feedbackNeedIntent":"Укажи, правильно ли MyModz понял запрос.","state.feedbackSaved":"Отзыв сохранён. Спасибо.","state.surveySaved":"Ответ сохранён. Спасибо.",
       "error.auth":"Бета-токен отсутствует или неверный.","error.rate":"Слишком много запросов. Попробуй позже.","error.generic":"Ошибка запроса",
       "meta.generation":"Генерация","meta.capability":"Тип","meta.totalTime":"Общее время","meta.factorio":"Проверка Factorio","meta.artifact":"Файл","meta.size":"Размер ZIP",
       "cap.prototype_property":"Параметр машины","cap.recipe_ingredient":"Ингредиент рецепта","cap.recipe_crafting_time":"Время крафта","cap.recipe_result":"Результат рецепта","cap.item_stack_size":"Размер стака","cap.technology_cost":"Стоимость исследования","cap.technology_prerequisite":"Зависимость исследования","cap.new_machine":"Новая машина","cap.new_recipe":"Новый рецепт","cap.new_item":"Новый материал","cap.mixed":"Набор мода",
@@ -390,6 +416,8 @@ const APP_JS = String.raw`(() => {
   const revisionState = document.querySelector("#revision-state");
   const feedback = document.querySelector("#feedback");
   const feedbackNote = document.querySelector("#feedback-note");
+  const feedbackIssue = document.querySelector("#feedback-issue");
+  const saveFeedback = document.querySelector("#save-feedback");
   const feedbackState = document.querySelector("#feedback-state");
   const survey = document.querySelector("#survey");
   const surveyState = document.querySelector("#survey-state");
@@ -401,6 +429,8 @@ const APP_JS = String.raw`(() => {
   let pollTimer = null;
   let currentRecord = null;
   let historyRecords = [];
+  let feedbackIntent = null;
+  let feedbackGame = null;
 
   function t(key) { return dictionaries[language][key] || dictionaries.en[key] || key; }
   function nameFor(value) {
@@ -528,6 +558,21 @@ const APP_JS = String.raw`(() => {
     });
   }
 
+  function setFeedbackChoice(kind, value) {
+    if (kind === "intent") feedbackIntent = value;
+    else feedbackGame = value;
+    feedback.querySelectorAll(kind === "intent" ? "[data-intent]" : "[data-game]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset[kind] === value));
+    });
+  }
+  function renderFeedback(record) {
+    const saved = record.feedback || null;
+    setFeedbackChoice("intent", saved && saved.intentMatch ? saved.intentMatch : null);
+    setFeedbackChoice("game", saved && saved.gameTest ? saved.gameTest : null);
+    feedbackIssue.value = saved && saved.mainIssue ? saved.mainIssue : "";
+    if (saved && typeof saved.note === "string") feedbackNote.value = saved.note;
+  }
+
   function renderProgress(status) {
     const terminal = ["succeeded","failed","unsupported"].includes(status);
     progress.querySelectorAll("span").forEach((item) => item.classList.remove("active","done"));
@@ -551,7 +596,8 @@ const APP_JS = String.raw`(() => {
     renderChangeDetails(record);
     const canDownload = record.status === "succeeded"; const canRetry = record.status === "failed" && record.error && record.error.retryable === true;
     resultActions.classList.toggle("hidden", !canDownload && !canRetry); downloadButton.classList.toggle("hidden", !canDownload); retryButton.classList.toggle("hidden", !canRetry); installNote.classList.toggle("hidden", !canDownload); revision.classList.toggle("hidden", !canDownload);
-    const terminal = ["succeeded","failed","unsupported"].includes(record.status); feedback.classList.toggle("hidden", !terminal); survey.classList.toggle("hidden", !canDownload);
+    const terminal = ["succeeded","failed","unsupported"].includes(record.status); feedback.classList.toggle("hidden", !canDownload); survey.classList.toggle("hidden", !canDownload);
+    if (canDownload) renderFeedback(record);
     if (record.status === "queued") resultMessage.textContent = t("message.queued");
     else if (record.status === "running") resultMessage.textContent = t("message.running");
     else if (record.status === "succeeded") resultMessage.textContent = t("message.succeeded");
@@ -614,7 +660,7 @@ const APP_JS = String.raw`(() => {
     if (!token()) { requestState.textContent = t("state.enterToken"); tokenInput.focus(); return; }
     if (!promptInput.value.trim()) { requestState.textContent = t("state.describe"); promptInput.focus(); return; }
     if (pollTimer !== null) window.clearTimeout(pollTimer);
-    generationId = null; currentRecord = null; feedbackState.textContent = ""; surveyState.textContent = ""; revisionState.textContent = ""; revisionPrompt.value = ""; feedbackNote.value = ""; resultPanel.classList.add("hidden"); generateButton.disabled = true; requestState.textContent = t("state.submitting");
+    generationId = null; currentRecord = null; feedbackIntent = null; feedbackGame = null; feedbackIssue.value = ""; feedbackState.textContent = ""; surveyState.textContent = ""; revisionState.textContent = ""; revisionPrompt.value = ""; feedbackNote.value = ""; resultPanel.classList.add("hidden"); generateButton.disabled = true; requestState.textContent = t("state.submitting");
     try {
       const body = await api("/v1/generations", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ prompt:promptInput.value.trim() }) });
       generationId = body.generation.id; render(body.generation); resultPanel.scrollIntoView({ behavior:"smooth", block:"start" }); requestState.textContent = t("state.running"); pollTimer = window.setTimeout(poll, 500);
@@ -646,12 +692,19 @@ const APP_JS = String.raw`(() => {
     finally { downloadButton.disabled = false; downloadButton.textContent = t("result.download"); }
   });
 
-  feedback.querySelectorAll("[data-rating]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      if (!generationId) return; feedbackState.textContent = t("state.feedbackSaving");
-      try { await api("/v1/generations/" + encodeURIComponent(generationId) + "/feedback", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ rating:button.dataset.rating, ...(feedbackNote.value.trim() ? { note:feedbackNote.value.trim() } : {}) }) }); feedbackState.textContent = t("state.feedbackSaved"); }
-      catch (error) { feedbackState.textContent = friendlyError(error); }
-    });
+  feedback.querySelectorAll("[data-intent]").forEach((button) => button.addEventListener("click", () => setFeedbackChoice("intent", button.dataset.intent)));
+  feedback.querySelectorAll("[data-game]").forEach((button) => button.addEventListener("click", () => setFeedbackChoice("game", button.dataset.game)));
+  saveFeedback.addEventListener("click", async () => {
+    if (!generationId) return;
+    if (!feedbackIntent) { feedbackState.textContent = t("state.feedbackNeedIntent"); return; }
+    feedbackState.textContent = t("state.feedbackSaving"); saveFeedback.disabled = true;
+    try {
+      const body = { intentMatch:feedbackIntent, ...(feedbackGame ? { gameTest:feedbackGame } : {}), ...(feedbackIssue.value ? { mainIssue:feedbackIssue.value } : {}), ...(feedbackNote.value.trim() ? { note:feedbackNote.value.trim() } : {}) };
+      const result = await api("/v1/generations/" + encodeURIComponent(generationId) + "/feedback", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
+      if (result && result.generation) currentRecord = result.generation;
+      feedbackState.textContent = t("state.feedbackSaved");
+    } catch (error) { feedbackState.textContent = friendlyError(error); }
+    finally { saveFeedback.disabled = false; }
   });
   survey.querySelectorAll("[data-wtp]").forEach((button) => {
     button.addEventListener("click", async () => {

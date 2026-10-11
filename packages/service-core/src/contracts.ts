@@ -89,8 +89,22 @@ export const ArtifactRefSchema = z.strictObject({
   sizeBytes: z.number().int().nonnegative(),
 });
 
+export const FeedbackIntentMatchSchema = z.enum(["yes", "partial", "no"]);
+export const FeedbackGameTestSchema = z.enum(["worked", "partly", "failed", "not_tested"]);
+export const FeedbackMainIssueSchema = z.enum([
+  "misunderstood",
+  "did_not_load",
+  "wrong_behavior",
+  "missing_capability",
+  "mod_conflict",
+  "other",
+]);
+
 export const GenerationFeedbackSchema = z.strictObject({
   rating: z.enum(["up", "down"]),
+  intentMatch: FeedbackIntentMatchSchema.optional(),
+  gameTest: FeedbackGameTestSchema.optional(),
+  mainIssue: FeedbackMainIssueSchema.optional(),
   note: z.string().trim().min(1).max(2_000).optional(),
   createdAt: TimestampSchema,
 });
@@ -123,6 +137,7 @@ export const SucceededGenerationRecordSchema = GenerationBaseSchema.extend({
   modSpec: ModSpecSchema,
   artifact: ArtifactRefSchema,
   telemetry: GenerationTelemetrySchema,
+  firstDownloadedAt: TimestampSchema.optional(),
   feedback: GenerationFeedbackSchema.optional(),
 });
 

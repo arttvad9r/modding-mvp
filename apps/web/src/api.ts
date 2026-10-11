@@ -5,10 +5,14 @@ import { ProjectError, type ModChange } from "@project/domain";
 import {
   BetaSurveyResponseSchema,
   SubmitGenerationRequestSchema,
+  FeedbackGameTestSchema,
+  FeedbackIntentMatchSchema,
+  FeedbackMainIssueSchema,
   WillingnessToPaySchema,
   authenticateAccessToken,
   findGenerationForUser,
   listGenerationsForUser,
+  markGenerationDownloadStarted,
   recordGenerationFeedback,
   submitGenerationAtomically,
   type ArtifactDownloadSigner,
@@ -23,8 +27,13 @@ import {
 import { z, ZodError } from "zod";
 
 const FeedbackBodySchema = z.strictObject({
-  rating: z.enum(["up", "down"]),
+  rating: z.enum(["up", "down"]).optional(),
+  intentMatch: FeedbackIntentMatchSchema.optional(),
+  gameTest: FeedbackGameTestSchema.optional(),
+  mainIssue: FeedbackMainIssueSchema.optional(),
   note: z.string().trim().min(1).max(2_000).optional(),
+}).refine((value) => value.rating !== undefined || value.intentMatch !== undefined, {
+  message: "Feedback requires rating or intentMatch",
 });
 
 const SurveyBodySchema = z.strictObject({
@@ -400,11 +409,15 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
           throw new HttpError(409, "not_terminal", "Feedback is accepted only for terminal generations");
         }
         const body = FeedbackBodySchema.parse(await readJsonBody(request));
+        const rating = body.rating ?? (body.intentMatch === "yes" ? "up" : "down");
         const updated = await recordGenerationFeedback({
           repository: dependencies.repository,
           generationId: feedbackId,
           userId: context.user.id,
-          rating: body.rating,
+          rating,
+          ...(body.intentMatch === undefined ? {} : { intentMatch: body.intentMatch }),
+          ...(body.gameTest === undefined ? {} : { gameTest: body.gameTest }),
+          ...(body.mainIssue === undefined ? {} : { mainIssue: body.mainIssue }),
           ...(body.note === undefined ? {} : { note: body.note }),
           ...(dependencies.now === undefined ? {} : { now: dependencies.now }),
         });
@@ -421,6 +434,12 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
           throw new HttpError(409, "artifact_not_ready", "Generation artifact is not available");
         }
         const location = await dependencies.artifactDownloads.createDownloadUrl(current.artifact, 60);
+        await markGenerationDownloadStarted(
+          dependencies.repository,
+          downloadId,
+          context.user.id,
+          dependencies.now ?? (() => new Date()),
+        );
         const acceptsJson = (request.headers.accept ?? "").split(",").some((value) => value.trim().startsWith("application/json"));
         if (acceptsJson) {
           sendJson(response, 200, { downloadUrl: location, expiresInSeconds: 60 });

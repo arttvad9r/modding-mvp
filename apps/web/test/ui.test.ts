@@ -34,6 +34,7 @@ describe("private-beta tester UI", () => {
       expect(page.status).toBe(200);
       expect(page.headers.get("content-security-policy")).toContain("default-src 'none'");
       const html = await page.text();
+      expect(html).toContain("MYMODZ · FACTORIO BETA");
       expect(html).toContain("Make Factorio play your way.");
       expect(html).toContain("No Lua required");
       expect(html).toContain("We build & check");
@@ -56,6 +57,11 @@ describe("private-beta tester UI", () => {
       expect(html).toContain('id="history-panel"');
       expect(html).toContain("What the mod changes");
       expect(html).toContain("What changed in this revision");
+      expect(html).toContain("Did MyModz understand what you wanted?");
+      expect(html).toContain('data-intent="partial"');
+      expect(html).toContain('data-game="not_tested"');
+      expect(html).toContain('id="feedback-issue"');
+      expect(html).toContain('id="save-feedback"');
       expect(html).toContain("isolated base-game Factorio 2.0.77");
       expect(html).toContain('id="revision-prompt"');
       expect(html).toContain('id="revise"');
@@ -80,6 +86,9 @@ describe("private-beta tester UI", () => {
       expect(javascript).toContain("data-prompt-en");
       expect(javascript).toContain('Accept:"application/json"');
       expect(javascript).toContain("/feedback");
+      expect(javascript).toContain("intentMatch:feedbackIntent");
+      expect(javascript).toContain("gameTest:feedbackGame");
+      expect(javascript).toContain("MyModz правильно понял, что ты хотел?");
       expect(javascript).toContain("/retry");
       expect(javascript).toContain("/revise");
       expect(javascript).toContain("/v1/generations?limit=10");

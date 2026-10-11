@@ -37,6 +37,10 @@ function succeeded(options: {
   totalTokens: number;
   estimatedCostUsd?: number;
   feedback: "up" | "down";
+  intentMatch?: "yes" | "partial" | "no";
+  gameTest?: "worked" | "partly" | "failed" | "not_tested";
+  mainIssue?: "misunderstood" | "did_not_load" | "wrong_behavior" | "missing_capability" | "mod_conflict" | "other";
+  downloaded?: boolean;
 }) {
   const attempts = options.repaired
     ? [{
@@ -66,6 +70,7 @@ function succeeded(options: {
       contentType: "application/zip",
       sizeBytes: 512,
     },
+    ...(options.downloaded ? { firstDownloadedAt: "2026-10-11T00:00:30.000Z" } : {}),
     telemetry: {
       durationMs: options.durationMs,
       attempts,
@@ -83,6 +88,9 @@ function succeeded(options: {
     },
     feedback: {
       rating: options.feedback,
+      ...(options.intentMatch === undefined ? {} : { intentMatch: options.intentMatch }),
+      ...(options.gameTest === undefined ? {} : { gameTest: options.gameTest }),
+      ...(options.mainIssue === undefined ? {} : { mainIssue: options.mainIssue }),
       createdAt: "2026-10-11T00:01:00.000Z",
     },
   });
@@ -99,6 +107,9 @@ describe("private-beta KPI report", () => {
         totalTokens: 100,
         estimatedCostUsd: 0.001,
         feedback: "up",
+        intentMatch: "yes",
+        gameTest: "worked",
+        downloaded: true,
       }),
       succeeded({
         id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
@@ -108,6 +119,9 @@ describe("private-beta KPI report", () => {
         totalTokens: 200,
         estimatedCostUsd: 0.002,
         feedback: "down",
+        intentMatch: "no",
+        gameTest: "failed",
+        mainIssue: "misunderstood",
       }),
       GenerationRecordSchema.parse({
         schemaVersion: 2,
@@ -172,6 +186,8 @@ describe("private-beta KPI report", () => {
       failed: 1,
       unsupported: 1,
       repairedSuccesses: 1,
+      downloadStarted: 1,
+      downloadStartRate: 0.5,
       medianPromptToResultMs: 2_000,
       medianFactorioValidationMs: 100,
     });
@@ -185,6 +201,22 @@ describe("private-beta KPI report", () => {
       succeededFeedbackDown: 1,
       succeededFeedbackCoverage: 1,
       reportedFalseSuccessRate: 0.5,
+      structuredSucceededFeedback: 2,
+      structuredFeedbackCoverage: 1,
+      intentYes: 1,
+      intentPartial: 0,
+      intentNo: 1,
+      gameWorked: 1,
+      gamePartly: 0,
+      gameFailed: 1,
+      gameNotTested: 0,
+      inGameTested: 2,
+      inGameTestCoverage: 1,
+      inGameWorkedRate: 0.5,
+      reportedRuntimeFailureRate: 0.5,
+      problemOutcomeCount: 1,
+      problemOutcomeRate: 0.5,
+      mainIssues: { misunderstood: 1 },
     });
     expect(report.willingnessToPay).toEqual({
       yes: 1,
@@ -201,6 +233,29 @@ describe("private-beta KPI report", () => {
     });
   });
 
+  it("counts a runtime problem even when the request intent was understood", () => {
+    const report = calculateBetaKpis({
+      provisionedUserIds: [userA],
+      generationRecords: [succeeded({
+        id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        prompt: "Create a reviewed machine",
+        repaired: false,
+        durationMs: 1_000,
+        totalTokens: 100,
+        feedback: "up",
+        intentMatch: "yes",
+        gameTest: "failed",
+        mainIssue: "wrong_behavior",
+      })],
+      surveyResponses: [],
+    });
+
+    expect(report.feedback.reportedFalseSuccessRate).toBe(0);
+    expect(report.feedback.reportedRuntimeFailureRate).toBe(1);
+    expect(report.feedback.problemOutcomeCount).toBe(1);
+    expect(report.feedback.problemOutcomeRate).toBe(1);
+  });
+
   it("returns null rates when there is no observed denominator", () => {
     const report = calculateBetaKpis({
       provisionedUserIds: [],
@@ -209,9 +264,15 @@ describe("private-beta KPI report", () => {
     });
     expect(report.generations.nonUnsupportedTerminalSuccessRate).toBeNull();
     expect(report.generations.directSuccessRate).toBeNull();
+    expect(report.generations.downloadStartRate).toBeNull();
     expect(report.generations.medianPromptToResultMs).toBeNull();
     expect(report.generations.medianFactorioValidationMs).toBeNull();
     expect(report.feedback.succeededFeedbackCoverage).toBeNull();
     expect(report.feedback.reportedFalseSuccessRate).toBeNull();
+    expect(report.feedback.structuredFeedbackCoverage).toBeNull();
+    expect(report.feedback.inGameTestCoverage).toBeNull();
+    expect(report.feedback.inGameWorkedRate).toBeNull();
+    expect(report.feedback.reportedRuntimeFailureRate).toBeNull();
+    expect(report.feedback.problemOutcomeRate).toBeNull();
   });
 });

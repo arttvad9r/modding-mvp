@@ -6,7 +6,7 @@ This document describes the implemented M6 private-beta service boundary and the
 
 `queued -> running -> succeeded | unsupported | failed`
 
-A generation is created before queue publication. Every record carries a monotonically increasing `revision`; repository updates use revision compare-and-set semantics so same-status updates such as feedback cannot silently overwrite each other. Workers claim only `queued` records. While execution is active, the worker refreshes `updatedAt` through revision CAS heartbeats. Terminal records are immutable except for bounded user feedback. Duplicate queue delivery after a terminal state is a no-op.
+A generation is created before queue publication. Every record carries a monotonically increasing `revision`; repository updates use revision compare-and-set semantics so same-status updates such as feedback cannot silently overwrite each other. Workers claim only `queued` records. While execution is active, the worker refreshes `updatedAt` through revision CAS heartbeats. Terminal records are immutable except for bounded user feedback and the first download-start timestamp. Duplicate queue delivery after a terminal state is a no-op.
 
 The queue message is versioned and contains only:
 
@@ -64,13 +64,18 @@ Returns the current generation state. Terminal states expose either artifact met
 
 ### `POST /v1/generations/:id/feedback`
 
-Request:
+Request (new structured beta clients):
 
 ```json
-{ "rating": "up", "note": "Installed and worked" }
+{
+  "intentMatch": "yes",
+  "gameTest": "worked",
+  "mainIssue": "other",
+  "note": "Installed and worked"
+}
 ```
 
-Feedback is accepted only for terminal generations. Notes are bounded to 2,000 characters.
+`intentMatch` is `yes | partial | no`; `gameTest` is `worked | partly | failed | not_tested`; `mainIssue` is optional and bounded to a reviewed diagnostic category. Legacy `{ rating: "up" | "down", note? }` requests remain accepted. Structured feedback is normalized to the existing `rating` field for backwards-compatible KPI history. Feedback is accepted only for terminal generations. Notes are bounded to 2,000 characters.
 
 ### Artifact download
 
@@ -112,11 +117,11 @@ API rate limits are backed by PostgreSQL fixed-window counters for both user ID 
 - `POST /v1/generations/:id/revise` — owner-scoped successful-generation follow-up; creates a new immutable child generation from the accepted ModSpec snapshot.
 - `POST /v1/generations/:id/feedback` — owner-scoped feedback for terminal results only.
 - `POST /v1/generations/:id/retry` — only for owner-scoped `failed` records whose typed error is retryable; creates a new queued generation with the same prompt and leaves the original terminal record unchanged.
-- `GET /v1/generations/:id/download` — owner-scoped 60-second presigned object URL only after success. Default clients receive a `302`; clients sending `Accept: application/json` receive `{ downloadUrl, expiresInSeconds }`, which lets the same-origin tester UI navigate to object storage without forwarding the bearer token.
+- `GET /v1/generations/:id/download` — owner-scoped 60-second presigned object URL only after success; the first authorized download request records `firstDownloadedAt` once as a funnel signal (it means download started/requested, not proof of installation). Default clients receive a `302`; clients sending `Accept: application/json` receive `{ downloadUrl, expiresInSeconds }`, which lets the same-origin tester UI navigate to object storage without forwarding the bearer token.
 - `POST /v1/survey` — authenticated per-user upsert of `{ willingnessToPay: "yes" | "maybe" | "no" }` for the private-beta willingness-to-pay hypothesis.
 
 ## Tester UI
-`GET /` serves the private-beta tester interface from the same `apps/web` process. The interface is bilingual English/Russian, selects Russian automatically for a Russian browser locale, exposes an explicit EN/RU switch, and stores only the non-secret language preference in `localStorage`; the beta bearer token remains only in tab-scoped `sessionStorage`. The page uses a three-step onboarding flow, explains the intentionally narrow prototype-stage beta scope and isolated base-game Factorio 2.0.77 validation boundary, offers language-matched known-good example prompts, loads the authenticated user's recent generations, submits prompts through the API, polls until terminal state, renders localized accepted typed changes plus a revision diff when applicable, explains unsupported/retryable outcomes, exposes the signed ZIP download on success, offers a natural-language follow-up form, records optional up/down feedback, and asks the explicit willingness-to-pay survey after success. Russian broad-category wording is covered by the same conservative no-partial-fulfillment guard as English wording. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.
+`GET /` serves the private-beta tester interface from the same `apps/web` process. The interface is bilingual English/Russian, selects Russian automatically for a Russian browser locale, exposes an explicit EN/RU switch, and stores only the non-secret language preference in `localStorage`; the beta bearer token remains only in tab-scoped `sessionStorage`. The page uses a three-step onboarding flow, explains the intentionally narrow prototype-stage beta scope and isolated base-game Factorio 2.0.77 validation boundary, offers language-matched known-good example prompts, loads the authenticated user's recent generations, submits prompts through the API, polls until terminal state, renders localized accepted typed changes plus a revision diff when applicable, explains unsupported/retryable outcomes, exposes the signed ZIP download on success, offers a natural-language follow-up form, records short structured intent/in-game feedback plus an optional issue/note, and asks the explicit willingness-to-pay survey after success. Russian broad-category wording is covered by the same conservative no-partial-fulfillment guard as English wording. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.
 
 ## Beta KPI report
-`pnpm beta:kpis` reads the deployment PostgreSQL database, excludes users with `metricsEligible=false` and all of their generations/surveys, and emits one JSON report covering active/provisioned testers, distinct-prompt repeat usage, supported terminal success, direct success without Repair, prompt-to-result and Factorio-validation medians, feedback coverage and the reported false-success proxy, willingness to pay, token/cost coverage, and Repair attempts. The report is observational; it does not mark M6 hypotheses as achieved until real beta data reaches their thresholds.
+`pnpm beta:kpis` reads the deployment PostgreSQL database, excludes users with `metricsEligible=false` and all of their generations/surveys, and emits one JSON report covering active/provisioned testers, distinct-prompt repeat usage, supported terminal success, direct success without Repair, prompt-to-result and Factorio-validation medians, download-start conversion, feedback coverage, intent-match counts, in-game test coverage/worked/runtime-failure signals, a structured problem-outcome rate (intent mismatch or partly/failed in-game result), the legacy reported false-success proxy, willingness to pay, token/cost coverage, and Repair attempts. The report is observational; it does not mark M6 hypotheses as achieved until real beta data reaches their thresholds.

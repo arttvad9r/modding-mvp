@@ -4,6 +4,9 @@ import { ModSpecSchema, ProjectError, normalizeProjectError, type ModSpec } from
 import { z } from "zod";
 
 import {
+  FeedbackGameTestSchema,
+  FeedbackIntentMatchSchema,
+  FeedbackMainIssueSchema,
   GenerationFeedbackSchema,
   GenerationIdSchema,
   GenerationRecordSchema,
@@ -157,6 +160,9 @@ const FeedbackInputSchema = z.strictObject({
   generationId: GenerationIdSchema,
   userId: UserIdSchema,
   rating: z.enum(["up", "down"]),
+  intentMatch: FeedbackIntentMatchSchema.optional(),
+  gameTest: FeedbackGameTestSchema.optional(),
+  mainIssue: FeedbackMainIssueSchema.optional(),
   note: z.string().trim().min(1).max(2_000).optional(),
 });
 
@@ -165,6 +171,9 @@ export interface RecordGenerationFeedbackOptions {
   readonly generationId: string;
   readonly userId: string;
   readonly rating: "up" | "down";
+  readonly intentMatch?: "yes" | "partial" | "no";
+  readonly gameTest?: "worked" | "partly" | "failed" | "not_tested";
+  readonly mainIssue?: "misunderstood" | "did_not_load" | "wrong_behavior" | "missing_capability" | "mod_conflict" | "other";
   readonly note?: string;
   readonly now?: () => Date;
 }
@@ -176,6 +185,9 @@ export async function recordGenerationFeedback(
     generationId: options.generationId,
     userId: options.userId,
     rating: options.rating,
+    ...(options.intentMatch === undefined ? {} : { intentMatch: options.intentMatch }),
+    ...(options.gameTest === undefined ? {} : { gameTest: options.gameTest }),
+    ...(options.mainIssue === undefined ? {} : { mainIssue: options.mainIssue }),
     ...(options.note === undefined ? {} : { note: options.note }),
   });
   const now = options.now ?? (() => new Date());
@@ -208,6 +220,9 @@ export async function recordGenerationFeedback(
     const timestamp = now().toISOString();
     const feedback = GenerationFeedbackSchema.parse({
       rating: input.rating,
+      ...(input.intentMatch === undefined ? {} : { intentMatch: input.intentMatch }),
+      ...(input.gameTest === undefined ? {} : { gameTest: input.gameTest }),
+      ...(input.mainIssue === undefined ? {} : { mainIssue: input.mainIssue }),
       ...(input.note === undefined ? {} : { note: input.note }),
       createdAt: timestamp,
     });
@@ -224,6 +239,40 @@ export async function recordGenerationFeedback(
     code: "process_error",
     stage: "process",
     message: "Generation changed concurrently while recording feedback",
+    retryable: true,
+  });
+}
+
+export async function markGenerationDownloadStarted(
+  repository: GenerationRepository,
+  generationId: string,
+  userId: string,
+  now: () => Date = () => new Date(),
+): Promise<GenerationRecord> {
+  const id = GenerationIdSchema.parse(generationId);
+  const ownerId = UserIdSchema.parse(userId);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = await repository.get(id);
+    if (current === null || current.userId !== ownerId) {
+      throw new ProjectError({ code: "input_error", stage: "input", message: `Generation not found: ${id}` });
+    }
+    if (current.status !== "succeeded") {
+      throw new ProjectError({ code: "input_error", stage: "input", message: "Only successful generations can be downloaded" });
+    }
+    if (current.firstDownloadedAt !== undefined) return current;
+    const timestamp = now().toISOString();
+    const next = GenerationRecordSchema.parse({
+      ...current,
+      revision: current.revision + 1,
+      updatedAt: timestamp,
+      firstDownloadedAt: timestamp,
+    });
+    if (await repository.compareAndSet(current.id, current.revision, next)) return next;
+  }
+  throw new ProjectError({
+    code: "process_error",
+    stage: "process",
+    message: "Generation changed concurrently while recording download",
     retryable: true,
   });
 }

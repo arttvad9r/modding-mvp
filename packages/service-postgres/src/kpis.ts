@@ -36,6 +36,8 @@ export interface BetaKpiReport {
     readonly nonUnsupportedTerminalSuccessRate: number | null;
     readonly directSuccessRate: number | null;
     readonly repairedSuccesses: number;
+    readonly downloadStarted: number;
+    readonly downloadStartRate: number | null;
     readonly medianPromptToResultMs: number | null;
     readonly medianFactorioValidationMs: number | null;
   };
@@ -47,6 +49,22 @@ export interface BetaKpiReport {
     readonly succeededFeedbackDown: number;
     readonly succeededFeedbackCoverage: number | null;
     readonly reportedFalseSuccessRate: number | null;
+    readonly structuredSucceededFeedback: number;
+    readonly structuredFeedbackCoverage: number | null;
+    readonly intentYes: number;
+    readonly intentPartial: number;
+    readonly intentNo: number;
+    readonly gameWorked: number;
+    readonly gamePartly: number;
+    readonly gameFailed: number;
+    readonly gameNotTested: number;
+    readonly inGameTested: number;
+    readonly inGameTestCoverage: number | null;
+    readonly inGameWorkedRate: number | null;
+    readonly reportedRuntimeFailureRate: number | null;
+    readonly problemOutcomeCount: number;
+    readonly problemOutcomeRate: number | null;
+    readonly mainIssues: Readonly<Record<string, number>>;
   };
   readonly willingnessToPay: {
     readonly yes: number;
@@ -94,10 +112,21 @@ export function calculateBetaKpis(
   const validationDurations: number[] = [];
   let directSucceeded = 0;
   let repairedSuccesses = 0;
+  let downloadStarted = 0;
   let feedbackUp = 0;
   let feedbackDown = 0;
   let succeededWithFeedback = 0;
   let succeededFeedbackDown = 0;
+  let structuredSucceededFeedback = 0;
+  let intentYes = 0;
+  let intentPartial = 0;
+  let intentNo = 0;
+  let gameWorked = 0;
+  let gamePartly = 0;
+  let gameFailed = 0;
+  let gameNotTested = 0;
+  let problemOutcomeCount = 0;
+  const mainIssues: Record<string, number> = {};
   let totalTokens = 0;
   let estimatedCostUsd = 0;
   let costCoverageGenerations = 0;
@@ -125,19 +154,37 @@ export function calculateBetaKpis(
     }
 
     if (record.status === "succeeded") {
+      if (record.firstDownloadedAt !== undefined) downloadStarted += 1;
       if (record.telemetry.validation?.repaired === false) directSucceeded += 1;
       if (record.telemetry.validation?.repaired === true) repairedSuccesses += 1;
       if (record.feedback !== undefined) {
         succeededWithFeedback += 1;
         if (record.feedback.rating === "down") succeededFeedbackDown += 1;
+        if (record.feedback.intentMatch !== undefined) {
+          structuredSucceededFeedback += 1;
+          const intentProblem = record.feedback.intentMatch !== "yes";
+          const gameProblem = record.feedback.gameTest === "partly" || record.feedback.gameTest === "failed";
+          if (intentProblem || gameProblem) problemOutcomeCount += 1;
+        }
       }
     }
 
+    if (record.feedback?.intentMatch === "yes") intentYes += 1;
+    if (record.feedback?.intentMatch === "partial") intentPartial += 1;
+    if (record.feedback?.intentMatch === "no") intentNo += 1;
+    if (record.feedback?.gameTest === "worked") gameWorked += 1;
+    if (record.feedback?.gameTest === "partly") gamePartly += 1;
+    if (record.feedback?.gameTest === "failed") gameFailed += 1;
+    if (record.feedback?.gameTest === "not_tested") gameNotTested += 1;
+    if (record.feedback?.mainIssue !== undefined) {
+      mainIssues[record.feedback.mainIssue] = (mainIssues[record.feedback.mainIssue] ?? 0) + 1;
+    }
     if (record.feedback?.rating === "up") feedbackUp += 1;
     if (record.feedback?.rating === "down") feedbackDown += 1;
   }
 
   const repeatWithTwoDistinctPrompts = [...promptsByUser.values()].filter((prompts) => prompts.size >= 2).length;
+  const inGameTested = gameWorked + gamePartly + gameFailed;
   const supportedTerminal = byStatus.succeeded + byStatus.failed;
   const surveyCounts = { yes: 0, maybe: 0, no: 0 };
   for (const response of input.surveyResponses) surveyCounts[response.willingnessToPay] += 1;
@@ -161,6 +208,8 @@ export function calculateBetaKpis(
       nonUnsupportedTerminalSuccessRate: ratio(byStatus.succeeded, supportedTerminal),
       directSuccessRate: ratio(directSucceeded, supportedTerminal),
       repairedSuccesses,
+      downloadStarted,
+      downloadStartRate: ratio(downloadStarted, byStatus.succeeded),
       medianPromptToResultMs: median(terminalDurations),
       medianFactorioValidationMs: median(validationDurations),
     },
@@ -172,6 +221,22 @@ export function calculateBetaKpis(
       succeededFeedbackDown,
       succeededFeedbackCoverage: ratio(succeededWithFeedback, byStatus.succeeded),
       reportedFalseSuccessRate: ratio(succeededFeedbackDown, succeededWithFeedback),
+      structuredSucceededFeedback,
+      structuredFeedbackCoverage: ratio(structuredSucceededFeedback, byStatus.succeeded),
+      intentYes,
+      intentPartial,
+      intentNo,
+      gameWorked,
+      gamePartly,
+      gameFailed,
+      gameNotTested,
+      inGameTested,
+      inGameTestCoverage: ratio(inGameTested, byStatus.succeeded),
+      inGameWorkedRate: ratio(gameWorked, inGameTested),
+      reportedRuntimeFailureRate: ratio(gameFailed, inGameTested),
+      problemOutcomeCount,
+      problemOutcomeRate: ratio(problemOutcomeCount, structuredSucceededFeedback),
+      mainIssues,
     },
     willingnessToPay: {
       ...surveyCounts,

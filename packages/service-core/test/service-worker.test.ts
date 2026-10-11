@@ -492,13 +492,16 @@ describe("service feedback", () => {
       generationId,
       userId,
       rating: "down",
+      intentMatch: "partial",
+      gameTest: "not_tested",
+      mainIssue: "missing_capability",
       note: "Need runtime scripting",
       now: () => fixedDate,
     });
     expect(updated).toMatchObject({
       status: "unsupported",
       revision: 3,
-      feedback: { rating: "down", note: "Need runtime scripting" },
+      feedback: { rating: "down", intentMatch: "partial", gameTest: "not_tested", mainIssue: "missing_capability", note: "Need runtime scripting" },
     });
   });
 });

@@ -3,7 +3,7 @@
 ## Purpose
 Build a service that turns a natural-language request into a validated, installable Factorio mod for a user who does not need to know Lua or the Factorio mod API.
 
-The public product name is intentionally undecided.
+The current beta-facing product name is **MyModz**. It is still treated as a temporary name; internal repository/runtime identifiers do not need to match it yet.
 
 ## MVP promise
 For a supported request, the user should be able to:
@@ -93,7 +93,9 @@ For every generation record:
 - duration per stage;
 - LLM token usage and estimated cost when LLMs are introduced;
 - Factorio test duration;
-- user feedback on whether the downloaded mod worked.
+- first authorized ZIP download-start timestamp;
+- structured user feedback on whether MyModz understood the request and what happened when the ZIP was tried in Factorio;
+- optional main-issue category and free-form note.
 
 Pricing decisions should be based on this observed unit economics and user behavior rather than assumed cost per generated mod.
 
@@ -103,5 +105,7 @@ Pricing decisions should be based on this observed unit economics and user behav
 - A repeat tester has submitted at least two **distinct prompts**; an explicit retry of the same prompt does not count as a second mod.
 - Supported terminal success rate is `succeeded / (succeeded + failed)`; `unsupported` requests are reported separately rather than weakening the supported-set denominator.
 - Direct-success rate uses the same denominator and counts only succeeded generations whose validation telemetry reports no Repair.
-- `reportedFalseSuccessRate` is the share of succeeded generations with feedback that received `down`/"Needs work" feedback. It is a product-signal proxy, not ground-truth false-success, and must always be read together with succeeded-feedback coverage.
+- Download-start rate is the share of succeeded generations for which the user requested an authorized ZIP download; it is not proof that the ZIP was installed or launched.
+- Structured succeeded feedback records `intentMatch = yes | partial | no` and optional `gameTest = worked | partly | failed | not_tested`; in-game worked/runtime-failure rates are reported only over users who explicitly tested the ZIP. `problemOutcomeRate` additionally counts structured succeeded feedback where intent is partial/no or the in-game result is partly/failed, so an understood request that breaks at runtime is not hidden by the legacy rating. A structured problem outcome is counted when intent is not `yes` or an explicit in-game result is `partly`/`failed`.
+- `reportedFalseSuccessRate` remains the backwards-compatible share of succeeded generations whose normalized feedback rating is `down`; it is a broad product-signal proxy and must always be read together with structured-feedback coverage and the more specific intent/in-game metrics.
 - Willingness to pay is an explicit per-user beta survey (`yes | maybe | no`); the initial hypothesis is reached only by `yes` responses.

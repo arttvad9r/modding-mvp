@@ -453,9 +453,15 @@ describe("private-beta HTTP API", () => {
     const feedback = await fetch(`${api.baseUrl}/v1/generations/${queued.id}/feedback`, {
       method: "POST",
       headers: auth(api.token),
-      body: JSON.stringify({ rating: "up", note: "Installed" }),
+      body: JSON.stringify({ intentMatch: "yes", gameTest: "worked", note: "Installed" }),
     });
     expect(feedback.status).toBe(200);
+    const feedbackBody = (await feedback.json()) as { generation: { feedback?: unknown } };
+    expect(feedbackBody.generation.feedback).toMatchObject({
+      rating: "up",
+      intentMatch: "yes",
+      gameTest: "worked",
+    });
 
     const download = await fetch(`${api.baseUrl}/v1/generations/${queued.id}/download`, {
       headers: auth(api.token),
@@ -472,6 +478,9 @@ describe("private-beta HTTP API", () => {
       downloadUrl: expect.stringContaining("download.invalid"),
       expiresInSeconds: 60,
     });
+    const downloadedRecord = api.repository.records.get(queued.id);
+    expect(downloadedRecord).toMatchObject({ firstDownloadedAt: "2026-10-11T00:00:00.000Z" });
+
     expect(api.signer.keys).toEqual([
       `generations/${queued.id}/faster-steel-furnaces_0.1.0.zip`,
       `generations/${queued.id}/faster-steel-furnaces_0.1.0.zip`,

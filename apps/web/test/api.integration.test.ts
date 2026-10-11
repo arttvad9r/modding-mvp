@@ -198,6 +198,9 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       const artifactResponse = await fetch(downloadBody.downloadUrl);
       expect(artifactResponse.status).toBe(200);
       expect((await artifactResponse.arrayBuffer()).byteLength).toBe(generation.artifact.sizeBytes);
+      const downloadedGenerationResponse = await fetch(`${baseUrl}/v1/generations/${created.generation.id}`, { headers });
+      const downloadedGeneration = (await downloadedGenerationResponse.json()) as { generation: { firstDownloadedAt?: string } };
+      expect(downloadedGeneration.generation.firstDownloadedAt).toBeTruthy();
 
       const reviseResponse = await fetch(
         `${baseUrl}/v1/generations/${created.generation.id}/revise`,
@@ -248,12 +251,12 @@ describe("private-beta HTTP API through real service infrastructure", () => {
         {
           method: "POST",
           headers,
-          body: JSON.stringify({ rating: "up", note: "API integration install passed" }),
+          body: JSON.stringify({ intentMatch: "yes", gameTest: "worked", note: "API integration install passed" }),
         },
       );
       expect(feedbackResponse.status).toBe(200);
-      const feedback = (await feedbackResponse.json()) as { generation: { feedback: { rating: string } } };
-      expect(feedback.generation.feedback.rating).toBe("up");
+      const feedback = (await feedbackResponse.json()) as { generation: { feedback: { rating: string; intentMatch?: string; gameTest?: string } } };
+      expect(feedback.generation.feedback).toMatchObject({ rating: "up", intentMatch: "yes", gameTest: "worked" });
 
       const surveyResponse = await fetch(`${baseUrl}/v1/survey`, {
         method: "POST",
