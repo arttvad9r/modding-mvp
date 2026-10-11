@@ -144,7 +144,7 @@ Exit criteria:
 - Planner mixed-request eval remains above the existing classification/semantic development gates.
 
 ## M6B — Content Mods before external beta
-Status: in progress.
+Status: complete (2026-10-11).
 
 Goal: make the product capable of creating meaningful new Factorio content, not only changing existing values, while preserving deterministic typed generation and real-runtime semantic validation.
 
@@ -171,16 +171,12 @@ Implemented content slices are `new_item`, `new_recipe`, and `new_machine`, and 
 - unlock via an existing reviewed technology or one new bounded technology;
 - semantically validate recipe shape and unlock in real Factorio.
 
-Exit criteria for these slices:
-- deterministic `new_machine` ModSpec builds a validated installable ZIP in Factorio 2.0.77;
-- Planner can extract representative EN/RU machine-creation requests at the normal live eval gates;
-- UI clearly shows created-machine intent and no longer claims all new entities are unsupported;
-- full typecheck/unit/build/real-Factorio/service E2E remains green.
+Exit review: **passed**. Deterministic `new_item` / `new_recipe` / `new_machine` bundles and linked content trees build validated installable ZIPs in Factorio 2.0.77; the final live Planner gate passes **53/53 classification and 34/34 exact supported ModSpecs**; the bilingual UI exposes material/recipe/machine/content-chain examples and structured accepted-change/revision-diff output; full typecheck/unit/build/real-Factorio/service E2E remains green. Runtime source `793f1be` is deployed tailnet-only on the home server with restart=0/OOM=false, apps-health OK, and verify-stack 30 OK / 0 warnings / 0 failures.
 
 M6B stops at this bounded data-stage content graph for the first external beta. Arbitrary `control.lua` and generated/custom assets are separate later stages because the current validation boundary does not prove runtime-event behavior, save/multiplayer behavior, or media correctness.
 
 ## M6 — Private beta service
-Status: in progress; M6A passed and M6B content-value work now precedes public recruitment.
+Status: in progress; M6A and M6B passed, so the next gate is the first external player cohort/public ingress.
 
 Goal: validate product usefulness with real Factorio players after the M6A trust gate and M6B content-value expansion.
 
