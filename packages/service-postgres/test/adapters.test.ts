@@ -1,14 +1,20 @@
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
-import { GENERATION_QUEUE_NAME, generations } from "../src/index.js";
+import {
+  GENERATION_QUEUE_NAME,
+  generations,
+  rateLimitBuckets,
+  serviceUsers,
+} from "../src/index.js";
 
 describe("service-postgres schema", () => {
-  it("keeps generation CAS/status columns and indexes explicit", () => {
+  it("keeps generation ownership/CAS/status columns and indexes explicit", () => {
     const config = getTableConfig(generations);
     expect(config.name).toBe("generations");
     expect(config.columns.map((column) => column.name)).toEqual([
       "id",
+      "user_id",
       "revision",
       "status",
       "prompt",
@@ -19,11 +25,38 @@ describe("service-postgres schema", () => {
     expect(config.indexes.map((index) => index.config.name).sort()).toEqual([
       "generations_status_created_idx",
       "generations_updated_idx",
+      "generations_user_created_idx",
     ]);
+    expect(config.foreignKeys).toHaveLength(1);
     expect(config.checks.map((check) => check.name).sort()).toEqual([
       "generations_revision_nonnegative",
       "generations_status_valid",
     ]);
+  });
+
+  it("keeps beta-user token hashes and shared rate-limit buckets explicit", () => {
+    const users = getTableConfig(serviceUsers);
+    expect(users.columns.map((column) => column.name)).toEqual([
+      "id",
+      "label",
+      "token_hash",
+      "created_at",
+      "disabled_at",
+    ]);
+    expect(users.indexes.map((index) => index.config.name).sort()).toEqual([
+      "service_users_created_idx",
+      "service_users_token_hash_uidx",
+    ]);
+
+    const limits = getTableConfig(rateLimitBuckets);
+    expect(limits.columns.map((column) => column.name)).toEqual([
+      "key",
+      "window_start",
+      "count",
+      "updated_at",
+    ]);
+    expect(limits.primaryKeys).toHaveLength(1);
+    expect(limits.checks.map((check) => check.name)).toEqual(["rate_limit_count_positive"]);
   });
 
   it("uses one stable generation queue name", () => {

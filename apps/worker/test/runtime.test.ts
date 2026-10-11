@@ -24,13 +24,16 @@ class MemoryRepository implements GenerationRepository {
   async listRunningUpdatedBefore() { return []; }
 }
 
+const userId = "00000000-0000-4000-8000-000000000001";
+
 describe("generation worker runtime", () => {
   it("registers pg-boss work, processes the generation, and stops cleanly", async () => {
     const id = "99999999-9999-4999-8999-999999999999";
     const repository = new MemoryRepository();
     repository.records.set(id, GenerationRecordSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       id,
+      userId,
       revision: 0,
       prompt: "unsupported runtime request",
       status: "queued",

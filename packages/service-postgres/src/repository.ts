@@ -15,6 +15,7 @@ function rowToRecord(row: GenerationRow): GenerationRecord {
   const record = GenerationRecordSchema.parse(row.record);
   if (
     record.id !== row.id ||
+    record.userId !== row.userId ||
     record.revision !== row.revision ||
     record.status !== row.status ||
     record.prompt !== row.prompt ||
@@ -29,6 +30,7 @@ function rowToRecord(row: GenerationRow): GenerationRecord {
 export function generationRecordValues(record: GenerationRecord) {
   return {
     id: record.id,
+    userId: record.userId,
     revision: record.revision,
     status: record.status,
     prompt: record.prompt,

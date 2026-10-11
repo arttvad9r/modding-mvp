@@ -14,8 +14,10 @@ import {
   type GenerationSubmissionStore,
   type QueuedGenerationRecord,
 } from "./contracts.js";
+import { UserIdSchema } from "./auth.js";
 
 interface QueuedGenerationInput {
+  readonly userId: string;
   readonly prompt: string;
   readonly generationId?: () => string;
   readonly now?: () => Date;
@@ -23,11 +25,13 @@ interface QueuedGenerationInput {
 
 function createQueuedGeneration(input: QueuedGenerationInput): QueuedGenerationRecord {
   const request = SubmitGenerationRequestSchema.parse({ prompt: input.prompt });
+  const userId = UserIdSchema.parse(input.userId);
   const id = GenerationIdSchema.parse((input.generationId ?? randomUUID)());
   const timestamp = (input.now ?? (() => new Date()))().toISOString();
   return GenerationRecordSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     id,
+    userId,
     revision: 0,
     prompt: request.prompt,
     status: "queued",
@@ -122,8 +126,19 @@ export async function findGeneration(
   return record === null ? null : GenerationRecordSchema.parse(record);
 }
 
+export async function findGenerationForUser(
+  repository: GenerationRepository,
+  generationId: string,
+  userId: string,
+): Promise<GenerationRecord | null> {
+  const ownerId = UserIdSchema.parse(userId);
+  const record = await findGeneration(repository, generationId);
+  return record === null || record.userId !== ownerId ? null : record;
+}
+
 const FeedbackInputSchema = z.strictObject({
   generationId: GenerationIdSchema,
+  userId: UserIdSchema,
   rating: z.enum(["up", "down"]),
   note: z.string().trim().min(1).max(2_000).optional(),
 });
@@ -131,6 +146,7 @@ const FeedbackInputSchema = z.strictObject({
 export interface RecordGenerationFeedbackOptions {
   readonly repository: GenerationRepository;
   readonly generationId: string;
+  readonly userId: string;
   readonly rating: "up" | "down";
   readonly note?: string;
   readonly now?: () => Date;
@@ -141,6 +157,7 @@ export async function recordGenerationFeedback(
 ): Promise<GenerationRecord> {
   const input = FeedbackInputSchema.parse({
     generationId: options.generationId,
+    userId: options.userId,
     rating: options.rating,
     ...(options.note === undefined ? {} : { note: options.note }),
   });
@@ -156,6 +173,13 @@ export async function recordGenerationFeedback(
       });
     }
     const parsed = GenerationRecordSchema.parse(current);
+    if (parsed.userId !== input.userId) {
+      throw new ProjectError({
+        code: "input_error",
+        stage: "input",
+        message: `Generation not found: ${input.generationId}`,
+      });
+    }
     if (parsed.status === "queued" || parsed.status === "running") {
       throw new ProjectError({
         code: "input_error",

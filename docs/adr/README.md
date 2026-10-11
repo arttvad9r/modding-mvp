@@ -45,3 +45,4 @@ Do not create an ADR merely for:
 - [ADR-0010: Bounded data.lua-only Repair preserves accepted ModSpec](0010-bounded-data-lua-repair.md)
 - [ADR-0011: Private-beta generation uses an asynchronous API/worker boundary](0011-async-service-worker-boundary.md)
 - [ADR-0012: Private beta uses PostgreSQL + pg-boss + Drizzle and S3-compatible artifact storage](0012-private-beta-postgres-queue-storage.md)
+- [ADR-0013: Private beta uses opaque bearer tokens, owned generations, and PostgreSQL rate limits](0013-private-beta-token-auth-and-ownership.md)

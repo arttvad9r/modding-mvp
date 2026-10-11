@@ -19,6 +19,7 @@ import {
   type ServiceGenerationExecution,
 } from "../src/index.js";
 
+const userId = "00000000-0000-4000-8000-000000000001";
 const generationId = "11111111-1111-4111-8111-111111111111";
 const fixedDate = new Date("2026-10-11T00:00:00.000Z");
 
@@ -139,6 +140,7 @@ class FixedExecutor implements GenerationExecutor {
 
 async function queued(repository: MemoryRepository, queue = new MemoryQueue()) {
   return submitGeneration({
+    userId,
     repository,
     queue,
     prompt: "Make steel furnaces twice as fast",
@@ -348,8 +350,9 @@ describe("generation worker state machine", () => {
   it("recovers only stale running generations with compare-and-set protection", async () => {
     const repository = new MemoryRepository();
     const stale = GenerationRecordSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       id: generationId,
+      userId,
       revision: 4,
       prompt: "stale generation",
       status: "running",
@@ -422,6 +425,7 @@ describe("service feedback", () => {
       recordGenerationFeedback({
         repository,
         generationId,
+        userId,
         rating: "up",
         now: () => fixedDate,
       }),
@@ -438,6 +442,7 @@ describe("service feedback", () => {
     const updated = await recordGenerationFeedback({
       repository,
       generationId,
+      userId,
       rating: "down",
       note: "Need runtime scripting",
       now: () => fixedDate,

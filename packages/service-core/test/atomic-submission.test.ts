@@ -7,6 +7,7 @@ import {
   type QueuedGenerationRecord,
 } from "../src/index.js";
 
+const userId = "00000000-0000-4000-8000-000000000001";
 const generationId = "44444444-4444-4444-8444-444444444444";
 const now = new Date("2026-10-11T00:00:00.000Z");
 
@@ -24,6 +25,7 @@ describe("atomic generation submission", () => {
   it("delegates the queued record and matching id-only job as one store operation", async () => {
     const store = new CapturingSubmissionStore();
     const result = await submitGenerationAtomically({
+      userId,
       submissionStore: store,
       prompt: "Make steel furnaces twice as fast",
       generationId: () => generationId,
@@ -45,6 +47,7 @@ describe("atomic generation submission", () => {
 
     await expect(
       submitGenerationAtomically({
+      userId,
         submissionStore: store,
         prompt: "Make steel furnaces twice as fast",
         generationId: () => generationId,

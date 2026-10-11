@@ -8,6 +8,8 @@ import { promisify } from "node:util";
 
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import {
+  authenticateAccessToken,
+  createServiceUser,
   submitGeneration,
   submitGenerationAtomically,
   type GenerationRecord,
@@ -19,6 +21,8 @@ import {
   PgBossGenerationQueue,
   PostgresGenerationRepository,
   PostgresGenerationSubmissionStore,
+  PostgresRateLimitStore,
+  PostgresServiceUserRepository,
   createServicePostgresClient,
 } from "../src/index.js";
 
@@ -27,6 +31,7 @@ const packageRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const repositoryRoot = path.resolve(packageRoot, "../..");
 const defaultBinDir = path.join(repositoryRoot, ".tools/postgresql/18.6/bin");
 const binDir = process.env.PROJECT_POSTGRES_BIN_DIR ?? defaultBinDir;
+const userId = "00000000-0000-4000-8000-000000000001";
 
 async function withStepTimeout<T>(label: string, promise: Promise<T>, timeoutMs = 10_000): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
@@ -66,6 +71,7 @@ describe("PostgreSQL service adapters", () => {
   let connectionString: string;
   let client: ReturnType<typeof createServicePostgresClient>;
   let queue: PgBossGenerationQueue;
+  let accessToken: string;
 
   beforeAll(async () => {
     workRoot = await mkdtemp(path.join(os.tmpdir(), "modding-service-postgres-"));
@@ -106,6 +112,15 @@ describe("PostgreSQL service adapters", () => {
       migrate(client.db, { migrationsFolder: path.join(packageRoot, "drizzle") }),
     );
 
+    const createdUser = createServiceUser({
+      label: "Postgres integration tester",
+      userId: () => userId,
+      token: () => "beta_postgres_integration_token_1234567890abcdef",
+      now: () => new Date("2026-10-11T00:00:00.000Z"),
+    });
+    accessToken = createdUser.accessToken;
+    await new PostgresServiceUserRepository(client.db).insert(createdUser.user);
+
     queue = new PgBossGenerationQueue({ connectionString, schema: "project_pgboss" });
     await withStepTimeout("pg-boss start", queue.start());
   }, 30_000);
@@ -121,12 +136,41 @@ describe("PostgreSQL service adapters", () => {
     if (workRoot) await rm(workRoot, { recursive: true, force: true });
   }, 30_000);
 
+  it("authenticates hashed beta tokens and enforces a shared PostgreSQL rate-limit bucket", async () => {
+    const users = new PostgresServiceUserRepository(client.db);
+    await expect(authenticateAccessToken(users, accessToken)).resolves.toMatchObject({ id: userId });
+
+    const limiter = new PostgresRateLimitStore(client.db);
+    const now = new Date("2026-10-11T00:00:10.000Z");
+    await expect(limiter.consume({ key: `user:${userId}:create`, limit: 2, windowMs: 60_000, now })).resolves.toMatchObject({
+      allowed: true,
+      remaining: 1,
+    });
+    await expect(limiter.consume({ key: `user:${userId}:create`, limit: 2, windowMs: 60_000, now })).resolves.toMatchObject({
+      allowed: true,
+      remaining: 0,
+    });
+    await expect(limiter.consume({ key: `user:${userId}:create`, limit: 2, windowMs: 60_000, now })).resolves.toMatchObject({
+      allowed: false,
+      remaining: 0,
+    });
+    await expect(
+      limiter.consume({
+        key: `user:${userId}:create`,
+        limit: 2,
+        windowMs: 60_000,
+        now: new Date("2026-10-11T00:01:00.000Z"),
+      }),
+    ).resolves.toMatchObject({ allowed: true, remaining: 1 });
+  });
+
   it("migrates, persists/reloads records with revision CAS, and round-trips pg-boss jobs", async () => {
     const repository = new PostgresGenerationRepository(client.db);
     const generationId = "33333333-3333-4333-8333-333333333333";
     const now = new Date("2026-10-11T00:00:00.000Z");
 
     const queued = await submitGeneration({
+      userId,
       repository,
       queue,
       prompt: "Make steel furnaces twice as fast",
@@ -166,6 +210,7 @@ describe("PostgreSQL service adapters", () => {
     const successId = "55555555-5555-4555-8555-555555555555";
 
     const accepted = await submitGenerationAtomically({
+      userId,
       submissionStore,
       prompt: "Double automation research cost",
       generationId: () => successId,
@@ -180,6 +225,7 @@ describe("PostgreSQL service adapters", () => {
     const rolledBackId = "66666666-6666-4666-8666-666666666666";
     await expect(
       submitGenerationAtomically({
+        userId,
         submissionStore,
         prompt: "Double logistics research cost",
         generationId: () => rolledBackId,

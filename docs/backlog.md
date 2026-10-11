@@ -195,8 +195,10 @@ Before starting M2:
 - [x] Adapt M5 `runLocalFactorioGeneration` into the service `GenerationExecutor` without exposing local `.runs` persistence.
 - [x] Add executable pg-boss worker process consuming generation jobs and preserving typed terminal outcomes/telemetry.
 - [x] Add Docker-backed full service integration: atomic submit -> pg-boss worker -> real Factorio -> S3-compatible upload -> persisted success -> presigned download.
-- [ ] Add `POST /v1/generations`, `GET /v1/generations/:id`, and terminal feedback endpoint.
-- [ ] Add basic authentication and per-user/IP rate limits for private beta.
+- [x] Add authenticated `POST /v1/generations`, `GET /v1/generations/:id`, terminal feedback, and signed-download endpoints.
+- [x] Add ADR-0013 for private-beta token auth, generation ownership, and PostgreSQL rate limits.
+- [x] Add operator CLI for creating beta users/tokens and a versioned migration CLI.
+- [x] Add operator-provisioned opaque bearer tokens stored only as SHA-256 hashes, generation ownership, and PostgreSQL per-user/salted-IP rate limits.
 - [x] Add running-generation heartbeat and CAS-safe stale-running recovery to retryable `failed`.
 - [ ] Add explicit retry/requeue policy before deployment.
 

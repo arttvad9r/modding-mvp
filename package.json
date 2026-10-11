@@ -20,7 +20,10 @@
     "service:infra:up": "docker compose -f infra/compose.integration.yaml up -d --pull missing",
     "service:infra:down": "docker compose -f infra/compose.integration.yaml down -v --remove-orphans",
     "test:service-integration": "bash scripts/with-service-infra.sh bash scripts/run-service-integration.sh",
-    "worker:start": "pnpm --filter @project/worker start"
+    "worker:start": "pnpm --filter @project/worker start",
+    "db:migrate": "pnpm --filter @project/service-postgres db:migrate",
+    "api:start": "pnpm --filter @project/web start",
+    "beta:user:create": "pnpm --filter @project/web user:create --"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

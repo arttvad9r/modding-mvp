@@ -187,7 +187,7 @@ Worker rules:
 7. treat terminal redelivery as idempotent and do not execute already-running work again;
 8. allow a separate CAS-safe recovery pass to mark genuinely stale running records as retryable process failures without silently requeueing them.
 
-The service record retains prompt, accepted ModSpec when applicable, Planner/Repair attempt metadata, aggregate usage/cost, validation state, typed failures, artifact metadata, and bounded user feedback. `packages/factorio-service-executor` implements the service executor port by running M5 under a fresh temporary root, returning validated ZIP bytes plus mapped service telemetry, and deleting temporary M5 reports/artifacts before returning. See `docs/service-contract.md` and ADR-0011.
+The service record retains immutable `userId`, prompt, accepted ModSpec when applicable, Planner/Repair attempt metadata, aggregate usage/cost, validation state, typed failures, artifact metadata, and bounded user feedback. The persisted generation-record contract is currently `schemaVersion: 2`; the pg-boss generation-job payload remains independently versioned at schema version 1 because its shape did not change when ownership was added. `packages/factorio-service-executor` implements the service executor port by running M5 under a fresh temporary root, returning validated ZIP bytes plus mapped service telemetry, and deleting temporary M5 reports/artifacts before returning. See `docs/service-contract.md` and ADR-0011.
 
 Private-beta adapter defaults from ADR-0012:
 - PostgreSQL for durable service state;
@@ -195,10 +195,18 @@ Private-beta adapter defaults from ADR-0012:
 - pg-boss for asynchronous jobs in the same PostgreSQL deployment;
 - private S3-compatible object storage via AWS SDK v3 semantics for validated ZIP artifacts.
 
-Production migrations are versioned Drizzle migrations; schema push at application startup is not the production migration policy. `packages/service-postgres` stores the runtime-validated record JSON alongside indexed id/status/revision/timestamps and performs optimistic updates by revision. API submission can use `PostgresGenerationSubmissionStore`, which inserts the queued row and calls pg-boss `send()` through `fromDrizzle(tx, sql)` inside one transaction. The integration test proves a queue failure rolls the row back. A checksum-pinned PostgreSQL 18.6 source build under `.tools/` is used only for reproducible local integration tests. `packages/service-s3` uploads only runtime-validated ZIP keys/names through AWS SDK v3 PutObject. Generation records persist only private object metadata; downloads are generated on demand as 30–900 second presigned GetObject URLs with attachment filename/content type. Object keys are persisted, while authorization to request a signed URL remains in the API layer. Redis is not part of the initial beta architecture. `apps/worker` is the executable pg-boss consumer and wires the configured LLM provider, Factorio executor, PostgreSQL repository, and S3 artifact store. Local service integration uses pinned Docker PostgreSQL 18.6 plus Adobe S3Mock 5.2.3 and proves atomic submission -> queue consumption -> real Factorio validation -> S3-compatible upload -> persisted success -> presigned download. The integration Planner is a typed fake provider so this infrastructure test does not spend external LLM quota. The selected hosted object-storage provider still requires a deployment smoke before beta.
+Production migrations are versioned Drizzle migrations; schema push at application startup is not the production migration policy. `packages/service-postgres` stores the runtime-validated record JSON alongside indexed id/status/revision/timestamps and performs optimistic updates by revision. API submission can use `PostgresGenerationSubmissionStore`, which inserts the queued row and calls pg-boss `send()` through `fromDrizzle(tx, sql)` inside one transaction. The integration test proves a queue failure rolls the row back. A checksum-pinned PostgreSQL 18.6 source build under `.tools/` is used only for reproducible local integration tests. `packages/service-s3` uploads only runtime-validated ZIP keys/names through AWS SDK v3 PutObject. Generation records persist only private object metadata; downloads are generated on demand as 30–900 second presigned GetObject URLs with attachment filename/content type. Object keys are persisted, while authorization to request a signed URL remains in the API layer. Redis is not part of the initial beta architecture.
+
+Private-beta API security:
+- users are operator-provisioned with high-entropy opaque bearer tokens; only SHA-256 token hashes are persisted;
+- generation reads, feedback, and downloads are owner-scoped by immutable `userId`;
+- successful API responses omit internal ownership and object-store key fields;
+- per-user and salted-IP fixed-window rate-limit counters live in PostgreSQL; raw IP addresses are not used as bucket keys;
+- proxy forwarding headers are trusted only when explicitly configured;
+- artifact downloads require ownership and redirect to a short-lived presigned URL. See ADR-0013. `apps/worker` is the executable pg-boss consumer and wires the configured LLM provider, Factorio executor, PostgreSQL repository, and S3 artifact store. Local service integration uses pinned Docker PostgreSQL 18.6 plus Adobe S3Mock 5.2.3 and proves atomic submission -> queue consumption -> real Factorio validation -> S3-compatible upload -> persisted success -> presigned download. The integration Planner is a typed fake provider so this infrastructure test does not spend external LLM quota. The selected hosted object-storage provider still requires a deployment smoke before beta.
 
 ## Package boundaries
-Planned repository boundaries:
+Current and planned repository boundaries:
 - `packages/domain`: ModSpec, state machine, shared typed errors;
 - `packages/factorio-harness`: execute and normalize Factorio validation;
 - `packages/factorio-generator`: deterministic ModSpec-to-mod materialization;
@@ -216,8 +224,8 @@ Factorio-specific logic must not leak into generic orchestration contracts.
 
 ## Persistence for service stage
 PostgreSQL is the accepted private-beta persistence default. Minimum entities:
-- users;
-- generations;
+- users — implemented as private-beta `service_users`;
+- generations — implemented with immutable user ownership;
 - generation attempts;
 - persisted ModSpec;
 - artifacts;

@@ -1,3 +1,4 @@
+export * from "./auth.js";
 export * from "./db.js";
 export * from "./queue.js";
 export * from "./repository.js";

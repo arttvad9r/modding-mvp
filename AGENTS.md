@@ -44,6 +44,9 @@ M0 through M5 are complete and should be treated as stable boundaries unless a t
 - Temporary test runs must use isolated directories.
 - Do not modify unrelated files while completing a task.
 - Do not silently bypass ModSpec for supported product generation flows.
+- User-facing generation access must be owner-scoped by immutable `userId`; another user's generation ID must not disclose the record.
+- Private-beta bearer tokens are high-entropy secrets; persist only their SHA-256 hashes and never log/token-echo them outside explicit provisioning output.
+- Raw client IP addresses must not be persisted for rate limiting; use the deployment-salted hash contract from ADR-0013.
 
 ## ADR policy
 Create or update an ADR when a task changes a durable decision such as:
@@ -71,6 +74,9 @@ Small refactors, implementation details, and patch dependency upgrades normally 
 - `pnpm prompt:feedback -- <generation-id> <up|down> [note]`
 - `pnpm test:service-integration`
 - `pnpm worker:start`
+- `pnpm api:start`
+- `pnpm db:migrate`
+- `pnpm beta:user:create -- "<label>"`
 
 ## Definition of done
 A task is done only when:

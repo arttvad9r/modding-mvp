@@ -6,6 +6,8 @@ import {
 } from "@project/domain";
 import { z } from "zod";
 
+import { UserIdSchema } from "./auth.js";
+
 const safeArtifactKey = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$/;
 const safeZipName = /^[a-z0-9]+(?:-[a-z0-9]+)*_[0-9]+\.[0-9]+\.[0-9]+\.zip$/;
 
@@ -94,8 +96,9 @@ export const GenerationFeedbackSchema = z.strictObject({
 });
 
 const GenerationBaseSchema = z.strictObject({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   id: GenerationIdSchema,
+  userId: UserIdSchema,
   revision: z.number().int().nonnegative(),
   prompt: GenerationPromptSchema,
   createdAt: TimestampSchema,
@@ -197,6 +200,10 @@ export interface ArtifactStorePutInput {
 
 export interface ArtifactStore {
   put(input: ArtifactStorePutInput): Promise<ArtifactRef>;
+}
+
+export interface ArtifactDownloadSigner {
+  createDownloadUrl(artifact: ArtifactRef, expiresInSeconds?: number): Promise<string>;
 }
 
 export type ServiceGenerationExecution =

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { LlmJsonRequest, LlmJsonResponse, LlmProvider } from "@project/llm";
 import {
+  createServiceUser,
   findGeneration,
   submitGenerationAtomically,
   type GenerationRecord,
@@ -12,6 +13,7 @@ import {
   PgBossGenerationQueue,
   PostgresGenerationRepository,
   PostgresGenerationSubmissionStore,
+  PostgresServiceUserRepository,
   createServicePostgresClient,
 } from "@project/service-postgres";
 import { createS3ArtifactStore } from "@project/service-s3";
@@ -85,6 +87,14 @@ describe("private-beta service infrastructure flow", () => {
     });
     const repository = new PostgresGenerationRepository(database.db);
     const submissionStore = new PostgresGenerationSubmissionStore(database.db, queue);
+    const userId = "00000000-0000-4000-8000-000000000001";
+    await new PostgresServiceUserRepository(database.db).insert(
+      createServiceUser({
+        label: "Worker integration tester",
+        userId: () => userId,
+        token: () => "beta_worker_integration_token_1234567890abcdef",
+      }).user,
+    );
     const artifactStore = createS3ArtifactStore({
       endpoint: required("PROJECT_SERVICE_S3_ENDPOINT"),
       bucket: required("PROJECT_SERVICE_S3_BUCKET"),
@@ -110,6 +120,7 @@ describe("private-beta service infrastructure flow", () => {
     try {
       const generationId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
       const accepted = await submitGenerationAtomically({
+        userId,
         submissionStore,
         prompt: "Make steel furnaces twice as fast",
         generationId: () => generationId,

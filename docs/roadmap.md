@@ -133,12 +133,14 @@ Completed first slice:
 - ADR-0011 asynchronous service/worker boundary;
 - ADR-0012 PostgreSQL + Drizzle/node-postgres + pg-boss + S3-compatible storage default;
 - `apps/worker` executable pg-boss consumer with generation heartbeats/stale recovery;
-- Docker-backed full service integration proving atomic submit -> worker -> real Factorio -> object storage -> persisted success -> presigned download.
+- Docker-backed full service integration proving atomic submit -> worker -> real Factorio -> object storage -> persisted success -> presigned download;
+- authenticated HTTP API for create/get/feedback/download with generation ownership;
+- operator-provisioned opaque beta tokens, PostgreSQL per-user/salted-IP rate limits, migration/user-provisioning CLIs, and ADR-0013;
+- Docker-backed HTTP integration proving bearer auth -> API -> queue -> worker -> real Factorio -> download -> feedback.
 
 Remaining scope:
-- HTTP API/web surface;
+- minimal tester web UI over the implemented HTTP API;
 - explicit retry/requeue policy;
-- basic authentication and rate limiting;
 - private deployment and smoke against the selected hosted S3-compatible provider;
 - 30+ testers target.
 

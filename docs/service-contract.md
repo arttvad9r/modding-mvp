@@ -1,6 +1,6 @@
 # Private-beta service contract
 
-This document describes the M6 service boundary. It is transport-facing design, not a promise that every endpoint is already implemented.
+This document describes the implemented M6 private-beta service boundary and the remaining transport/deployment constraints.
 
 ## Generation lifecycle
 
@@ -16,6 +16,8 @@ The queue message is versioned and contains only:
   "generationId": "<uuid>"
 }
 ```
+
+The persisted **generation record** is a separate versioned contract and is currently `schemaVersion: 2`; v2 adds immutable `userId` ownership. Queue jobs intentionally remain `schemaVersion: 1` because their payload contract is still only the generation ID. User records are separately versioned and currently use schema version 1.
 
 The prompt, ModSpec, telemetry, errors, artifact metadata, and feedback stay in persistent generation state rather than being copied into queue payloads.
 
@@ -74,4 +76,18 @@ A successful generation stores a private object reference such as `generations/<
 9. Preserve Planner/Repair attempt metadata, usage/cost, validation metadata, and duration.
 10. A separate recovery pass may mark a running record `failed` with retryable `process_error` only when its heartbeat is older than the configured stale threshold; CAS prevents racing a live worker.
 
-Cancellation, explicit retry scheduling/requeue, authentication, and rate limiting are later M6 slices and must be added explicitly rather than inferred.
+Cancellation and explicit retry scheduling/requeue remain later M6 slices and must be added explicitly rather than inferred.
+
+## Authentication and ownership
+Private-beta users are operator-provisioned and authenticate with `Authorization: Bearer <opaque-token>`. Only a SHA-256 hash of the high-entropy token is stored. Each generation has an immutable `userId`; another user's generation ID resolves as not found rather than disclosing ownership. See ADR-0013.
+
+API rate limits are backed by PostgreSQL fixed-window counters for both user ID and salted SHA-256 client-IP hash. `X-Forwarded-For` is used only when trusted-proxy mode is explicitly enabled.
+
+## Implemented HTTP endpoints
+- `GET /health/live` — unauthenticated liveness check.
+- `POST /v1/generations` — authenticate, rate-limit, atomically persist+enqueue, return `202`.
+- `GET /v1/generations/:id` — owner-scoped status/result; internal `userId` and object-store key are omitted.
+- `POST /v1/generations/:id/feedback` — owner-scoped feedback for terminal results only.
+- `GET /v1/generations/:id/download` — owner-scoped redirect to a 60-second presigned object URL only after success.
+
+`apps/web` is currently an HTTP API process, not the final product UI. M6 may add a minimal tester interface over this stable service contract without moving generation work into the request process.

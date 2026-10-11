@@ -16,7 +16,7 @@ The project deliberately starts with prototype-stage modifications and one game.
 - M5 — Local end-to-end prototype: complete.
 - M6 — Private beta service: in progress.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 is in progress: `packages/service-core` defines the asynchronous API/worker lifecycle, `packages/factorio-service-executor` connects workers to the validated M5 pipeline, and `packages/service-postgres` now provides versioned Drizzle migrations, revision-CAS persistence, pg-boss queueing, and atomic generation+job submission verified against real PostgreSQL 18.6. `packages/service-s3` implements private S3-compatible artifact storage/presigned downloads, and `apps/worker` now consumes pg-boss jobs with heartbeat/stale recovery. A Docker-backed integration proves atomic submit -> worker -> real Factorio -> object storage -> persisted success -> presigned download. HTTP API, explicit retry/requeue, auth/rate limits, hosted-storage smoke, and deployment remain.
+M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 is in progress: `packages/service-core` defines the asynchronous API/worker lifecycle, `packages/factorio-service-executor` connects workers to the validated M5 pipeline, and `packages/service-postgres` now provides versioned Drizzle migrations, revision-CAS persistence, pg-boss queueing, and atomic generation+job submission verified against real PostgreSQL 18.6. `packages/service-s3` implements private S3-compatible artifact storage/presigned downloads, and `apps/worker` now consumes pg-boss jobs with heartbeat/stale recovery. A Docker-backed integration proves atomic submit -> worker -> real Factorio -> object storage -> persisted success -> presigned download. Authenticated create/get/feedback/download HTTP endpoints, per-user ownership, PostgreSQL rate limits, and beta-token provisioning are now implemented. A minimal tester UI, explicit retry/requeue, hosted-storage smoke, and deployment remain.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -147,3 +147,18 @@ Run the real worker with deployment environment variables from `.env.example` us
 ```bash
 pnpm worker:start
 ```
+
+## Private-beta API
+
+Apply versioned service migrations, provision a tester, then run API and worker as separate processes:
+
+```bash
+DATABASE_URL=... pnpm db:migrate
+DATABASE_URL=... pnpm beta:user:create -- "Tester label"
+DATABASE_URL=... S3_BUCKET=... API_IP_HASH_SALT=... pnpm api:start
+DATABASE_URL=... S3_BUCKET=... LLM_PROVIDER=zai pnpm worker:start
+```
+
+`beta:user:create` prints the high-entropy bearer token once; only its SHA-256 hash is stored. The implemented endpoints are `POST /v1/generations`, `GET /v1/generations/:id`, `POST /v1/generations/:id/feedback`, and `GET /v1/generations/:id/download`. Generation work always stays in the worker.
+
+`pnpm test:service-integration` now proves the complete Docker-backed HTTP path with fake typed Planner output and real Factorio, so it does not spend external LLM quota.
