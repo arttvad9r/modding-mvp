@@ -287,6 +287,11 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
           throw new HttpError(409, "artifact_not_ready", "Generation artifact is not available");
         }
         const location = await dependencies.artifactDownloads.createDownloadUrl(current.artifact, 60);
+        const acceptsJson = (request.headers.accept ?? "").split(",").some((value) => value.trim().startsWith("application/json"));
+        if (acceptsJson) {
+          sendJson(response, 200, { downloadUrl: location, expiresInSeconds: 60 });
+          return;
+        }
         setBaseHeaders(response);
         response.statusCode = 302;
         response.setHeader("Location", location);

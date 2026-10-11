@@ -11,6 +11,7 @@ import {
 import { createS3ArtifactStore } from "@project/service-s3";
 
 import { createGenerationApiHandler } from "./api.js";
+import { createPrivateBetaWebHandler } from "./ui.js";
 
 function optional(name: string): string | undefined {
   const value = process.env[name]?.trim();
@@ -67,7 +68,7 @@ async function main(): Promise<void> {
   const users = new PostgresServiceUserRepository(database.db);
   const rateLimits = new PostgresRateLimitStore(database.db);
   const submissionStore = new PostgresGenerationSubmissionStore(database.db, queue);
-  const handler = createGenerationApiHandler({
+  const apiHandler = createGenerationApiHandler({
     users,
     repository,
     rateLimits,
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
     ipHashSalt: required("API_IP_HASH_SALT"),
     trustProxy: boolean("API_TRUST_PROXY", false),
   });
+  const handler = createPrivateBetaWebHandler(apiHandler);
   const server = createServer((request, response) => {
     void handler(request, response);
   });

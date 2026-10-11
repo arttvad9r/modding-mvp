@@ -19,6 +19,7 @@ import { startGenerationWorker } from "@project/worker";
 import { describe, expect, it } from "vitest";
 
 import { createGenerationApiHandler } from "../src/api.js";
+import { createPrivateBetaWebHandler } from "../src/ui.js";
 
 class FixedPlannerProvider implements LlmProvider {
   async generateJson(_request: LlmJsonRequest): Promise<LlmJsonResponse> {
@@ -123,7 +124,7 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       staleAfterMs: 10_000,
       staleRecoveryIntervalMs: 5_000,
     });
-    const handler = createGenerationApiHandler({
+    const apiHandler = createGenerationApiHandler({
       users,
       repository,
       submissionStore,
@@ -131,6 +132,7 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       artifactDownloads: artifactStore,
       ipHashSalt: "http-integration-ip-hash-salt",
     });
+    const handler = createPrivateBetaWebHandler(apiHandler);
     const server = createServer((request, response) => void handler(request, response));
     const baseUrl = await listen(server);
     const headers = {
@@ -139,6 +141,10 @@ describe("private-beta HTTP API through real service infrastructure", () => {
     };
 
     try {
+      const pageResponse = await fetch(`${baseUrl}/`);
+      expect(pageResponse.status).toBe(200);
+      expect(await pageResponse.text()).toContain("Generate a Factorio mod");
+
       const createResponse = await fetch(`${baseUrl}/v1/generations`, {
         method: "POST",
         headers,
@@ -162,12 +168,12 @@ describe("private-beta HTTP API through real service infrastructure", () => {
 
       const downloadResponse = await fetch(
         `${baseUrl}/v1/generations/${created.generation.id}/download`,
-        { headers, redirect: "manual" },
+        { headers: { ...headers, Accept: "application/json" } },
       );
-      expect(downloadResponse.status).toBe(302);
-      const location = downloadResponse.headers.get("location");
-      expect(location).toBeTruthy();
-      const artifactResponse = await fetch(location!);
+      expect(downloadResponse.status).toBe(200);
+      const downloadBody = (await downloadResponse.json()) as { downloadUrl: string; expiresInSeconds: number };
+      expect(downloadBody.expiresInSeconds).toBe(60);
+      const artifactResponse = await fetch(downloadBody.downloadUrl);
       expect(artifactResponse.status).toBe(200);
       expect((await artifactResponse.arrayBuffer()).byteLength).toBe(generation.artifact.sizeBytes);
 

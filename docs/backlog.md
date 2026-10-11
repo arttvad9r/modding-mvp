@@ -199,6 +199,7 @@ Before starting M2:
 - [x] Add ADR-0013 for private-beta token auth, generation ownership, and PostgreSQL rate limits.
 - [x] Add operator CLI for creating beta users/tokens and a versioned migration CLI.
 - [x] Add operator-provisioned opaque bearer tokens stored only as SHA-256 hashes, generation ownership, and PostgreSQL per-user/salted-IP rate limits.
+- [x] Add minimal same-origin private-beta tester UI for token entry, prompt submission, status polling, ZIP download, and feedback.
 - [x] Add running-generation heartbeat and CAS-safe stale-running recovery to retryable `failed`.
 - [ ] Add explicit retry/requeue policy before deployment.
 

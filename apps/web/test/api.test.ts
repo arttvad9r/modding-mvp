@@ -261,7 +261,19 @@ describe("private-beta HTTP API", () => {
     });
     expect(download.status).toBe(302);
     expect(download.headers.get("location")).toContain("download.invalid");
-    expect(api.signer.keys).toEqual([`generations/${queued.id}/faster-steel-furnaces_0.1.0.zip`]);
+
+    const signedJson = await fetch(`${api.baseUrl}/v1/generations/${queued.id}/download`, {
+      headers: { ...auth(api.token), Accept: "application/json" },
+    });
+    expect(signedJson.status).toBe(200);
+    await expect(signedJson.json()).resolves.toMatchObject({
+      downloadUrl: expect.stringContaining("download.invalid"),
+      expiresInSeconds: 60,
+    });
+    expect(api.signer.keys).toEqual([
+      `generations/${queued.id}/faster-steel-furnaces_0.1.0.zip`,
+      `generations/${queued.id}/faster-steel-furnaces_0.1.0.zip`,
+    ]);
   });
 
   it("returns 429 when the per-user generation-create bucket is exhausted", async () => {

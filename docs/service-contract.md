@@ -88,6 +88,7 @@ API rate limits are backed by PostgreSQL fixed-window counters for both user ID 
 - `POST /v1/generations` — authenticate, rate-limit, atomically persist+enqueue, return `202`.
 - `GET /v1/generations/:id` — owner-scoped status/result; internal `userId` and object-store key are omitted.
 - `POST /v1/generations/:id/feedback` — owner-scoped feedback for terminal results only.
-- `GET /v1/generations/:id/download` — owner-scoped redirect to a 60-second presigned object URL only after success.
+- `GET /v1/generations/:id/download` — owner-scoped 60-second presigned object URL only after success. Default clients receive a `302`; clients sending `Accept: application/json` receive `{ downloadUrl, expiresInSeconds }`, which lets the same-origin tester UI navigate to object storage without forwarding the bearer token.
 
-`apps/web` is currently an HTTP API process, not the final product UI. M6 may add a minimal tester interface over this stable service contract without moving generation work into the request process.
+## Tester UI
+`GET /` serves the minimal private-beta tester interface from the same `apps/web` process. The page stores the beta token only in tab-scoped `sessionStorage`, submits prompts through the authenticated API, polls until terminal state, exposes the signed ZIP download on success, and records optional up/down feedback. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.

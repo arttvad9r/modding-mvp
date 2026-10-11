@@ -116,6 +116,21 @@ LLM_PROVIDER=zai ZAI_API_MODE=coding pnpm repair:eval
 
 Repair never changes the accepted ModSpec, `info.json`, or semantic assertions; the model may replace only `data.lua`. Z.ai Coding Plan `glm-5.3-flash` repairs 5/5 injected load/semantic failures with 5 total attempts.
 
+## Private-beta service commands
+
+The service backend now has separate migration, worker, API/UI, and beta-user provisioning commands:
+
+```bash
+DATABASE_URL=... pnpm db:migrate
+DATABASE_URL=... pnpm beta:user:create -- "Tester label"
+pnpm worker:start
+pnpm web:start
+```
+
+`beta:user:create` prints the opaque access token only when it is created; only its SHA-256 hash is persisted. `web:start` serves the tester UI at `/` and the authenticated `/v1` API from the same origin. Required PostgreSQL, S3, LLM, Factorio, and API security environment variables are listed in `.env.example`. The beta token entered in the UI is kept only in the current browser tab's `sessionStorage`.
+
+For a reproducible backend regression using Docker PostgreSQL + S3Mock and real Factorio, run `pnpm test:service-integration`. This does not replace the required smoke against the eventual hosted S3-compatible provider.
+
 ## Build from a natural-language prompt
 
 ```bash
