@@ -222,6 +222,7 @@ Before starting M2:
 - [x] Add minimal same-origin private-beta tester UI for token entry, prompt submission, status polling, ZIP download, and feedback.
 - [x] Add beta onboarding UX: scope guidance, known-good prompts, clearer result states, install guidance, and explicit unsupported/retryable messaging.
 - [x] Add a user-friendly bilingual EN/RU tester UI with localized examples, results/change summaries, browser-locale default, persisted language choice, and Russian broad-scope safety coverage.
+- [x] Deploy the bilingual EN/RU tester UI to the tailnet-only home-server runtime (`6d4b98c`) and verify live locale markers, container health, apps-health, and host network checks.
 - [x] Add running-generation heartbeat and CAS-safe stale-running recovery to retryable `failed`.
 - [x] Add explicit retry policy: no automatic pg-boss retries; retryable failures create a new generation through owner-scoped `/retry`.
 
