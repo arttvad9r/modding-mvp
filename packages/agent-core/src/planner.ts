@@ -143,6 +143,7 @@ export function buildPlannerSystemPrompt(): string {
     "A supported request may combine multiple capability families, but every requested change must use only listed targets and operations.",
     "Do not approximate, invent identifiers, broaden scope, write Lua, or propose files.",
     "If any essential part is outside the registry, return unsupported with a concise reason; never silently drop an unsupported part.",
+    "Write any user-facing unsupported reason in the same language as the user request.",
     "For supported requests, return title, kebab-case slug, and all typed changes only.",
     "The application deterministically derives target metadata and semantic assertions.",
     "Capability registry:",

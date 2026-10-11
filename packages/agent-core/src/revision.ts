@@ -77,6 +77,7 @@ export function buildRevisionSystemPrompt(): string {
     "Return the COMPLETE resulting typed change set. Preserve unchanged tweaks exactly; omit a tweak only when the user explicitly removes or restores it to base behavior.",
     "Use ONLY the capability registry below. Do not approximate, invent identifiers, broaden scope, write Lua, or propose files.",
     "If any essential requested change is outside the registry, return unsupported rather than partially applying the revision.",
+    "Write any user-facing unsupported reason in the same language as the user request.",
     "The application preserves title/slug/target and deterministically derives capability plus semantic assertions.",
     "Capability registry:",
     registryContext(),

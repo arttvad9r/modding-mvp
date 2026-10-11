@@ -19,7 +19,7 @@ async function close(server: Server): Promise<void> {
 }
 
 describe("private-beta tester UI", () => {
-  it("serves a locked-down onboarding UI and delegates API paths", async () => {
+  it("serves a bilingual user-friendly onboarding UI and delegates API paths", async () => {
     let delegated = 0;
     const handler = createPrivateBetaWebHandler(async (_request, response) => {
       delegated += 1;
@@ -34,22 +34,21 @@ describe("private-beta tester UI", () => {
       expect(page.status).toBe(200);
       expect(page.headers.get("content-security-policy")).toContain("default-src 'none'");
       const html = await page.text();
-      expect(html).toContain("Describe the rebalance.");
-      expect(html).toContain("Real Factorio validation");
-      expect(html).toContain("Try a known-good tweak bundle");
-      expect(html).toContain("Fast-start bundle");
-      expect(html).toContain("assembling machine 2 twice as fast");
-      expect(html).toContain("Throughput bundle");
-      expect(html).toContain("transport belts produce 4 belts per craft");
-      expect(html).toContain("stack size to 500");
-      expect(html).toContain("Not supported yet");
+      expect(html).toContain("Make Factorio play your way.");
+      expect(html).toContain("No Lua required");
+      expect(html).toContain("We build & check");
+      expect(html).toContain("Paste your invite token");
+      expect(html).toContain("Start with an example");
+      expect(html).toContain("What can I change right now?");
+      expect(html).toContain('data-lang-select="en"');
+      expect(html).toContain('data-lang-select="ru"');
+      expect(html).toContain('data-prompt-ru="Ускорь сборочный автомат 2');
       expect(html).toContain('id="token"');
       expect(html).toContain('id="clear-token"');
-      expect(html).toContain("Your recent generations");
-      expect(html).toContain("Accepted changes");
-      expect(html).toContain("Revision diff");
+      expect(html).toContain('id="history-panel"');
+      expect(html).toContain("What the mod changes");
+      expect(html).toContain("What changed in this revision");
       expect(html).toContain("isolated base-game Factorio 2.0.77");
-      expect(html).toContain("Refine this tweak bundle");
       expect(html).toContain('id="revision-prompt"');
       expect(html).toContain('id="revise"');
       expect(html).toContain('src="/app.js"');
@@ -57,18 +56,18 @@ describe("private-beta tester UI", () => {
       const script = await fetch(`${baseUrl}/app.js`);
       expect(script.status).toBe(200);
       const javascript = await script.text();
+      expect(javascript).toContain("project.language");
+      expect(javascript).toContain("localStorage.setItem");
       expect(javascript).toContain("sessionStorage");
       expect(javascript).toContain("sessionStorage.removeItem");
-      expect(javascript).toContain("[data-prompt]");
-      expect(javascript).toContain('mixed: "Tweak bundle"');
-      expect(javascript).toContain('recipe_crafting_time: "Recipe crafting time"');
-      expect(javascript).toContain('recipe_result: "Recipe result"');
-      expect(javascript).toContain('item_stack_size: "Item stack size"');
-      expect(javascript).toContain('Accept: "application/json"');
+      expect(javascript).toContain("Настрой Factorio под себя.");
+      expect(javascript).toContain("Собрать мой мод");
+      expect(javascript).toContain("Проверка запускается в изолированной базовой Factorio 2.0.77");
+      expect(javascript).toContain("data-prompt-en");
+      expect(javascript).toContain('Accept:"application/json"');
       expect(javascript).toContain("/feedback");
       expect(javascript).toContain("/retry");
       expect(javascript).toContain("/revise");
-      expect(javascript).toContain("Revised generation in progress");
       expect(javascript).toContain("/v1/generations?limit=10");
       expect(javascript).toContain("renderHistory");
       expect(javascript).toContain("describeChange");
@@ -78,7 +77,10 @@ describe("private-beta tester UI", () => {
       const css = await fetch(`${baseUrl}/app.css`);
       expect(css.status).toBe(200);
       expect(css.headers.get("content-type")).toContain("text/css");
-      expect(await css.text()).toContain(".example-grid");
+      const stylesheet = await css.text();
+      expect(stylesheet).toContain(".language-switch");
+      expect(stylesheet).toContain(".workflow");
+      expect(stylesheet).toContain(".example-grid");
 
       const api = await fetch(`${baseUrl}/v1/generations/example`);
       expect(api.status).toBe(204);

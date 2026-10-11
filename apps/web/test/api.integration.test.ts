@@ -159,7 +159,7 @@ describe("private-beta HTTP API through real service infrastructure", () => {
     try {
       const pageResponse = await fetch(`${baseUrl}/`);
       expect(pageResponse.status).toBe(200);
-      expect(await pageResponse.text()).toContain("Describe the rebalance.");
+      expect(await pageResponse.text()).toContain("Make Factorio play your way.");
 
       const createResponse = await fetch(`${baseUrl}/v1/generations`, {
         method: "POST",

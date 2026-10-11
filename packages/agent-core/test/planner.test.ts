@@ -204,6 +204,17 @@ describe("planFactorioPrompt", () => {
     expect(provider.requests).toHaveLength(0);
   });
 
+  it("rejects Russian universal category scopes before calling the model", async () => {
+    const provider = new SequenceProvider([]);
+    const result = await planFactorioPrompt({ provider, prompt: "Ускорь все манипуляторы в 2 раза" });
+
+    expect(result).toMatchObject({ status: "unsupported" });
+    if (result.status !== "unsupported") throw new Error("expected unsupported result");
+    expect(result.reason).toContain("манипуляторы");
+    expect(result.reason).toContain("конкретные цели");
+    expect(provider.requests).toHaveLength(0);
+  });
+
   it("rejects generic plural category wording after structured planning", async () => {
     const provider = new SequenceProvider([response({
       status: "supported",
@@ -220,6 +231,30 @@ describe("planFactorioPrompt", () => {
     if (result.status !== "unsupported") throw new Error("expected unsupported result");
     expect(result.reason).toContain("Broad category request for inserters");
     expect(provider.requests).toHaveLength(1);
+  });
+
+  it("rejects Russian generic plural category wording after structured planning", async () => {
+    const provider = new SequenceProvider([response({
+      status: "supported",
+      title: "Быстрые манипуляторы",
+      slug: "fast-inserters-ru",
+      changes: [
+        { type: "prototype_property", prototypeType: "inserter", prototypeName: "inserter", property: "extension_speed", operation: { type: "multiply", factor: 2 } },
+        { type: "prototype_property", prototypeType: "inserter", prototypeName: "inserter", property: "rotation_speed", operation: { type: "multiply", factor: 2 } },
+      ],
+    })]);
+    const result = await planFactorioPrompt({ provider, prompt: "Ускорь манипуляторы в 2 раза" });
+
+    expect(result).toMatchObject({ status: "unsupported" });
+    if (result.status !== "unsupported") throw new Error("expected unsupported result");
+    expect(result.reason).toContain("манипуляторы");
+    expect(provider.requests).toHaveLength(1);
+  });
+
+  it("keeps explicit Russian reviewed targets supported", async () => {
+    const provider = new SequenceProvider([response(fasterSteelDraft())]);
+    const result = await planFactorioPrompt({ provider, prompt: "Ускорь стальные печи в 2 раза" });
+    expect(result.status).toBe("supported");
   });
 
   it("keeps explicit reviewed targets supported", async () => {
@@ -400,6 +435,19 @@ describe("planFactorioRevision", () => {
       prompt: "Also make all inserters twice as fast",
     });
     expect(result).toMatchObject({ status: "unsupported" });
+    expect(provider.requests).toHaveLength(0);
+  });
+
+  it("rejects broad Russian category follow-ups before calling the revision model", async () => {
+    const provider = new SequenceProvider([]);
+    const result = await planFactorioRevision({
+      provider,
+      baseModSpec: acceptedSpec,
+      prompt: "Теперь ускорь все манипуляторы в 2 раза, остальное оставь",
+    });
+    expect(result).toMatchObject({ status: "unsupported" });
+    if (result.status !== "unsupported") throw new Error("expected unsupported revision");
+    expect(result.reason).toContain("манипуляторы");
     expect(provider.requests).toHaveLength(0);
   });
 

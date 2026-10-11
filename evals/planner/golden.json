@@ -30,5 +30,11 @@
   {"id":"broad-generic-inserters","prompt":"Make inserters twice as fast.","expected":{"status":"unsupported"}},
   {"id":"broad-all-belts","prompt":"Make all transport belts 50% faster.","expected":{"status":"unsupported"}},
   {"id":"broad-all-recipes","prompt":"Make all recipes craft twice as fast.","expected":{"status":"unsupported"}},
-  {"id":"broad-generic-furnaces","prompt":"Make furnaces twice as fast.","expected":{"status":"unsupported"}}
+  {"id":"broad-generic-furnaces","prompt":"Make furnaces twice as fast.","expected":{"status":"unsupported"}},
+  {"id":"ru-prototype-steel-double","prompt":"Ускорь стальные печи в 2 раза","expected":{"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"steel-furnace","property":"crafting_speed","operation":{"type":"multiply","factor":2}}]}},
+  {"id":"ru-mixed-throughput","prompt":"Сделай железные шестерни в 2 раза быстрее в производстве, пусть рецепт конвейера выдаёт 4 конвейера, а размер стака электронных схем будет 500","expected":{"status":"supported","capability":"mixed","changes":[{"type":"recipe_crafting_time","recipeName":"iron-gear-wheel","operation":{"type":"multiply","factor":0.5}},{"type":"recipe_result","recipeName":"transport-belt","resultType":"item","resultName":"transport-belt","operation":{"type":"set","value":4}},{"type":"item_stack_size","itemName":"electronic-circuit","operation":{"type":"set","value":500}}]}},
+  {"id":"ru-production-speeds","prompt":"Увеличь скорость электрического бура в 2 раза и скорость исследования лаборатории в 2 раза","expected":{"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"mining-drill","prototypeName":"electric-mining-drill","property":"mining_speed","operation":{"type":"multiply","factor":2}},{"type":"prototype_property","prototypeType":"lab","prototypeName":"lab","property":"researching_speed","operation":{"type":"multiply","factor":2}}]}},
+  {"id":"ru-prerequisite-remove-steel","prompt":"Убери Обработку стали из требований для Автоматизации 2","expected":{"status":"supported","capability":"technology_prerequisite","changes":[{"type":"technology_prerequisite","technologyName":"automation-2","prerequisiteName":"steel-processing","operation":{"type":"remove"}}]}},
+  {"id":"ru-universal-inserters","prompt":"Ускорь все манипуляторы в 2 раза","expected":{"status":"unsupported"}},
+  {"id":"ru-generic-inserters","prompt":"Ускорь манипуляторы в 2 раза","expected":{"status":"unsupported"}}
 ]
