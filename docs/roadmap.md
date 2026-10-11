@@ -139,6 +139,7 @@ Completed slices:
 - operator-provisioned opaque beta tokens, PostgreSQL per-user/salted-IP rate limits, migration/user-provisioning CLIs, and ADR-0013;
 - Docker-backed HTTP integration proving bearer auth -> API -> queue -> worker -> real Factorio -> download -> feedback;
 - same-origin tester UI with explicit retry and willingness-to-pay survey;
+- tester-facing beta onboarding UX with current-scope guidance, known-good prompt examples, clearer generation states, install guidance, and explicit unsupported/retryable messaging;
 - `pnpm beta:kpis` report for active/repeat testers, success/direct-success, duration/Factorio validation, feedback/false-success proxy, WTP, tokens/cost, and Repair attempts, with explicit internal/smoke users excluded.
 - production-conditional workspace exports, compiled-runtime smoke, slim production-only web/worker Docker targets, provider-neutral deployment runbook, and hosted S3 smoke command;
 - Helsinki VPS beta stack with pinned PostgreSQL 18.6 + SeaweedFS 4.39, persistent volumes, fixed private Docker subnet, and tailnet-only HTTPS via Tailscale Serve;

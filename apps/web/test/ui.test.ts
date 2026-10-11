@@ -19,7 +19,7 @@ async function close(server: Server): Promise<void> {
 }
 
 describe("private-beta tester UI", () => {
-  it("serves a locked-down same-origin UI and delegates API paths", async () => {
+  it("serves a locked-down onboarding UI and delegates API paths", async () => {
     let delegated = 0;
     const handler = createPrivateBetaWebHandler(async (_request, response) => {
       delegated += 1;
@@ -34,14 +34,21 @@ describe("private-beta tester UI", () => {
       expect(page.status).toBe(200);
       expect(page.headers.get("content-security-policy")).toContain("default-src 'none'");
       const html = await page.text();
-      expect(html).toContain("Generate a Factorio mod");
+      expect(html).toContain("Describe the tweak.");
+      expect(html).toContain("Real Factorio validation");
+      expect(html).toContain("Try a known-good example");
+      expect(html).toContain("Make steel furnaces twice as fast");
+      expect(html).toContain("Not supported yet");
       expect(html).toContain('id="token"');
+      expect(html).toContain('id="clear-token"');
       expect(html).toContain('src="/app.js"');
 
       const script = await fetch(`${baseUrl}/app.js`);
       expect(script.status).toBe(200);
       const javascript = await script.text();
       expect(javascript).toContain("sessionStorage");
+      expect(javascript).toContain("sessionStorage.removeItem");
+      expect(javascript).toContain("[data-prompt]");
       expect(javascript).toContain('Accept: "application/json"');
       expect(javascript).toContain("/feedback");
       expect(javascript).toContain("/retry");
@@ -50,6 +57,7 @@ describe("private-beta tester UI", () => {
       const css = await fetch(`${baseUrl}/app.css`);
       expect(css.status).toBe(200);
       expect(css.headers.get("content-type")).toContain("text/css");
+      expect(await css.text()).toContain(".example-grid");
 
       const api = await fetch(`${baseUrl}/v1/generations/example`);
       expect(api.status).toBe(204);
