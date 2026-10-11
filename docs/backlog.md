@@ -248,6 +248,7 @@ Before starting M2:
 - [ ] Enable public HTTPS ingress for testers outside the tailnet (Tailscale Funnel approval or a conventional public domain/reverse proxy).
 - [x] Instrument private-beta KPI report plus explicit willingness-to-pay survey.
 - [x] Add beta-learning instrumentation: one-time download-start tracking plus structured intent-match / in-game-result / main-issue feedback and corresponding KPI coverage/rates.
+- [x] Deploy beta-learning instrumentation from runtime source `fbd7ee4`; verify live MyModz EN/RU feedback UI, deployed KPI fields, container health, apps-health, and host network checks.
 - [x] Exclude explicit internal/operator smoke accounts and all of their activity from product KPI reporting.
 - [ ] Recruit 30+ testers and evaluate the M6 product hypotheses from observed data.
 
