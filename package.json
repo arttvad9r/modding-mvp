@@ -34,7 +34,8 @@
     "s3:smoke:prod": "pnpm --filter @project/service-s3 smoke:prod",
     "container:build:web": "docker build -f infra/Dockerfile --target web -t modding-mvp-web:local .",
     "container:build:worker": "docker build -f infra/Dockerfile --target worker -t modding-mvp-worker:local .",
-    "test:container-images": "bash scripts/test-container-images.sh"
+    "test:container-images": "bash scripts/test-container-images.sh",
+    "test:beta-compose": "bash scripts/test-beta-compose.sh"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

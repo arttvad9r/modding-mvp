@@ -119,7 +119,7 @@ Status: in progress.
 
 Goal: validate product usefulness with real Factorio players.
 
-Completed first slice:
+Completed slices:
 - `packages/service-core` runtime schemas for generation records/jobs/telemetry/artifact refs;
 - asynchronous API/worker lifecycle with compare-and-set claiming and terminal redelivery idempotency;
 - infrastructure ports for repository, queue, artifact store, and generation executor;
@@ -140,10 +140,13 @@ Completed first slice:
 - Docker-backed HTTP integration proving bearer auth -> API -> queue -> worker -> real Factorio -> download -> feedback;
 - same-origin tester UI with explicit retry and willingness-to-pay survey;
 - `pnpm beta:kpis` report for active/repeat testers, success/direct-success, duration/Factorio validation, feedback/false-success proxy, WTP, tokens/cost, and Repair attempts.
-- production-conditional workspace exports, compiled-runtime smoke, separate web/worker Docker targets, provider-neutral deployment runbook, and hosted S3 smoke command.
+- production-conditional workspace exports, compiled-runtime smoke, separate web/worker Docker targets, provider-neutral deployment runbook, and hosted S3 smoke command;
+- Helsinki VPS beta stack with pinned PostgreSQL 18.6 + SeaweedFS 4.39, persistent volumes, fixed private Docker subnet, and tailnet-only HTTPS via Tailscale Serve;
+- hosted SeaweedFS smoke proving upload -> presigned GET -> byte comparison -> delete;
+- deployed live Z.ai `glm-5.3-flash` E2E proving API -> pg-boss -> worker -> real Factorio -> private object storage -> presigned ZIP -> feedback/survey; the first server smoke succeeded directly in 19.1 s using 2,205 tokens.
 
 Remaining scope:
-- private deployment and smoke against the selected hosted S3-compatible provider;
+- enable public HTTPS ingress for testers outside the tailnet (Tailscale Funnel requires tailnet-admin approval, or use a conventional public domain/reverse proxy);
 - recruit 30+ active testers and evaluate the product hypotheses from observed beta data.
 
 Exit criteria are the product hypotheses in `product-spec.md`, especially success rate, false-success rate, repeat usage, and willingness to pay.

@@ -1,6 +1,58 @@
 # Private-beta deployment runbook
 
-This runbook describes a provider-neutral M6 deployment. It does not select or provision a hosting vendor, PostgreSQL provider, S3-compatible provider, DNS name, or TLS proxy.
+This runbook describes the provider-neutral M6 deployment contract plus the first concrete beta topology.
+
+## First deployed beta topology (2026-10-11)
+
+The initial production-like environment runs on the Helsinki Debian VPS using `infra/compose.beta.yaml` and a `0600` env file stored outside the repository. It deliberately keeps application and storage listeners on loopback; ingress is a separate concern.
+
+Pinned infrastructure:
+- PostgreSQL `18.6-alpine3.24` at digest `sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873`;
+- SeaweedFS 4.39 at digest `sha256:c7d6c721b30ae711db766bbbfd40192776e263d4e51e22f57baef7bef93c12c6`, running `weed mini` with a persistent `/data` volume;
+- application web/worker images built from application revision `52cebaa`;
+- persistent volumes for PostgreSQL, object storage, and `/app/.tools` Factorio runtime cache;
+- fixed compose subnet `172.30.0.0/24`; worker concurrency starts at `1`.
+
+PostgreSQL 18+ must mount the volume at `/var/lib/postgresql`, not `/var/lib/postgresql/data`. The official image rejects the old mount layout.
+
+The VPS has a default-drop host forward chain. Docker therefore also needs narrow forwarding permission for the compose subnet. Persist equivalent rules in the host policy, adapting the public interface name if it is not `ens1`:
+
+```nft
+ct state established,related accept
+ip saddr 172.30.0.0/24 ip daddr 172.30.0.0/24 accept
+ip saddr 172.30.0.0/24 oifname "ens1" accept
+```
+
+Validate the checked-in topology before transferring it to the VPS:
+
+```bash
+pnpm test:beta-compose
+```
+
+Start/reconcile the stack with:
+
+```bash
+docker compose --env-file /opt/modding-mvp/beta.env \
+  -f /opt/modding-mvp/compose.beta.yaml up -d
+```
+
+Current private HTTPS ingress is Tailscale Serve:
+
+```bash
+tailscale serve --bg --https=443 http://127.0.0.1:3000
+tailscale serve --bg --tls-terminated-tcp=8443 tcp://127.0.0.1:8333
+```
+
+Web is therefore available only inside the tailnet at `https://helsinki-vps.<tailnet>.ts.net/`, and presigned S3 URLs use the same host on port `8443`. `API_TRUST_PROXY=true` is acceptable for this topology because the web container is published only on loopback behind the controlled Serve proxy; a live spoof check confirmed that a client-supplied `X-Forwarded-For` did not replace the real tailnet client IP used by rate limiting.
+
+Tailscale Funnel is not yet enabled for the tailnet and requires one tailnet-admin approval. Once enabled, the same two listeners can be switched from `tailscale serve` to `tailscale funnel`, or replaced by a conventional public DNS/TLS reverse proxy. Do not recruit off-tailnet testers until this ingress gate is complete.
+
+Deployment evidence from 2026-10-11:
+- hosted SeaweedFS smoke passed upload -> presigned GET -> byte comparison -> delete;
+- the deployed worker reported `zai` / `glm-5.3-flash`;
+- the first server generation succeeded directly without Repair in 19,074 ms using 2,205 tokens; Factorio validation took 11,249 ms;
+- the ZIP downloaded through the HTTPS presigned endpoint and passed archive validation;
+- feedback and willingness-to-pay survey writes succeeded.
 
 ## Preconditions
 

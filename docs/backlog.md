@@ -189,7 +189,7 @@ Before starting M2:
 - [x] Add checksum-pinned PostgreSQL 18.6 dev runtime plus real migration/repository/queue/rollback integration tests.
 - [x] Implement private S3-compatible artifact store and bounded presigned download flow through AWS SDK v3.
 - [x] Add Docker-backed S3-compatible integration smoke with upload + presigned download byte round-trip.
-- [ ] Run storage smoke against the actual private-beta S3-compatible provider before deployment.
+- [x] Run storage smoke against the actual private-beta S3-compatible provider (SeaweedFS 4.39 on the Helsinki VPS; upload -> presigned GET -> byte compare -> delete).
 
 ### Worker/API
 - [x] Adapt M5 `runLocalFactorioGeneration` into the service `GenerationExecutor` without exposing local `.runs` persistence.
@@ -205,7 +205,9 @@ Before starting M2:
 
 ### Private deployment/beta
 - [x] Add production JS package exports, Docker web/worker targets, container smoke, hosted S3 smoke command, and deployment runbook.
-- [ ] Deploy API, worker, PostgreSQL, and private object storage.
+- [x] Deploy API, worker, PostgreSQL, and private object storage to the Helsinki VPS with persistent volumes and tailnet-only HTTPS ingress.
+- [x] Run deployed live Z.ai `glm-5.3-flash` E2E: API -> pg-boss -> worker -> Factorio -> SeaweedFS -> presigned ZIP -> feedback/survey.
+- [ ] Enable public HTTPS ingress for testers outside the tailnet (Tailscale Funnel approval or a conventional public domain/reverse proxy).
 - [x] Instrument private-beta KPI report plus explicit willingness-to-pay survey.
 - [ ] Recruit 30+ testers and evaluate the M6 product hypotheses from observed data.
 
