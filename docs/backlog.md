@@ -179,7 +179,7 @@ Before starting M2:
 - [x] Add iterative follow-up editing of an accepted successful tweak bundle through a new immutable revision generation.
 - [x] Add reviewed recipe crafting-time, existing recipe-result amount, and item stack-size primitives with semantic assertions.
 - [x] Finalize the first mixed-request golden eval slice and rerun the live Planner gate (24/24 classification, 14/14 exact supported ModSpecs on Z.ai `glm-5.3-flash`).
-- [x] Deploy compound requests, iterative revisions, and reviewed crafting-time/result/stack-size primitives to the tailnet-only home-server runtime (`cc672d5`) and verify live UI/health, apps-health, and host network checks.
+- [x] Deploy compound requests, iterative revisions, and reviewed crafting-time/result/stack-size primitives to the tailnet-only home-server runtime (`40d28e1`) and verify live UI/health, apps-health, and host network checks.
 
 ### M6A exit review — 2026-10-11
 - [x] Run a fresh product/scope review against the deployed seven-family runtime and realistic non-golden prompts.
