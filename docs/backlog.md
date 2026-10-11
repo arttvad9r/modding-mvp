@@ -181,6 +181,15 @@ Before starting M2:
 - [x] Finalize the first mixed-request golden eval slice and rerun the live Planner gate (24/24 classification, 14/14 exact supported ModSpecs on Z.ai `glm-5.3-flash`).
 - [x] Deploy compound requests, iterative revisions, and reviewed crafting-time/result/stack-size primitives to the tailnet-only home-server runtime (`cc672d5`) and verify live UI/health, apps-health, and host network checks.
 
+### M6A exit review — 2026-10-11
+- [x] Run a fresh product/scope review against the deployed seven-family runtime and realistic non-golden prompts.
+- [ ] Prevent universal/category prompts from silently partially applying when the registry covers only some members (review reproduced this with `Make all inserters twice as fast`: burner and long-handed inserters were omitted).
+- [ ] Show the exact interpreted change list, and revision diff, in tester UI so a successful Factorio validation cannot hide a prompt-to-ModSpec interpretation mistake.
+- [ ] Add an owner-scoped recent-generation/history flow so reload/returning users can reopen downloads and continue revisions instead of losing the in-memory generation ID.
+- [ ] State the validation environment explicitly in the UI: current success proves the generated mod against isolated base-game Factorio 2.0.77, not arbitrary third-party mod stacks or unvalidated DLC combinations.
+- [ ] Add the exit-review adversarial prompts to regression/eval coverage and rerun the live Planner gate after fixing partial-fulfillment semantics.
+- [ ] Re-run the M6A exit review; if green, start with a 5–10 player external cohort before scaling recruitment to the 30+ M6 target.
+
 ## M6 — in progress
 
 ### Service boundary

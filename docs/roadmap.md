@@ -133,9 +133,15 @@ Completed M6A slices:
 - reviewed `recipe_crafting_time`, `recipe_result`, and `item_stack_size` primitives with registry-derived Planner/Revision support and real-Factorio semantic validation; a mixed regression bundle changes gear crafting time, belt output, and circuit stack size in one validated ZIP.
 - refreshed live Z.ai `glm-5.3-flash` Planner gate on the expanded seven-family corpus: **27/27 classification and 17/17 exact supported ModSpecs**; live Throughput bundle smoke (gear crafting ×0.5, belt output = 4, circuit stack = 500) completed prompt -> validated ZIP in **7.957 s**, including **1.676 s** Factorio validation, **4,466 tokens**, and no Repair.
 
+Exit review on 2026-10-11: **not yet passed**. The runtime/validation stack is ready, but a realistic prompt review exposed one silent partial-fulfillment case (`all inserters`) and product-trust gaps: the UI does not show the exact accepted change set, returning users cannot reopen prior generations from the UI, and the success copy does not state clearly enough that validation is against the isolated base-game 2.0.77 environment rather than an arbitrary player mod stack.
+
 Remaining scope before external recruitment:
-- extend the mixed-request golden corpus as new primitives are added and keep the live Planner gate green;
-- make a final M6A exit review against product usefulness and safety before opening public ingress/recruitment.
+- make universal/category requests all-or-unsupported unless the application can prove complete reviewed coverage;
+- expose the accepted change set/revision diff to testers;
+- add owner-scoped recent generation recovery/history;
+- clarify the exact validation/compatibility boundary in tester-facing copy;
+- add the exit-review adversarial prompts to eval coverage and keep the live Planner gate green;
+- repeat the exit review, then recruit a first 5–10 player cohort before scaling toward the 30+ M6 target.
 
 Exit criteria:
 - one natural-language request can express a useful multi-change rebalance and produce one validated ZIP;
