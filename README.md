@@ -96,7 +96,7 @@ pnpm prompt:plan -- "Make steel furnaces twice as fast"
 
 For a Z.ai Coding Plan API key, additionally set `ZAI_API_MODE=coding`; the project then uses the coding-only base URL instead of the general API URL. OpenAI remains available with `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
 
-The current dev/eval defaults are `glm-5.3-flash` for both Ollama Cloud and Z.ai. The beta worker uses Ollama Cloud as primary and Z.ai Coding Plan as provider-level fallback; local CLI/eval commands still select one provider with `LLM_PROVIDER`. Override a model with `LLM_MODEL` (or the provider-specific model variable).
+The current dev/eval defaults are `glm-5.3-flash` for both Ollama Cloud and Z.ai. The beta worker code supports Ollama Cloud as primary and Z.ai Coding Plan as provider-level fallback; the current home-server deployment remains Z.ai-only until the Ollama credential is installed in its root-only env. Local CLI/eval commands still select one provider with `LLM_PROVIDER`. Override a model with `LLM_MODEL` (or the provider-specific model variable).
 
 `prompt:plan`, `prompt:build`, `planner:eval`, and `repair:eval` automatically load a git-ignored `.env.local` from the repository root when it exists. This is the preferred local-key workflow; copy `.env.example` to `.env.local`, add only local credentials, and never commit the file.
 
