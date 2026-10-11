@@ -179,7 +179,7 @@ Before starting M2:
 - [ ] Add iterative follow-up editing of an accepted tweak bundle.
 - [ ] Add the next high-value reviewed tweak primitives with semantic assertions.
 - [x] Finalize the first mixed-request golden eval slice and rerun the live Planner gate (24/24 classification, 14/14 exact supported ModSpecs on Z.ai `glm-5.3-flash`).
-- [ ] Deploy the compound-request beta UX before external recruitment.
+- [x] Deploy the compound-request beta UX to the tailnet-only home-server runtime (`8112d38`) and verify live UI/health, apps-health, and host network checks.
 
 ## M6 — in progress
 

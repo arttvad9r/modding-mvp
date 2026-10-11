@@ -127,12 +127,12 @@ Completed first slice:
 - real-Factorio integration proving a six-change fast-start bundle across prototype, recipe, and research families;
 - updated live Z.ai Planner gate: 24/24 classification and 14/14 exact supported ModSpecs on the 24-case corpus;
 - live natural-language four-change mixed smoke: one Planner attempt -> real Factorio validation -> ZIP in 8.1 s, no Repair.
+- compound-request beta UX deployed tailnet-only on the home server from runtime commit `8112d38`; live UI/health, apps-health, and `verify-stack` pass (30 OK / 0 warnings / 0 failures).
 
 Remaining scope before external recruitment:
 - add iterative follow-up editing of an accepted tweak bundle without asking the user to edit Lua;
 - add the next high-value safe primitives based on tweak-pack usefulness (candidate areas: recipe crafting time/results and item stack sizes), with real-runtime semantic coverage;
-- extend the mixed-request golden corpus as new primitives are added and keep the live Planner gate green;
-- deploy the beta UI around compound tweak-pack requests.
+- extend the mixed-request golden corpus as new primitives are added and keep the live Planner gate green.
 
 Exit criteria:
 - one natural-language request can express a useful multi-change rebalance and produce one validated ZIP;
