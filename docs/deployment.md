@@ -9,7 +9,7 @@ The initial production-like environment runs on the Helsinki Debian VPS using `i
 Pinned infrastructure:
 - PostgreSQL `18.6-alpine3.24` at digest `sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873`;
 - SeaweedFS 4.39 at digest `sha256:c7d6c721b30ae711db766bbbfd40192776e263d4e51e22f57baef7bef93c12c6`, running `weed mini` with a persistent `/data` volume;
-- application web/worker images built from runtime revision `fc00697` (production-only dependency layer);
+- current application web/worker images built from `b80e518`; the production-only runtime slimming was introduced in `fc00697`;
 - persistent volumes for PostgreSQL, object storage, and `/app/.tools` Factorio runtime cache;
 - fixed compose subnet `172.30.0.0/24`; worker concurrency starts at `1`.
 
@@ -53,7 +53,9 @@ Deployment evidence from 2026-10-11:
 - the first server generation succeeded directly without Repair in 19,074 ms using 2,205 tokens; Factorio validation took 11,249 ms;
 - the ZIP downloaded through the HTTPS presigned endpoint and passed archive validation;
 - feedback and willingness-to-pay survey writes succeeded;
-- runtime images were upgraded to `fc00697`: web 528 MB and worker 551 MB locally versus 758/781 MB before slimming, then both restarted successfully on the VPS with the Factorio cache preserved.
+- runtime images were upgraded to the slim production layout introduced in `fc00697`: web 528 MB and worker 551 MB locally versus 758/781 MB before slimming. The current `b80e518` images preserve those sizes and restarted successfully on the VPS with the Factorio cache preserved.
+- migration `0003` added `service_users.metrics_eligible`; the existing deployment-smoke user was marked ineligible, a second live `glm-5.3-flash` E2E succeeded in 20,692 ms using 2,213 tokens with no Repair, and `beta:kpis` remained at a zero real-tester baseline.
+- a compressed PostgreSQL baseline dump is stored on the VPS at `/opt/modding-mvp/backups/post-beta-baseline-20261011.sql.gz` with mode `0600`.
 
 ## Preconditions
 
