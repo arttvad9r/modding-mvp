@@ -9,6 +9,9 @@ import {
 import {
   assertSupportedPrototypeProperty,
   assertSupportedRecipeIngredient,
+  assertSupportedRecipeCraftingTime,
+  assertSupportedRecipeResult,
+  assertSupportedItemStackSize,
   assertSupportedTechnologyCost,
   assertSupportedTechnologyPrerequisite,
   listFactorioCapabilities,
@@ -44,6 +47,9 @@ const REVISION_SCHEMA_DESCRIPTION = `Return exactly one JSON object in one of th
 For supported output, changes is the COMPLETE resulting tweak bundle after applying the follow-up request, not a delta. Every change must use exactly one of these shapes:
 - prototype_property: {"type":"prototype_property","prototypeType":string,"prototypeName":string,"property":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - recipe_ingredient: {"type":"recipe_ingredient","recipeName":string,"ingredientType":"item","ingredientName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
+- recipe_crafting_time: {"type":"recipe_crafting_time","recipeName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
+- recipe_result: {"type":"recipe_result","recipeName":string,"resultType":"item","resultName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
+- item_stack_size: {"type":"item_stack_size","itemName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - technology_cost: {"type":"technology_cost","technologyName":string,"operation":{"type":"set","value":number}|{"type":"multiply","factor":number}}
 - technology_prerequisite: {"type":"technology_prerequisite","technologyName":string,"prerequisiteName":string,"operation":{"type":"add"}|{"type":"remove"}}
 Preserve every existing tweak unless the follow-up explicitly changes or removes it. A request to restore a target to base-game behavior removes that target's tweak from the resulting list. Relative wording such as "another 25% faster" is relative to the current accepted bundle. If any essential requested change is unsupported, or the result would contain no tweaks, return unsupported. Do not include title, slug, capability, target, assertions, Lua, files, markdown, or additional keys.`;
@@ -96,6 +102,12 @@ function assertionForChange(change: ModChange): ModAssertion {
         ingredientName: change.ingredientName,
         expectation: change.operation,
       };
+    case "recipe_crafting_time":
+      return { type: "recipe_crafting_time_matches", recipeName: change.recipeName, expectation: change.operation };
+    case "recipe_result":
+      return { type: "recipe_result_matches", recipeName: change.recipeName, resultType: change.resultType, resultName: change.resultName, expectation: change.operation };
+    case "item_stack_size":
+      return { type: "item_stack_size_matches", itemName: change.itemName, expectation: change.operation };
     case "technology_cost":
       return {
         type: "technology_cost_matches",
@@ -119,6 +131,15 @@ function assertChangeSupported(change: ModChange): void {
       return;
     case "recipe_ingredient":
       assertSupportedRecipeIngredient(change);
+      return;
+    case "recipe_crafting_time":
+      assertSupportedRecipeCraftingTime(change);
+      return;
+    case "recipe_result":
+      assertSupportedRecipeResult(change);
+      return;
+    case "item_stack_size":
+      assertSupportedItemStackSize(change);
       return;
     case "technology_cost":
       assertSupportedTechnologyCost(change);

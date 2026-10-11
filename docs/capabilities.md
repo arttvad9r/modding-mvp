@@ -16,6 +16,9 @@ The registry publishes, for each capability:
 ## Current capabilities
 - `prototype_property` — `set` / `multiply` reviewed numeric speed properties on furnaces, assembling machines, mining drills, transport belts, inserters, and labs;
 - `recipe_ingredient` — `set` / `multiply` existing allow-listed item ingredient amounts;
+- `recipe_crafting_time` — `set` / `multiply` crafting time for reviewed recipes;
+- `recipe_result` — `set` / `multiply` existing reviewed item result amounts;
+- `item_stack_size` — `set` / `multiply` stack size for reviewed base-game items;
 - `technology_cost` — `set` / `multiply` finite allow-listed technology `unit.count`;
 - `technology_prerequisite` — reviewed `add` / `remove` prerequisite edges.
 
@@ -28,4 +31,4 @@ All current entries target Factorio stable `2.0` and are validated against the p
 
 Adding a capability or supported target requires updating the knowledge catalog and tests. Planner prompts must not introduce support that is absent from this registry.
 
-See ADR-0007 and ADR-0015.
+See ADR-0007, ADR-0015, and ADR-0017.

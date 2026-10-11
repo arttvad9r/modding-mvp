@@ -1,4 +1,4 @@
-# Technical specification v0.3
+# Technical specification v0.4
 
 ## System goal
 Implement a bounded pipeline that converts a user request into a Factorio mod artifact and validates the artifact with the real game runtime before reporting success.
@@ -21,6 +21,9 @@ Minimum fields planned for M1:
 Implemented capability-specific ModSpec variants:
 - `prototype_property` — scalar mutation of an allow-listed prototype property;
 - `recipe_ingredient` — amount mutation of an existing allow-listed item ingredient in an existing base-game recipe;
+- `recipe_crafting_time` — crafting-time mutation for an allow-listed base-game recipe;
+- `recipe_result` — amount mutation of an existing allow-listed item result in an existing base-game recipe;
+- `item_stack_size` — stack-size mutation for an allow-listed base-game item;
 - `technology_cost` — mutation of finite research `unit.count` for an allow-listed base-game technology;
 - `technology_prerequisite` — add/remove one reviewed prerequisite edge between base-game technologies.
 
@@ -29,6 +32,12 @@ Legacy single-family ModSpec variants remain valid. A `mixed` ModSpec may compos
 For `prototype_property`, `packages/factorio-generator` supports reviewed numeric speed properties on base-game furnaces, assembling machines, mining drills, transport belts, inserters, and labs. The allow-list stores the pinned Factorio 2.0.77 base value for each supported address so relative operations such as `multiply` can be converted into an absolute semantic expectation.
 
 For `recipe_ingredient`, M2 initially supports existing item ingredients only. The versioned allow-list stores the recipe, ingredient type/name, and base amount. `set` and `multiply` are supported only when the resulting item amount is an integer in `1..65535`; invalid amounts fail before Factorio execution. The generator locates the named ingredient inside `data.raw["recipe"][recipe].ingredients` and mutates only its `amount`. New ingredients, ingredient removal, fluids, and recipe products are outside this first recipe capability.
+
+For `recipe_crafting_time`, M6A supports reviewed recipes with a pinned baseline. Factorio recipes that omit `energy_required` use the engine default baseline `0.5`; generation resolves the current value as `recipe.energy_required or <baseline>`, then writes an explicit final value. Final time is constrained to `0.001..3600` seconds.
+
+For `recipe_result`, M6A supports only existing reviewed item results. The final result amount must be an integer in `1..65535`; adding/removing results and fluid-result changes remain unsupported.
+
+For `item_stack_size`, M6A supports only reviewed base-game item prototypes. The final stack size must be an integer in `1..65535`.
 
 For `technology_cost`, M2 supports allow-listed technologies with a finite numeric `unit.count`. Baselines are read from the pinned Factorio 2.0.77 base data. `set` and `multiply` are accepted only when the resulting count is a positive safe integer. Technologies using `count_formula` are intentionally outside this first technology capability.
 
@@ -60,7 +69,7 @@ Malformed or registry-invalid model output receives at most one correction retry
 
 Golden Planner evals live under `evals/planner/`. The initial gate is >=90% supported/unsupported classification accuracy and >=80% exact semantic change accuracy on supported cases. These thresholds are development gates, not product KPI claims. The Planner schema prompt explicitly enumerates the exact JSON shape for each capability-specific change so model quality is measured against a fully specified typed contract rather than implicit TypeScript knowledge.
 
-Recorded Planner baselines on 2026-10-11: the original M3 corpus passed 24/24 classification and 12/12 supported semantic ModSpec cases on both Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`. After the M6A mixed-bundle/assembler expansion, Z.ai Coding Plan `glm-5.3-flash` passed the updated 24-case corpus at 24/24 classification and 14/14 exact supported semantic ModSpecs (74,458 total tokens), including the new heterogeneous mixed request. The earlier Z.ai HTTP 429/code 1113 result came from sending a Coding Plan key to the general endpoint, whose quota is separate.
+Recorded Planner baselines on 2026-10-11: the original M3 corpus passed 24/24 classification and 12/12 supported semantic ModSpec cases on both Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`. After the M6A mixed-bundle/assembler expansion, Z.ai Coding Plan `glm-5.3-flash` passed the updated 24-case corpus at 24/24 classification and 14/14 exact supported semantic ModSpecs (74,458 total tokens), including the new heterogeneous mixed request. The earlier Z.ai HTTP 429/code 1113 result came from sending a Coding Plan key to the general endpoint, whose quota is separate. After the recipe-time/result/stack expansion, the refreshed 27-case Z.ai corpus passed **27/27 classification and 17/17 exact supported semantic ModSpecs** with no failures (115,131 total evaluation tokens).
 
 For M3 development/evaluation, provider presets use `glm-5.3-flash` on Z.ai and `deepseek-v4.1-flash:cloud` on Ollama Cloud by default. These are dev/eval defaults only; provider/model selection remains runtime configuration and is not a production architecture commitment.
 
@@ -131,7 +140,7 @@ Examples:
 
 For the current deterministic capabilities, the generator returns semantic assertion Lua separately from the user artifact. During validation, `factorio-harness` materializes a temporary companion validator mod that depends on the candidate and runs the assertion from `data-final-fixes.lua`. Factorio executes the data-stage rounds in the order `data.lua`, `data-updates.lua`, then `data-final-fixes.lua`, so the validator observes the final prototype state in the isolated base+candidate environment.
 
-`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
+`prototype_property` assertions compare the final numeric property against the expected absolute value. `recipe_ingredient` assertions find the named item ingredient in the final recipe prototype and compare its `amount` against the expected integer. `recipe_crafting_time` assertions compare final `recipe.energy_required`; `recipe_result` assertions find the reviewed result and compare its amount; `item_stack_size` assertions compare final item `stack_size`. `technology_cost` assertions compare the final `technology.unit.count` against the expected integer. `technology_prerequisite` assertions verify final presence/absence of the reviewed prerequisite edge. Assertion failures use the `__PROJECT_SEMANTIC_ASSERTION__` marker and are normalized as `semantic_assertion_failed`, separately from `factorio_load_failed` and process errors. Validation-only Lua must not be packaged into the installable user artifact. See ADR-0006.
 
 ## Deterministic local build command
 `pnpm mod:build -- <mod-spec.json> [output-directory]` performs:
@@ -182,6 +191,8 @@ Each run gets a generation ID and a git-ignored `.runs/<generation-id>.json` rep
 Recorded M5 live smoke on 2026-10-11 using Z.ai Coding Plan `glm-5.3-flash`: direct supported prompt completed in 5,401 ms, one Planner attempt, 2,215 tokens, 1,540 ms Factorio validation, no Repair, and a validated ZIP under root `dist/`.
 
 Recorded M6A live mixed smoke on 2026-10-11 using the same provider: a four-change prompt (assembling-machine speed, furnace speed, gear ingredient cost, and Automation research cost) produced an exact `mixed` ModSpec on the first Planner attempt and a validated ZIP in 8,086 ms; Factorio validation took 1,599 ms, total model usage was 3,337 tokens, and no Repair was needed.
+
+Recorded M6A throughput smoke on 2026-10-11: “Make iron gears craft twice as fast, make transport belts produce 4 belts per craft, and set electronic circuit stack size to 500” produced the exact three-family `mixed` ModSpec on the first Planner attempt. The validated ZIP completed in **7,957 ms**; Factorio semantic validation took **1,676 ms**, model usage was **4,466 tokens**, and no Repair was needed.
 
 
 ## Private-beta service boundary

@@ -1,9 +1,9 @@
-# Architecture v0.13
+# Architecture v0.14
 
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
 
-M1 through M5 are complete and the M6 private-beta service foundation is operational. M6A is now the active product-value gate before public recruitment. The deterministic core still has four reviewed primitive capability families, but a backward-compatible `mixed` ModSpec can compose those primitives into one tweak bundle. The generator dispatches each typed change independently, while semantic assertions and real Factorio 2.0.77 remain authoritative. The reviewed prototype-property catalog now includes speed parameters for furnaces, assembling machines, mining drills, transport belts, inserters, and labs. The service, PostgreSQL/pg-boss queue, object storage, auth/rate limits, tester UI, hosted deployment, and KPI instrumentation remain in place. The M6A compound-request plus follow-up-revision UI/runtime is deployed tailnet-only on the home server from source commit `aa9bdcc`; live health plus host/app checks pass. A successful generation can spawn a new immutable revision generation from its accepted ModSpec snapshot, and the revised bundle is fully revalidated before a new artifact is exposed. Public off-tailnet ingress and 30+ tester recruitment remain deferred until the M6A product-value gate is satisfied.
+M1 through M5 are complete and the M6 private-beta service foundation is operational. M6A is now the active product-value gate before public recruitment. The deterministic core now has seven reviewed primitive capability families, and a backward-compatible `mixed` ModSpec can compose those primitives into one tweak bundle. The generator dispatches each typed change independently, while semantic assertions and real Factorio 2.0.77 remain authoritative. The reviewed catalog includes speed parameters for furnaces, assembling machines, mining drills, transport belts, inserters, and labs plus recipe crafting time, existing recipe result amounts, and item stack sizes for reviewed targets. The service, PostgreSQL/pg-boss queue, object storage, auth/rate limits, tester UI, hosted deployment, and KPI instrumentation remain in place. The M6A compound-request plus follow-up-revision UI/runtime is deployed tailnet-only on the home server from source commit `aa9bdcc`; live health plus host/app checks pass. A successful generation can spawn a new immutable revision generation from its accepted ModSpec snapshot, and the revised bundle is fully revalidated before a new artifact is exposed. Public off-tailnet ingress and 30+ tester recruitment remain deferred until the M6A product-value gate is satisfied.
 
 ## Target product pipeline
 
@@ -29,7 +29,7 @@ See ADR-0003 for why real Factorio is the validation authority.
 The current deterministic core provides:
 - `packages/domain` for typed ModSpec, generated-file manifest, and shared `ProjectError` contracts;
 - `packages/factorio-knowledge` for versioned Factorio allow-lists/baselines plus machine-readable Planner capability metadata;
-- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation across prototype property, recipe ingredient, technology cost, and reviewed technology prerequisite changes, including composition of those primitives in a `mixed` ModSpec;
+- `packages/factorio-generator` for deterministic supported ModSpec-to-Lua generation across prototype property, recipe ingredient, recipe crafting time, recipe result, item stack size, technology cost, and reviewed technology prerequisite changes, including composition of those primitives in a `mixed` ModSpec;
 - semantic assertion Lua generated separately from the user artifact;
 - `packages/factorio-harness` temporary companion validator mod and structured semantic failure classification;
 - temporary-only manifest materialization;
@@ -49,7 +49,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - Planner structured-output correction is bounded to two attempts by default.
 - `evals/planner/golden.json` and `pnpm planner:eval` provide repeatable model evaluation.
 - For Ollama reasoning models used as JSON planners, the adapter can request `reasoning_effort: none`; this avoids reasoning/content splits while application-side Zod validation remains authoritative.
-- The original M3 live baselines reached 100% classification and supported ModSpec accuracy on the 24-case corpus with Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`; after the M6A mixed/assembler expansion, Z.ai `glm-5.3-flash` again passed 24/24 classification and 14/14 exact supported ModSpecs on the updated corpus.
+- The original M3 live baselines reached 100% classification and supported ModSpec accuracy on the 24-case corpus with Ollama Cloud `deepseek-v4.1-flash:cloud` and Z.ai Coding Plan `glm-5.3-flash`; after the M6A mixed/assembler expansion, Z.ai passed 24/24 classification and 14/14 exact supported ModSpecs, and after the seven-family recipe-time/result/stack expansion the refreshed corpus passed **27/27 classification and 17/17 exact supported ModSpecs**.
 - `planFactorioRevision` accepts an already validated base ModSpec plus a follow-up request. The model returns the complete resulting typed change set only; the application preserves title/slug/target, derives capability/assertions, and rejects unsupported/partial revisions. A live Z.ai smoke correctly preserved/remapped a mixed bundle and passed real Factorio without Repair.
 
 ## Implemented Repair boundary
@@ -69,6 +69,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `pnpm prompt:feedback -- <generation-id> <up|down> [note]` updates the matching local run report. This JSON persistence is a disposable M5 prototype, not the M6 service data model.
 - Recorded live smoke on Z.ai Coding Plan `glm-5.3-flash`: direct supported request completed in about 5.4 seconds with one Planner attempt, 2,215 model tokens, 1.54 seconds of Factorio validation, and a validated ZIP under root `dist/`.
 - M6A mixed smoke: one natural-language four-change rebalance produced a `mixed` ModSpec on the first attempt and a real-Factorio-validated ZIP in about 8.1 seconds with no Repair.
+- M6A throughput smoke: one natural-language request combining gear crafting time, belt recipe output, and circuit stack size produced the exact three-family `mixed` ModSpec on the first attempt and a validated ZIP in 7.957 s; Factorio validation took 1.676 s and no Repair was needed.
 
 
 ## Implemented private-beta service core boundary

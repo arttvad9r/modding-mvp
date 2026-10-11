@@ -69,6 +69,56 @@ export const RecipeIngredientAssertionSchema = z.strictObject({
   expectation: ScalarOperationSchema,
 });
 
+const recipeAddressFields = {
+  recipeName: z.string().min(1).max(160).regex(factorioIdentifier),
+} as const;
+
+export const RecipeCraftingTimeChangeSchema = z.strictObject({
+  type: z.literal("recipe_crafting_time"),
+  ...recipeAddressFields,
+  operation: ScalarOperationSchema,
+});
+
+export const RecipeCraftingTimeAssertionSchema = z.strictObject({
+  type: z.literal("recipe_crafting_time_matches"),
+  ...recipeAddressFields,
+  expectation: ScalarOperationSchema,
+});
+
+const recipeResultAddressFields = {
+  recipeName: z.string().min(1).max(160).regex(factorioIdentifier),
+  resultType: z.literal("item"),
+  resultName: z.string().min(1).max(160).regex(factorioIdentifier),
+} as const;
+
+export const RecipeResultChangeSchema = z.strictObject({
+  type: z.literal("recipe_result"),
+  ...recipeResultAddressFields,
+  operation: ScalarOperationSchema,
+});
+
+export const RecipeResultAssertionSchema = z.strictObject({
+  type: z.literal("recipe_result_matches"),
+  ...recipeResultAddressFields,
+  expectation: ScalarOperationSchema,
+});
+
+const itemStackAddressFields = {
+  itemName: z.string().min(1).max(160).regex(factorioIdentifier),
+} as const;
+
+export const ItemStackSizeChangeSchema = z.strictObject({
+  type: z.literal("item_stack_size"),
+  ...itemStackAddressFields,
+  operation: ScalarOperationSchema,
+});
+
+export const ItemStackSizeAssertionSchema = z.strictObject({
+  type: z.literal("item_stack_size_matches"),
+  ...itemStackAddressFields,
+  expectation: ScalarOperationSchema,
+});
+
 const technologyAddressFields = {
   technologyName: z.string().min(1).max(160).regex(factorioIdentifier),
 } as const;
@@ -110,6 +160,9 @@ export const TechnologyPrerequisiteAssertionSchema = z.strictObject({
 export const ModChangeSchema = z.discriminatedUnion("type", [
   PrototypePropertyChangeSchema,
   RecipeIngredientChangeSchema,
+  RecipeCraftingTimeChangeSchema,
+  RecipeResultChangeSchema,
+  ItemStackSizeChangeSchema,
   TechnologyCostChangeSchema,
   TechnologyPrerequisiteChangeSchema,
 ]);
@@ -117,6 +170,9 @@ export const ModChangeSchema = z.discriminatedUnion("type", [
 export const ModAssertionSchema = z.discriminatedUnion("type", [
   PrototypePropertyAssertionSchema,
   RecipeIngredientAssertionSchema,
+  RecipeCraftingTimeAssertionSchema,
+  RecipeResultAssertionSchema,
+  ItemStackSizeAssertionSchema,
   TechnologyCostAssertionSchema,
   TechnologyPrerequisiteAssertionSchema,
 ]);
@@ -221,6 +277,39 @@ export const RecipeIngredientModSpecSchema = z
     );
   });
 
+export const RecipeCraftingTimeModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("recipe_crafting_time"),
+    changes: z.array(RecipeCraftingTimeChangeSchema).min(1).max(16),
+    assertions: z.array(RecipeCraftingTimeAssertionSchema).min(1).max(16),
+  })
+  .superRefine((spec, ctx) => {
+    addSemanticIssues(spec.changes, spec.assertions, (v) => v.recipeName, (v) => v.recipeName, (v) => v.operation, (v) => v.expectation, ctx, "Duplicate recipe crafting time change");
+  });
+
+export const RecipeResultModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("recipe_result"),
+    changes: z.array(RecipeResultChangeSchema).min(1).max(16),
+    assertions: z.array(RecipeResultAssertionSchema).min(1).max(16),
+  })
+  .superRefine((spec, ctx) => {
+    addSemanticIssues(spec.changes, spec.assertions, (v) => `${v.recipeName}\u0000${v.resultType}\u0000${v.resultName}`, (v) => `${v.recipeName}\u0000${v.resultType}\u0000${v.resultName}`, (v) => v.operation, (v) => v.expectation, ctx, "Duplicate recipe result change");
+  });
+
+export const ItemStackSizeModSpecSchema = z
+  .strictObject({
+    ...baseSpecFields,
+    capability: z.literal("item_stack_size"),
+    changes: z.array(ItemStackSizeChangeSchema).min(1).max(16),
+    assertions: z.array(ItemStackSizeAssertionSchema).min(1).max(16),
+  })
+  .superRefine((spec, ctx) => {
+    addSemanticIssues(spec.changes, spec.assertions, (v) => v.itemName, (v) => v.itemName, (v) => v.operation, (v) => v.expectation, ctx, "Duplicate item stack size change");
+  });
+
 export const TechnologyCostModSpecSchema = z
   .strictObject({
     ...baseSpecFields,
@@ -302,6 +391,12 @@ function mixedChangeAddress(change: z.infer<typeof ModChangeSchema>): string {
       return `${change.type}\u0000${change.prototypeType}\u0000${change.prototypeName}\u0000${change.property}`;
     case "recipe_ingredient":
       return `${change.type}\u0000${change.recipeName}\u0000${change.ingredientType}\u0000${change.ingredientName}`;
+    case "recipe_crafting_time":
+      return `${change.type}\u0000${change.recipeName}`;
+    case "recipe_result":
+      return `${change.type}\u0000${change.recipeName}\u0000${change.resultType}\u0000${change.resultName}`;
+    case "item_stack_size":
+      return `${change.type}\u0000${change.itemName}`;
     case "technology_cost":
       return `${change.type}\u0000${change.technologyName}`;
     case "technology_prerequisite":
@@ -324,6 +419,12 @@ function mixedAssertionSemanticKey(assertion: z.infer<typeof ModAssertionSchema>
       return `prototype_property\u0000${assertion.prototypeType}\u0000${assertion.prototypeName}\u0000${assertion.property}\u0000${operationKey(assertion.expectation)}`;
     case "recipe_ingredient_matches":
       return `recipe_ingredient\u0000${assertion.recipeName}\u0000${assertion.ingredientType}\u0000${assertion.ingredientName}\u0000${operationKey(assertion.expectation)}`;
+    case "recipe_crafting_time_matches":
+      return `recipe_crafting_time\u0000${assertion.recipeName}\u0000${operationKey(assertion.expectation)}`;
+    case "recipe_result_matches":
+      return `recipe_result\u0000${assertion.recipeName}\u0000${assertion.resultType}\u0000${assertion.resultName}\u0000${operationKey(assertion.expectation)}`;
+    case "item_stack_size_matches":
+      return `item_stack_size\u0000${assertion.itemName}\u0000${operationKey(assertion.expectation)}`;
     case "technology_cost_matches":
       return `technology_cost\u0000${assertion.technologyName}\u0000${operationKey(assertion.expectation)}`;
     case "technology_prerequisite_matches":
@@ -388,6 +489,9 @@ export const MixedModSpecSchema = z
 export const ModSpecSchema = z.union([
   PrototypePropertyModSpecSchema,
   RecipeIngredientModSpecSchema,
+  RecipeCraftingTimeModSpecSchema,
+  RecipeResultModSpecSchema,
+  ItemStackSizeModSpecSchema,
   TechnologyCostModSpecSchema,
   TechnologyPrerequisiteModSpecSchema,
   MixedModSpecSchema,
@@ -399,6 +503,12 @@ export type PrototypePropertyChange = z.infer<typeof PrototypePropertyChangeSche
 export type PrototypePropertyAssertion = z.infer<typeof PrototypePropertyAssertionSchema>;
 export type RecipeIngredientChange = z.infer<typeof RecipeIngredientChangeSchema>;
 export type RecipeIngredientAssertion = z.infer<typeof RecipeIngredientAssertionSchema>;
+export type RecipeCraftingTimeChange = z.infer<typeof RecipeCraftingTimeChangeSchema>;
+export type RecipeCraftingTimeAssertion = z.infer<typeof RecipeCraftingTimeAssertionSchema>;
+export type RecipeResultChange = z.infer<typeof RecipeResultChangeSchema>;
+export type RecipeResultAssertion = z.infer<typeof RecipeResultAssertionSchema>;
+export type ItemStackSizeChange = z.infer<typeof ItemStackSizeChangeSchema>;
+export type ItemStackSizeAssertion = z.infer<typeof ItemStackSizeAssertionSchema>;
 export type TechnologyCostChange = z.infer<typeof TechnologyCostChangeSchema>;
 export type TechnologyCostAssertion = z.infer<typeof TechnologyCostAssertionSchema>;
 export type PrerequisiteOperation = z.infer<typeof PrerequisiteOperationSchema>;
@@ -408,6 +518,9 @@ export type ModChange = z.infer<typeof ModChangeSchema>;
 export type ModAssertion = z.infer<typeof ModAssertionSchema>;
 export type PrototypePropertyModSpec = z.infer<typeof PrototypePropertyModSpecSchema>;
 export type RecipeIngredientModSpec = z.infer<typeof RecipeIngredientModSpecSchema>;
+export type RecipeCraftingTimeModSpec = z.infer<typeof RecipeCraftingTimeModSpecSchema>;
+export type RecipeResultModSpec = z.infer<typeof RecipeResultModSpecSchema>;
+export type ItemStackSizeModSpec = z.infer<typeof ItemStackSizeModSpecSchema>;
 export type TechnologyCostModSpec = z.infer<typeof TechnologyCostModSpecSchema>;
 export type TechnologyPrerequisiteModSpec = z.infer<typeof TechnologyPrerequisiteModSpecSchema>;
 export type MixedModSpec = z.infer<typeof MixedModSpecSchema>;

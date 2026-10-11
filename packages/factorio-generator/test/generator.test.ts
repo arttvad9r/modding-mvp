@@ -247,3 +247,59 @@ describe("generateFactorioMod mixed bundle", () => {
     expect(generated.semanticAssertionLua).toContain("technology.automation.unit.count|expected=5");
   });
 });
+
+describe("generateFactorioMod M6A rebalance primitives", () => {
+  it("renders recipe crafting time with an absolute semantic assertion", () => {
+    const spec: ModSpec = {
+      title: "Fast gears",
+      slug: "fast-gears",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+      capability: "recipe_crafting_time",
+      changes: [{ type: "recipe_crafting_time", recipeName: "iron-gear-wheel", operation: { type: "multiply", factor: 0.5 } }],
+      assertions: [{ type: "recipe_crafting_time_matches", recipeName: "iron-gear-wheel", expectation: { type: "multiply", factor: 0.5 } }],
+    };
+    const generated = generateFactorioMod(spec);
+    expect(generatedContent("data.lua", spec)).toContain("recipe.energy_required = current * 0.5");
+    expect(generated.semanticAssertionLua).toContain("recipe.iron-gear-wheel.energy_required|expected=0.25");
+  });
+
+  it("renders recipe result amount and rejects fractional item results", () => {
+    const spec: ModSpec = {
+      title: "More belts",
+      slug: "more-belts",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+      capability: "recipe_result",
+      changes: [{ type: "recipe_result", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", operation: { type: "multiply", factor: 2 } }],
+      assertions: [{ type: "recipe_result_matches", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", expectation: { type: "multiply", factor: 2 } }],
+    };
+    const generated = generateFactorioMod(spec);
+    expect(generatedContent("data.lua", spec)).toContain("result.amount = result.amount * 2");
+    expect(generated.semanticAssertionLua).toContain("recipe.transport-belt.result.item.transport-belt|expected=4");
+    const invalid = {
+      ...spec,
+      changes: [{ ...spec.changes[0]!, operation: { type: "multiply" as const, factor: 0.75 } }],
+      assertions: [{ ...spec.assertions[0]!, expectation: { type: "multiply" as const, factor: 0.75 } }],
+    } as ModSpec;
+    expect(() => generateFactorioMod(invalid)).toThrow("Item result amount must be an integer in range 1..65535");
+  });
+
+  it("renders item stack size and rejects non-integer stacks", () => {
+    const spec: ModSpec = {
+      title: "Bigger circuit stacks",
+      slug: "bigger-circuit-stacks",
+      target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+      capability: "item_stack_size",
+      changes: [{ type: "item_stack_size", itemName: "electronic-circuit", operation: { type: "set", value: 500 } }],
+      assertions: [{ type: "item_stack_size_matches", itemName: "electronic-circuit", expectation: { type: "set", value: 500 } }],
+    };
+    const generated = generateFactorioMod(spec);
+    expect(generatedContent("data.lua", spec)).toContain("item.stack_size = 500");
+    expect(generated.semanticAssertionLua).toContain("item.electronic-circuit.stack_size|expected=500");
+    const invalid = {
+      ...spec,
+      changes: [{ ...spec.changes[0]!, operation: { type: "set" as const, value: 1.5 } }],
+      assertions: [{ ...spec.assertions[0]!, expectation: { type: "set" as const, value: 1.5 } }],
+    } as ModSpec;
+    expect(() => generateFactorioMod(invalid)).toThrow("Item stack size must be an integer in range 1..65535");
+  });
+});

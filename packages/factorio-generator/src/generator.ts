@@ -11,6 +11,12 @@ import {
   type PrototypePropertyChange,
   type RecipeIngredientAssertion,
   type RecipeIngredientChange,
+  type RecipeCraftingTimeAssertion,
+  type RecipeCraftingTimeChange,
+  type RecipeResultAssertion,
+  type RecipeResultChange,
+  type ItemStackSizeAssertion,
+  type ItemStackSizeChange,
   type ScalarOperation,
   type TechnologyCostAssertion,
   type TechnologyCostChange,
@@ -21,10 +27,16 @@ import {
 import {
   assertSupportedPrototypeProperty,
   assertSupportedRecipeIngredient,
+  assertSupportedRecipeCraftingTime,
+  assertSupportedRecipeResult,
+  assertSupportedItemStackSize,
   assertSupportedTechnologyCost,
   assertSupportedTechnologyPrerequisite,
   getSupportedPrototypeProperty,
   getSupportedRecipeIngredient,
+  getSupportedRecipeCraftingTime,
+  getSupportedRecipeResult,
+  getSupportedItemStackSize,
   getSupportedTechnologyCost,
   getSupportedTechnologyPrerequisite,
 } from "@project/factorio-knowledge";
@@ -33,6 +45,10 @@ const GENERATED_VERSION = "0.1.0";
 const GENERATED_AUTHOR = "Generated mod";
 const SEMANTIC_MARKER = "__PROJECT_SEMANTIC_ASSERTION__";
 const MAX_ITEM_INGREDIENT_AMOUNT = 65_535;
+const MAX_ITEM_RESULT_AMOUNT = 65_535;
+const MAX_ITEM_STACK_SIZE = 65_535;
+const MIN_RECIPE_CRAFTING_TIME = 0.001;
+const MAX_RECIPE_CRAFTING_TIME = 3_600;
 const MAX_SAFE_INTEGER_VALUE = Number.MAX_SAFE_INTEGER;
 const safeLuaIdentifier = /^[A-Za-z0-9_-]+$/;
 const safeLuaProperty = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -88,6 +104,30 @@ function expectedItemIngredientAmount(operation: ScalarOperation, baseAmount: nu
     throw new Error(
       `Item ingredient amount must be an integer in range 1..${MAX_ITEM_INGREDIENT_AMOUNT}; got ${expected}`,
     );
+  }
+  return expected;
+}
+
+function expectedRecipeCraftingTime(operation: ScalarOperation, baseValue: number): number {
+  const expected = applyOperation(operation, baseValue);
+  if (expected < MIN_RECIPE_CRAFTING_TIME || expected > MAX_RECIPE_CRAFTING_TIME) {
+    throw new Error(`Recipe crafting time must be in range ${MIN_RECIPE_CRAFTING_TIME}..${MAX_RECIPE_CRAFTING_TIME}; got ${expected}`);
+  }
+  return expected;
+}
+
+function expectedRecipeResultAmount(operation: ScalarOperation, baseAmount: number): number {
+  const expected = applyOperation(operation, baseAmount);
+  if (!Number.isInteger(expected) || expected < 1 || expected > MAX_ITEM_RESULT_AMOUNT) {
+    throw new Error(`Item result amount must be an integer in range 1..${MAX_ITEM_RESULT_AMOUNT}; got ${expected}`);
+  }
+  return expected;
+}
+
+function expectedItemStackSize(operation: ScalarOperation, baseValue: number): number {
+  const expected = applyOperation(operation, baseValue);
+  if (!Number.isInteger(expected) || expected < 1 || expected > MAX_ITEM_STACK_SIZE) {
+    throw new Error(`Item stack size must be an integer in range 1..${MAX_ITEM_STACK_SIZE}; got ${expected}`);
   }
   return expected;
 }
@@ -148,6 +188,62 @@ function renderRecipeIngredientChange(change: RecipeIngredientChange): string {
     `  assert(ingredient, ${missingIngredient})`,
     `  assert(type(ingredient.amount) == \"number\", ${nonNumeric})`,
     `  ingredient.amount = ${renderOperation(change.operation, "ingredient.amount")}`,
+    "end",
+  ].join("\n");
+}
+
+function renderRecipeCraftingTimeChange(change: RecipeCraftingTimeChange): string {
+  const supported = getSupportedRecipeCraftingTime(change);
+  expectedRecipeCraftingTime(change.operation, supported.baseEnergyRequired);
+  const recipeName = quoteLuaIdentifier(change.recipeName, "identifier");
+  const missingRecipe = quoteLuaText(`Missing recipe ${change.recipeName}`);
+  const nonNumeric = quoteLuaText(`Expected numeric recipe crafting time ${change.recipeName}`);
+  return [
+    "do",
+    `  local recipe = data.raw[\"recipe\"] and data.raw[\"recipe\"][${recipeName}]`,
+    `  assert(recipe, ${missingRecipe})`,
+    `  local current = recipe.energy_required or ${luaNumber(supported.baseEnergyRequired)}`,
+    `  assert(type(current) == \"number\", ${nonNumeric})`,
+    `  recipe.energy_required = ${renderOperation(change.operation, "current")}`,
+    "end",
+  ].join("\n");
+}
+
+function renderRecipeResultChange(change: RecipeResultChange): string {
+  const supported = getSupportedRecipeResult(change);
+  expectedRecipeResultAmount(change.operation, supported.baseAmount);
+  const recipeName = quoteLuaIdentifier(change.recipeName, "identifier");
+  const resultName = quoteLuaIdentifier(change.resultName, "identifier");
+  const missingRecipe = quoteLuaText(`Missing recipe ${change.recipeName}`);
+  const missingResult = quoteLuaText(`Missing result ${change.resultType}.${change.resultName} in recipe ${change.recipeName}`);
+  const nonNumeric = quoteLuaText(`Expected numeric result amount ${change.recipeName}.${change.resultType}.${change.resultName}`);
+  return [
+    "do",
+    `  local recipe = data.raw[\"recipe\"] and data.raw[\"recipe\"][${recipeName}]`,
+    `  assert(recipe, ${missingRecipe})`,
+    "  local result = nil",
+    "  for _, candidate in ipairs(recipe.results or {}) do",
+    `    if candidate.type == \"item\" and candidate.name == ${resultName} then result = candidate break end`,
+    "  end",
+    `  assert(result, ${missingResult})`,
+    `  assert(type(result.amount) == \"number\", ${nonNumeric})`,
+    `  result.amount = ${renderOperation(change.operation, "result.amount")}`,
+    "end",
+  ].join("\n");
+}
+
+function renderItemStackSizeChange(change: ItemStackSizeChange): string {
+  const supported = getSupportedItemStackSize(change);
+  expectedItemStackSize(change.operation, supported.baseStackSize);
+  const itemName = quoteLuaIdentifier(change.itemName, "identifier");
+  const missingItem = quoteLuaText(`Missing item ${change.itemName}`);
+  const nonNumeric = quoteLuaText(`Expected numeric item stack size ${change.itemName}`);
+  return [
+    "do",
+    `  local item = data.raw[\"item\"] and data.raw[\"item\"][${itemName}]`,
+    `  assert(item, ${missingItem})`,
+    `  assert(type(item.stack_size) == \"number\", ${nonNumeric})`,
+    `  item.stack_size = ${renderOperation(change.operation, "item.stack_size")}`,
     "end",
   ].join("\n");
 }
@@ -225,6 +321,64 @@ function renderRecipeIngredientAssertion(assertion: RecipeIngredientAssertion): 
     "      end",
     "    end",
     "  end",
+    `  local expected = ${luaNumber(expected)}`,
+    "  if type(actual) ~= \"number\" or actual ~= expected then",
+    `    error(${markerPrefix} .. tostring(actual), 0)`,
+    "  end",
+    "end",
+  ].join("\n");
+}
+
+function renderRecipeCraftingTimeAssertion(assertion: RecipeCraftingTimeAssertion): string {
+  const supported = getSupportedRecipeCraftingTime({ type: "recipe_crafting_time", recipeName: assertion.recipeName, operation: assertion.expectation });
+  const expected = expectedRecipeCraftingTime(assertion.expectation, supported.baseEnergyRequired);
+  const recipeName = quoteLuaIdentifier(assertion.recipeName, "identifier");
+  const markerPrefix = quoteLuaText(`${SEMANTIC_MARKER}|recipe.${assertion.recipeName}.energy_required|expected=${expected}|actual=`);
+  return [
+    "do",
+    `  local recipe = data.raw[\"recipe\"] and data.raw[\"recipe\"][${recipeName}]`,
+    "  local actual = recipe and recipe.energy_required or nil",
+    `  local expected = ${luaNumber(expected)}`,
+    "  local tolerance = 1e-9 * math.max(1, math.abs(expected))",
+    "  if type(actual) ~= \"number\" or math.abs(actual - expected) > tolerance then",
+    `    error(${markerPrefix} .. tostring(actual), 0)`,
+    "  end",
+    "end",
+  ].join("\n");
+}
+
+function renderRecipeResultAssertion(assertion: RecipeResultAssertion): string {
+  const supported = getSupportedRecipeResult({ type: "recipe_result", recipeName: assertion.recipeName, resultType: assertion.resultType, resultName: assertion.resultName, operation: assertion.expectation });
+  const expected = expectedRecipeResultAmount(assertion.expectation, supported.baseAmount);
+  const recipeName = quoteLuaIdentifier(assertion.recipeName, "identifier");
+  const resultName = quoteLuaIdentifier(assertion.resultName, "identifier");
+  const markerPrefix = quoteLuaText(`${SEMANTIC_MARKER}|recipe.${assertion.recipeName}.result.${assertion.resultType}.${assertion.resultName}|expected=${expected}|actual=`);
+  return [
+    "do",
+    `  local recipe = data.raw[\"recipe\"] and data.raw[\"recipe\"][${recipeName}]`,
+    "  local actual = nil",
+    "  if recipe then",
+    "    for _, result in ipairs(recipe.results or {}) do",
+    `      if result.type == \"item\" and result.name == ${resultName} then actual = result.amount break end`,
+    "    end",
+    "  end",
+    `  local expected = ${luaNumber(expected)}`,
+    "  if type(actual) ~= \"number\" or actual ~= expected then",
+    `    error(${markerPrefix} .. tostring(actual), 0)`,
+    "  end",
+    "end",
+  ].join("\n");
+}
+
+function renderItemStackSizeAssertion(assertion: ItemStackSizeAssertion): string {
+  const supported = getSupportedItemStackSize({ type: "item_stack_size", itemName: assertion.itemName, operation: assertion.expectation });
+  const expected = expectedItemStackSize(assertion.expectation, supported.baseStackSize);
+  const itemName = quoteLuaIdentifier(assertion.itemName, "identifier");
+  const markerPrefix = quoteLuaText(`${SEMANTIC_MARKER}|item.${assertion.itemName}.stack_size|expected=${expected}|actual=`);
+  return [
+    "do",
+    `  local item = data.raw[\"item\"] and data.raw[\"item\"][${itemName}]`,
+    "  local actual = item and item.stack_size or nil",
     `  local expected = ${luaNumber(expected)}`,
     "  if type(actual) ~= \"number\" or actual ~= expected then",
     `    error(${markerPrefix} .. tostring(actual), 0)`,
@@ -344,6 +498,15 @@ function assertSupportedModChange(change: ModChange): void {
     case "recipe_ingredient":
       assertSupportedRecipeIngredient(change);
       return;
+    case "recipe_crafting_time":
+      assertSupportedRecipeCraftingTime(change);
+      return;
+    case "recipe_result":
+      assertSupportedRecipeResult(change);
+      return;
+    case "item_stack_size":
+      assertSupportedItemStackSize(change);
+      return;
     case "technology_cost":
       assertSupportedTechnologyCost(change);
       return;
@@ -359,6 +522,12 @@ function renderModChange(change: ModChange): string {
       return renderPrototypePropertyChange(change);
     case "recipe_ingredient":
       return renderRecipeIngredientChange(change);
+    case "recipe_crafting_time":
+      return renderRecipeCraftingTimeChange(change);
+    case "recipe_result":
+      return renderRecipeResultChange(change);
+    case "item_stack_size":
+      return renderItemStackSizeChange(change);
     case "technology_cost":
       return renderTechnologyCostChange(change);
     case "technology_prerequisite":
@@ -372,6 +541,12 @@ function renderModAssertion(assertion: ModAssertion): string {
       return renderPrototypePropertyAssertion(assertion);
     case "recipe_ingredient_matches":
       return renderRecipeIngredientAssertion(assertion);
+    case "recipe_crafting_time_matches":
+      return renderRecipeCraftingTimeAssertion(assertion);
+    case "recipe_result_matches":
+      return renderRecipeResultAssertion(assertion);
+    case "item_stack_size_matches":
+      return renderItemStackSizeAssertion(assertion);
     case "technology_cost_matches":
       return renderTechnologyCostAssertion(assertion);
     case "technology_prerequisite_matches":

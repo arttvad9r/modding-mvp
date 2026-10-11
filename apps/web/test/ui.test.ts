@@ -39,6 +39,9 @@ describe("private-beta tester UI", () => {
       expect(html).toContain("Try a known-good tweak bundle");
       expect(html).toContain("Fast-start bundle");
       expect(html).toContain("assembling machine 2 twice as fast");
+      expect(html).toContain("Throughput bundle");
+      expect(html).toContain("transport belts produce 4 belts per craft");
+      expect(html).toContain("stack size to 500");
       expect(html).toContain("Not supported yet");
       expect(html).toContain('id="token"');
       expect(html).toContain('id="clear-token"');
@@ -54,6 +57,9 @@ describe("private-beta tester UI", () => {
       expect(javascript).toContain("sessionStorage.removeItem");
       expect(javascript).toContain("[data-prompt]");
       expect(javascript).toContain('mixed: "Tweak bundle"');
+      expect(javascript).toContain('recipe_crafting_time: "Recipe crafting time"');
+      expect(javascript).toContain('recipe_result: "Recipe result"');
+      expect(javascript).toContain('item_stack_size: "Item stack size"');
       expect(javascript).toContain('Accept: "application/json"');
       expect(javascript).toContain("/feedback");
       expect(javascript).toContain("/retry");

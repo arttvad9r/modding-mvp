@@ -130,10 +130,12 @@ Completed M6A slices:
 - compound-request and follow-up-revision beta UX deployed tailnet-only on the home server from runtime commit `aa9bdcc`; live UI/health, apps-health, and `verify-stack` pass (30 OK / 0 warnings / 0 failures).
 - iterative follow-up revision flow: an owned successful generation can create a new immutable child generation carrying `sourceGenerationId` plus an accepted `baseModSpec` snapshot; the Revision Planner emits the complete resulting typed bundle and the normal Factorio validation/ZIP pipeline runs again;
 - Docker service E2E proves initial generation -> `/revise` -> second queue job -> real Factorio -> second S3 artifact; live Z.ai `glm-5.3-flash` revision smoke preserved unchanged tweaks, removed a restored-to-base research tweak, changed furnace `×1.5 -> ×1.875`, and produced a validated ZIP in about 12.4 s with no Repair.
+- reviewed `recipe_crafting_time`, `recipe_result`, and `item_stack_size` primitives with registry-derived Planner/Revision support and real-Factorio semantic validation; a mixed regression bundle changes gear crafting time, belt output, and circuit stack size in one validated ZIP.
+- refreshed live Z.ai `glm-5.3-flash` Planner gate on the expanded seven-family corpus: **27/27 classification and 17/17 exact supported ModSpecs**; live Throughput bundle smoke (gear crafting ×0.5, belt output = 4, circuit stack = 500) completed prompt -> validated ZIP in **7.957 s**, including **1.676 s** Factorio validation, **4,466 tokens**, and no Repair.
 
 Remaining scope before external recruitment:
-- add the next high-value safe primitives based on tweak-pack usefulness (candidate areas: recipe crafting time/results and item stack sizes), with real-runtime semantic coverage;
-- extend the mixed-request golden corpus as new primitives are added and keep the live Planner gate green.
+- extend the mixed-request golden corpus as new primitives are added and keep the live Planner gate green;
+- make a final M6A exit review against product usefulness and safety before opening public ingress/recruitment.
 
 Exit criteria:
 - one natural-language request can express a useful multi-change rebalance and produce one validated ZIP;

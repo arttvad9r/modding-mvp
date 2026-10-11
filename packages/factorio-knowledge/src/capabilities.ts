@@ -3,6 +3,9 @@ import type { ModSpec } from "@project/domain";
 import {
   listSupportedPrototypeProperties,
   listSupportedRecipeIngredients,
+  listSupportedRecipeCraftingTimes,
+  listSupportedRecipeResults,
+  listSupportedItemStackSizes,
   listSupportedTechnologyCosts,
   listSupportedTechnologyPrerequisites,
 } from "./supported.js";
@@ -31,6 +34,23 @@ export type FactorioCapabilityTarget =
       readonly ingredientType: "item";
       readonly ingredientName: string;
       readonly baseAmount: number;
+    }
+  | {
+      readonly kind: "recipe_crafting_time";
+      readonly recipeName: string;
+      readonly baseEnergyRequired: number;
+    }
+  | {
+      readonly kind: "recipe_result";
+      readonly recipeName: string;
+      readonly resultType: "item";
+      readonly resultName: string;
+      readonly baseAmount: number;
+    }
+  | {
+      readonly kind: "item_stack_size";
+      readonly itemName: string;
+      readonly baseStackSize: number;
     }
   | {
       readonly kind: "technology_cost";
@@ -105,6 +125,27 @@ export const factorioCapabilityRegistry = {
       kind: "recipe_ingredient" as const,
       ...entry,
     })),
+  },
+  recipe_crafting_time: {
+    id: "recipe_crafting_time", changeType: "recipe_crafting_time", target, operations: ["set", "multiply"],
+    summary: "Change crafting time (energy_required) for an allow-listed base-game recipe.",
+    constraints: ["Only reviewed recipes are supported.", "Final crafting time must stay positive and finite.", "Relative operations use the pinned 2.0.77 baseline."],
+    promptExamples: ["Make iron gears craft twice as fast.", "Set transport belt crafting time to 0.25 seconds."],
+    targets: listSupportedRecipeCraftingTimes().map((entry) => ({ kind: "recipe_crafting_time" as const, ...entry })),
+  },
+  recipe_result: {
+    id: "recipe_result", changeType: "recipe_result", target, operations: ["set", "multiply"],
+    summary: "Change the amount of an existing allow-listed item result in a base-game recipe.",
+    constraints: ["Only existing reviewed item results are supported.", "Adding/removing results and fluid results are unsupported.", "Final amount must be an integer in 1..65535."],
+    promptExamples: ["Make iron gear recipes produce 2 gears.", "Double transport belt recipe output."],
+    targets: listSupportedRecipeResults().map((entry) => ({ kind: "recipe_result" as const, ...entry })),
+  },
+  item_stack_size: {
+    id: "item_stack_size", changeType: "item_stack_size", target, operations: ["set", "multiply"],
+    summary: "Change stack_size for an allow-listed base-game item.",
+    constraints: ["Only reviewed base-game item prototypes are supported.", "Final stack size must be an integer in 1..65535."],
+    promptExamples: ["Double iron plate stack size.", "Set electronic circuit stack size to 500."],
+    targets: listSupportedItemStackSizes().map((entry) => ({ kind: "item_stack_size" as const, ...entry })),
   },
   technology_cost: {
     id: "technology_cost",

@@ -3,6 +3,9 @@ import { isDeepStrictEqual } from "node:util";
 import {
   PrototypePropertyChangeSchema,
   RecipeIngredientChangeSchema,
+  RecipeCraftingTimeChangeSchema,
+  RecipeResultChangeSchema,
+  ItemStackSizeChangeSchema,
   TechnologyCostChangeSchema,
   TechnologyPrerequisiteChangeSchema,
   serializeProjectError,
@@ -16,6 +19,9 @@ import { planFactorioPrompt } from "./planner.js";
 const EvalChangeSchema = z.discriminatedUnion("type", [
   PrototypePropertyChangeSchema,
   RecipeIngredientChangeSchema,
+  RecipeCraftingTimeChangeSchema,
+  RecipeResultChangeSchema,
+  ItemStackSizeChangeSchema,
   TechnologyCostChangeSchema,
   TechnologyPrerequisiteChangeSchema,
 ]);
@@ -25,6 +31,9 @@ const SupportedExpectationSchema = z.strictObject({
   capability: z.enum([
     "prototype_property",
     "recipe_ingredient",
+    "recipe_crafting_time",
+    "recipe_result",
+    "item_stack_size",
     "technology_cost",
     "technology_prerequisite",
     "mixed",

@@ -24,7 +24,7 @@ const INDEX_HTML = String.raw`<!doctype html>
 
     <section class="notice" aria-label="Beta scope notice">
       <strong>This beta focuses on personal base-game tweak packs.</strong>
-      <span>Combine supported machine-speed, recipe, and research changes in one request. If any essential part is outside the current scope, the whole request is rejected instead of silently dropping it.</span>
+      <span>Combine supported machine speed, crafting time, recipe input/output, stack-size, and research changes in one request. If any essential part is outside the current scope, the whole request is rejected instead of silently dropping it.</span>
     </section>
 
     <section class="panel access-panel" aria-labelledby="auth-title">
@@ -63,9 +63,9 @@ const INDEX_HTML = String.raw`<!doctype html>
             <span class="example-kicker">Production</span>
             <span>Double mining drill and lab speeds</span>
           </button>
-          <button type="button" class="example" data-prompt="Make iron gears cost one iron plate and set Logistics research cost to 40 science packs">
-            <span class="example-kicker">Recipe + research</span>
-            <span>Cheaper gears with a custom Logistics research cost</span>
+          <button type="button" class="example" data-prompt="Make iron gears craft twice as fast, make transport belts produce 4 belts per craft, and set electronic circuit stack size to 500">
+            <span class="example-kicker">Throughput bundle</span>
+            <span>Faster gears, more belts per craft, bigger circuit stacks</span>
           </button>
           <button type="button" class="example" data-prompt="Remove Steel processing as a prerequisite for Automation 2">
             <span class="example-kicker">Prerequisite</span>
@@ -83,7 +83,7 @@ const INDEX_HTML = String.raw`<!doctype html>
         <div class="scope-grid">
           <div class="scope-card">
             <p class="scope-title">Good beta requests</p>
-            <p>Combine reviewed speeds for furnaces, assemblers, mining drills, belts, inserters and labs with selected recipe ingredient amounts, research costs, and reviewed prerequisites.</p>
+            <p>Combine reviewed machine speeds with selected recipe ingredients, crafting times, recipe outputs, item stack sizes, research costs, and reviewed prerequisites.</p>
           </div>
           <div class="scope-card muted-card">
             <p class="scope-title">Not supported yet</p>
@@ -381,6 +381,9 @@ const APP_JS = String.raw`(() => {
     const labels = {
       prototype_property: "Prototype property",
       recipe_ingredient: "Recipe ingredient",
+      recipe_crafting_time: "Recipe crafting time",
+      recipe_result: "Recipe result",
+      item_stack_size: "Item stack size",
       technology_cost: "Research cost",
       technology_prerequisite: "Research prerequisite",
       mixed: "Tweak bundle",

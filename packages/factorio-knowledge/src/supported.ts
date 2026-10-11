@@ -2,6 +2,9 @@ import {
   ProjectError,
   type PrototypePropertyChange,
   RecipeIngredientChange,
+  RecipeCraftingTimeChange,
+  RecipeResultChange,
+  ItemStackSizeChange,
   TechnologyCostChange,
   TechnologyPrerequisiteChange,
 } from "@project/domain";
@@ -18,6 +21,23 @@ export interface SupportedRecipeIngredient {
   readonly ingredientType: "item";
   readonly ingredientName: string;
   readonly baseAmount: number;
+}
+
+export interface SupportedRecipeCraftingTime {
+  readonly recipeName: string;
+  readonly baseEnergyRequired: number;
+}
+
+export interface SupportedRecipeResult {
+  readonly recipeName: string;
+  readonly resultType: "item";
+  readonly resultName: string;
+  readonly baseAmount: number;
+}
+
+export interface SupportedItemStackSize {
+  readonly itemName: string;
+  readonly baseStackSize: number;
 }
 
 export interface SupportedTechnologyCost {
@@ -134,6 +154,29 @@ const supportedRecipeIngredients = new Map<string, SupportedRecipeIngredient>([
   ],
 ]);
 
+const supportedRecipeCraftingTimes = new Map<string, SupportedRecipeCraftingTime>([
+  ["iron-gear-wheel", { recipeName: "iron-gear-wheel", baseEnergyRequired: 0.5 }],
+  ["transport-belt", { recipeName: "transport-belt", baseEnergyRequired: 0.5 }],
+  ["electronic-circuit", { recipeName: "electronic-circuit", baseEnergyRequired: 0.5 }],
+  ["pipe", { recipeName: "pipe", baseEnergyRequired: 0.5 }],
+]);
+
+const supportedRecipeResults = new Map<string, SupportedRecipeResult>([
+  ["iron-gear-wheel\u0000item\u0000iron-gear-wheel", { recipeName: "iron-gear-wheel", resultType: "item", resultName: "iron-gear-wheel", baseAmount: 1 }],
+  ["transport-belt\u0000item\u0000transport-belt", { recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", baseAmount: 2 }],
+  ["electronic-circuit\u0000item\u0000electronic-circuit", { recipeName: "electronic-circuit", resultType: "item", resultName: "electronic-circuit", baseAmount: 1 }],
+  ["pipe\u0000item\u0000pipe", { recipeName: "pipe", resultType: "item", resultName: "pipe", baseAmount: 1 }],
+]);
+
+const supportedItemStackSizes = new Map<string, SupportedItemStackSize>([
+  ["iron-plate", { itemName: "iron-plate", baseStackSize: 100 }],
+  ["copper-plate", { itemName: "copper-plate", baseStackSize: 100 }],
+  ["iron-gear-wheel", { itemName: "iron-gear-wheel", baseStackSize: 100 }],
+  ["electronic-circuit", { itemName: "electronic-circuit", baseStackSize: 200 }],
+  ["pipe", { itemName: "pipe", baseStackSize: 100 }],
+  ["transport-belt", { itemName: "transport-belt", baseStackSize: 100 }],
+]);
+
 const supportedTechnologyCosts = new Map<string, SupportedTechnologyCost>([
   ["automation", { technologyName: "automation", baseCount: 10 }],
   ["automation-2", { technologyName: "automation-2", baseCount: 40 }],
@@ -173,6 +216,10 @@ function recipeSupportKey(change: RecipeIngredientChange) {
   return `${change.recipeName}\u0000${change.ingredientType}\u0000${change.ingredientName}`;
 }
 
+function recipeResultSupportKey(change: RecipeResultChange) {
+  return `${change.recipeName}\u0000${change.resultType}\u0000${change.resultName}`;
+}
+
 export function getSupportedPrototypeProperty(
   change: PrototypePropertyChange,
 ): SupportedPrototypeProperty {
@@ -209,6 +256,44 @@ export function getSupportedRecipeIngredient(
 
 export function assertSupportedRecipeIngredient(change: RecipeIngredientChange): void {
   getSupportedRecipeIngredient(change);
+}
+
+export function getSupportedRecipeCraftingTime(
+  change: RecipeCraftingTimeChange,
+): SupportedRecipeCraftingTime {
+  const supported = supportedRecipeCraftingTimes.get(change.recipeName);
+  if (!supported) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported recipe crafting time: ${change.recipeName}`, details: { capability: "recipe_crafting_time" } });
+  }
+  return supported;
+}
+
+export function assertSupportedRecipeCraftingTime(change: RecipeCraftingTimeChange): void {
+  getSupportedRecipeCraftingTime(change);
+}
+
+export function getSupportedRecipeResult(change: RecipeResultChange): SupportedRecipeResult {
+  const supported = supportedRecipeResults.get(recipeResultSupportKey(change));
+  if (!supported) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported recipe result: ${change.recipeName}.${change.resultType}.${change.resultName}`, details: { capability: "recipe_result" } });
+  }
+  return supported;
+}
+
+export function assertSupportedRecipeResult(change: RecipeResultChange): void {
+  getSupportedRecipeResult(change);
+}
+
+export function getSupportedItemStackSize(change: ItemStackSizeChange): SupportedItemStackSize {
+  const supported = supportedItemStackSizes.get(change.itemName);
+  if (!supported) {
+    throw new ProjectError({ code: "unsupported_capability", stage: "generation", message: `Unsupported item stack size: ${change.itemName}`, details: { capability: "item_stack_size" } });
+  }
+  return supported;
+}
+
+export function assertSupportedItemStackSize(change: ItemStackSizeChange): void {
+  getSupportedItemStackSize(change);
 }
 
 export function getSupportedTechnologyCost(
@@ -258,6 +343,18 @@ export function listSupportedPrototypeProperties(): readonly SupportedPrototypeP
 
 export function listSupportedRecipeIngredients(): readonly SupportedRecipeIngredient[] {
   return [...supportedRecipeIngredients.values()];
+}
+
+export function listSupportedRecipeCraftingTimes(): readonly SupportedRecipeCraftingTime[] {
+  return [...supportedRecipeCraftingTimes.values()];
+}
+
+export function listSupportedRecipeResults(): readonly SupportedRecipeResult[] {
+  return [...supportedRecipeResults.values()];
+}
+
+export function listSupportedItemStackSizes(): readonly SupportedItemStackSize[] {
+  return [...supportedItemStackSizes.values()];
 }
 
 export function listSupportedTechnologyCosts(): readonly SupportedTechnologyCost[] {

@@ -1,74 +1,29 @@
 [
-  {
-    "id": "prototype-steel-double",
-    "prompt": "Make steel furnaces twice as fast.",
-    "expected": {"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"steel-furnace","property":"crafting_speed","operation":{"type":"multiply","factor":2}}]}
-  },
-  {
-    "id": "prototype-stone-set",
-    "prompt": "Set stone furnace crafting speed to 1.5.",
-    "expected": {"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"stone-furnace","property":"crafting_speed","operation":{"type":"set","value":1.5}}]}
-  },
-  {
-    "id": "prototype-electric-double",
-    "prompt": "Double electric furnace crafting speed.",
-    "expected": {"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"electric-furnace","property":"crafting_speed","operation":{"type":"multiply","factor":2}}]}
-  },
-  {
-    "id": "recipe-gears-cheaper",
-    "prompt": "Make iron gears cost exactly 1 iron plate.",
-    "expected": {"status":"supported","capability":"recipe_ingredient","changes":[{"type":"recipe_ingredient","recipeName":"iron-gear-wheel","ingredientType":"item","ingredientName":"iron-plate","operation":{"type":"set","value":1}}]}
-  },
-  {
-    "id": "recipe-circuit-copper-double",
-    "prompt": "Double the copper cable cost of electronic circuits.",
-    "expected": {"status":"supported","capability":"recipe_ingredient","changes":[{"type":"recipe_ingredient","recipeName":"electronic-circuit","ingredientType":"item","ingredientName":"copper-cable","operation":{"type":"multiply","factor":2}}]}
-  },
-  {
-    "id": "recipe-belt-plate-set",
-    "prompt": "Set the iron plate ingredient of transport belts to 2.",
-    "expected": {"status":"supported","capability":"recipe_ingredient","changes":[{"type":"recipe_ingredient","recipeName":"transport-belt","ingredientType":"item","ingredientName":"iron-plate","operation":{"type":"set","value":2}}]}
-  },
-  {
-    "id": "recipe-pipe-double",
-    "prompt": "Double the iron plate cost of pipes.",
-    "expected": {"status":"supported","capability":"recipe_ingredient","changes":[{"type":"recipe_ingredient","recipeName":"pipe","ingredientType":"item","ingredientName":"iron-plate","operation":{"type":"multiply","factor":2}}]}
-  },
-  {
-    "id": "technology-automation-double",
-    "prompt": "Double the research cost of Automation.",
-    "expected": {"status":"supported","capability":"technology_cost","changes":[{"type":"technology_cost","technologyName":"automation","operation":{"type":"multiply","factor":2}}]}
-  },
-  {
-    "id": "technology-logistics-set",
-    "prompt": "Set Logistics research cost to 40 science packs.",
-    "expected": {"status":"supported","capability":"technology_cost","changes":[{"type":"technology_cost","technologyName":"logistics","operation":{"type":"set","value":40}}]}
-  },
-  {
-    "id": "technology-steel-double",
-    "prompt": "Make Steel processing research cost twice as high.",
-    "expected": {"status":"supported","capability":"technology_cost","changes":[{"type":"technology_cost","technologyName":"steel-processing","operation":{"type":"multiply","factor":2}}]}
-  },
-  {
-    "id": "prerequisite-remove-steel",
-    "prompt": "Remove Steel processing as a prerequisite for Automation 2.",
-    "expected": {"status":"supported","capability":"technology_prerequisite","changes":[{"type":"technology_prerequisite","technologyName":"automation-2","prerequisiteName":"steel-processing","operation":{"type":"remove"}}]}
-  },
-  {
-    "id": "prerequisite-add-logistics",
-    "prompt": "Make Logistics a prerequisite for Automation 2.",
-    "expected": {"status":"supported","capability":"technology_prerequisite","changes":[{"type":"technology_prerequisite","technologyName":"automation-2","prerequisiteName":"logistics","operation":{"type":"add"}}]}
-  },
+  {"id":"prototype-steel-double","prompt":"Make steel furnaces twice as fast.","expected":{"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"steel-furnace","property":"crafting_speed","operation":{"type":"multiply","factor":2}}]}},
+  {"id":"prototype-stone-set","prompt":"Set stone furnace crafting speed to 1.5.","expected":{"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"stone-furnace","property":"crafting_speed","operation":{"type":"set","value":1.5}}]}},
+  {"id":"prototype-electric-double","prompt":"Double electric furnace crafting speed.","expected":{"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"electric-furnace","property":"crafting_speed","operation":{"type":"multiply","factor":2}}]}},
+  {"id":"recipe-gears-cheaper","prompt":"Make iron gears cost exactly 1 iron plate.","expected":{"status":"supported","capability":"recipe_ingredient","changes":[{"type":"recipe_ingredient","recipeName":"iron-gear-wheel","ingredientType":"item","ingredientName":"iron-plate","operation":{"type":"set","value":1}}]}},
+  {"id":"recipe-circuit-copper-double","prompt":"Double the copper cable cost of electronic circuits.","expected":{"status":"supported","capability":"recipe_ingredient","changes":[{"type":"recipe_ingredient","recipeName":"electronic-circuit","ingredientType":"item","ingredientName":"copper-cable","operation":{"type":"multiply","factor":2}}]}},
+  {"id":"recipe-belt-plate-set","prompt":"Set the iron plate ingredient of transport belts to 2.","expected":{"status":"supported","capability":"recipe_ingredient","changes":[{"type":"recipe_ingredient","recipeName":"transport-belt","ingredientType":"item","ingredientName":"iron-plate","operation":{"type":"set","value":2}}]}},
+  {"id":"recipe-pipe-double","prompt":"Double the iron plate cost of pipes.","expected":{"status":"supported","capability":"recipe_ingredient","changes":[{"type":"recipe_ingredient","recipeName":"pipe","ingredientType":"item","ingredientName":"iron-plate","operation":{"type":"multiply","factor":2}}]}},
+  {"id":"technology-automation-double","prompt":"Double the research cost of Automation.","expected":{"status":"supported","capability":"technology_cost","changes":[{"type":"technology_cost","technologyName":"automation","operation":{"type":"multiply","factor":2}}]}},
+  {"id":"technology-logistics-set","prompt":"Set Logistics research cost to 40 science packs.","expected":{"status":"supported","capability":"technology_cost","changes":[{"type":"technology_cost","technologyName":"logistics","operation":{"type":"set","value":40}}]}},
+  {"id":"technology-steel-double","prompt":"Make Steel processing research cost twice as high.","expected":{"status":"supported","capability":"technology_cost","changes":[{"type":"technology_cost","technologyName":"steel-processing","operation":{"type":"multiply","factor":2}}]}},
+  {"id":"prerequisite-remove-steel","prompt":"Remove Steel processing as a prerequisite for Automation 2.","expected":{"status":"supported","capability":"technology_prerequisite","changes":[{"type":"technology_prerequisite","technologyName":"automation-2","prerequisiteName":"steel-processing","operation":{"type":"remove"}}]}},
+  {"id":"prerequisite-add-logistics","prompt":"Make Logistics a prerequisite for Automation 2.","expected":{"status":"supported","capability":"technology_prerequisite","changes":[{"type":"technology_prerequisite","technologyName":"automation-2","prerequisiteName":"logistics","operation":{"type":"add"}}]}},
   {"id":"unsupported-new-ore","prompt":"Add a brand-new titanium ore with mining and smelting recipes.","expected":{"status":"unsupported"}},
   {"id":"prototype-assembler-2-double","prompt":"Make assembling machine 2 twice as fast.","expected":{"status":"supported","capability":"prototype_property","changes":[{"type":"prototype_property","prototypeType":"assembling-machine","prototypeName":"assembling-machine-2","property":"crafting_speed","operation":{"type":"multiply","factor":2}}]}},
   {"id":"unsupported-remove-ingredient","prompt":"Remove iron plates entirely from the electronic circuit recipe.","expected":{"status":"unsupported"}},
   {"id":"unsupported-add-ingredient","prompt":"Add stone as a new ingredient to transport belts.","expected":{"status":"unsupported"}},
   {"id":"unsupported-fluid-ingredient","prompt":"Double the sulfuric acid ingredient of a recipe.","expected":{"status":"unsupported"}},
-  {"id":"unsupported-product-change","prompt":"Make iron gear recipes produce 3 gears instead of 1.","expected":{"status":"unsupported"}},
+  {"id":"recipe-gears-output-set","prompt":"Make iron gear recipes produce 3 gears instead of 1.","expected":{"status":"supported","capability":"recipe_result","changes":[{"type":"recipe_result","recipeName":"iron-gear-wheel","resultType":"item","resultName":"iron-gear-wheel","operation":{"type":"set","value":3}}]}},
   {"id":"unsupported-runtime-control","prompt":"Every time the player crafts an item, spawn a biter next to them.","expected":{"status":"unsupported"}},
   {"id":"unsupported-new-technology","prompt":"Create a new research technology called Super Automation.","expected":{"status":"unsupported"}},
   {"id":"unsupported-prerequisite-edge","prompt":"Make Steel processing a prerequisite for Logistics.","expected":{"status":"unsupported"}},
   {"id":"mixed-furnace-and-research","prompt":"Double steel furnace speed and also double Automation research cost in the same mod.","expected":{"status":"supported","capability":"mixed","changes":[{"type":"prototype_property","prototypeType":"furnace","prototypeName":"steel-furnace","property":"crafting_speed","operation":{"type":"multiply","factor":2}},{"type":"technology_cost","technologyName":"automation","operation":{"type":"multiply","factor":2}}]}},
   {"id":"unsupported-version","prompt":"Build this mod specifically for experimental Factorio 2.1.","expected":{"status":"unsupported"}},
-  {"id":"unsupported-assets","prompt":"Replace the steel furnace sprite with a newly generated neon texture.","expected":{"status":"unsupported"}}
+  {"id":"unsupported-assets","prompt":"Replace the steel furnace sprite with a newly generated neon texture.","expected":{"status":"unsupported"}},
+  {"id":"recipe-gears-crafting-faster","prompt":"Make iron gears craft twice as fast.","expected":{"status":"supported","capability":"recipe_crafting_time","changes":[{"type":"recipe_crafting_time","recipeName":"iron-gear-wheel","operation":{"type":"multiply","factor":0.5}}]}},
+  {"id":"item-circuit-stack-500","prompt":"Set electronic circuit stack size to 500.","expected":{"status":"supported","capability":"item_stack_size","changes":[{"type":"item_stack_size","itemName":"electronic-circuit","operation":{"type":"set","value":500}}]}},
+  {"id":"unsupported-new-recipe-result","prompt":"Make the copper cable recipe also produce sulfur as a second result.","expected":{"status":"unsupported"}}
 ]

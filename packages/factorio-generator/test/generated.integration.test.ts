@@ -182,3 +182,36 @@ describe("mixed tweak bundle through real Factorio", () => {
     60_000,
   );
 });
+
+describe("M6A high-value rebalance primitives through real Factorio", () => {
+  it(
+    "validates recipe crafting time, recipe result amount, and item stack size in one mixed bundle",
+    async () => {
+      const outputDirectory = await mkdtemp(path.join(tmpdir(), "factorio-m6a-primitives-output-"));
+      const spec: ModSpec = {
+        title: "Compact early-game rebalance",
+        slug: "compact-early-game-rebalance",
+        target: { game: "factorio", channel: "stable", versionLine: "2.0" },
+        capability: "mixed",
+        changes: [
+          { type: "recipe_crafting_time", recipeName: "iron-gear-wheel", operation: { type: "multiply", factor: 0.5 } },
+          { type: "recipe_result", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", operation: { type: "multiply", factor: 2 } },
+          { type: "item_stack_size", itemName: "electronic-circuit", operation: { type: "set", value: 500 } },
+        ],
+        assertions: [
+          { type: "recipe_crafting_time_matches", recipeName: "iron-gear-wheel", expectation: { type: "multiply", factor: 0.5 } },
+          { type: "recipe_result_matches", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", expectation: { type: "multiply", factor: 2 } },
+          { type: "item_stack_size_matches", itemName: "electronic-circuit", expectation: { type: "set", value: 500 } },
+        ],
+      };
+      try {
+        const result = await buildValidatedFactorioArtifact({ spec, outputDirectory });
+        expect(result.validation.ok, result.validation.summary ?? "unknown failure").toBe(true);
+        expect(result.validation.errorType).toBeNull();
+      } finally {
+        await rm(outputDirectory, { recursive: true, force: true });
+      }
+    },
+    30_000,
+  );
+});

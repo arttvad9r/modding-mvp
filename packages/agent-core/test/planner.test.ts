@@ -121,6 +121,9 @@ describe("Planner prompt contract", () => {
     const prompt = buildPlannerSystemPrompt();
     expect(prompt).toContain("prototype_property");
     expect(prompt).toContain("recipe_ingredient");
+    expect(prompt).toContain("recipe_crafting_time");
+    expect(prompt).toContain("recipe_result");
+    expect(prompt).toContain("item_stack_size");
     expect(prompt).toContain("technology_cost");
     expect(prompt).toContain("technology_prerequisite");
     expect(prompt).toContain("steel-furnace");
@@ -164,6 +167,31 @@ describe("planFactorioPrompt", () => {
     expect(result.modSpec.capability).toBe("mixed");
     expect(result.modSpec.changes).toHaveLength(2);
     expect(result.modSpec.assertions).toHaveLength(2);
+  });
+
+  it("derives assertions for M6A recipe-time/result/stack mixed bundles", async () => {
+    const provider = new SequenceProvider([response({
+      status: "supported",
+      title: "Throughput bundle",
+      slug: "throughput-bundle",
+      changes: [
+        { type: "recipe_crafting_time", recipeName: "iron-gear-wheel", operation: { type: "multiply", factor: 0.5 } },
+        { type: "recipe_result", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", operation: { type: "set", value: 4 } },
+        { type: "item_stack_size", itemName: "electronic-circuit", operation: { type: "set", value: 500 } },
+      ],
+    })]);
+    const result = await planFactorioPrompt({
+      provider,
+      prompt: "Make gears craft twice as fast, belts output 4, and circuit stacks 500",
+    });
+    expect(result.status).toBe("supported");
+    if (result.status !== "supported") throw new Error("expected supported result");
+    expect(result.modSpec.capability).toBe("mixed");
+    expect(result.modSpec.assertions).toEqual([
+      { type: "recipe_crafting_time_matches", recipeName: "iron-gear-wheel", expectation: { type: "multiply", factor: 0.5 } },
+      { type: "recipe_result_matches", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", expectation: { type: "set", value: 4 } },
+      { type: "item_stack_size_matches", itemName: "electronic-circuit", expectation: { type: "set", value: 500 } },
+    ]);
   });
 
   it("returns an explicit unsupported decision without inventing a ModSpec", async () => {
@@ -335,5 +363,8 @@ describe("planFactorioRevision", () => {
     expect(prompt).toContain("COMPLETE resulting typed change set");
     expect(prompt).toContain("Preserve unchanged tweaks exactly");
     expect(prompt).toContain("return unsupported rather than partially applying");
+    expect(prompt).toContain("recipe_crafting_time");
+    expect(prompt).toContain("recipe_result");
+    expect(prompt).toContain("item_stack_size");
   });
 });

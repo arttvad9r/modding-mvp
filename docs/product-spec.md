@@ -1,4 +1,4 @@
-# Product specification v0.3
+# Product specification v0.4
 
 ## Purpose
 Build a service that turns a natural-language request into a validated, installable Factorio mod for a user who does not need to know Lua or the Factorio mod API.
@@ -23,8 +23,9 @@ The product must prefer an explicit unsupported/failed result over claiming that
 ## Initial supported capability families
 The first usable MVP should cover a narrow set of deterministic changes:
 - prototype property changes, such as crafting speed or other scalar properties;
-- recipe ingredient/result changes;
+- recipe ingredient/result changes plus reviewed recipe crafting-time changes;
 - technology cost and prerequisite changes;
+- item stack-size changes for reviewed base-game items;
 - similarly structured changes that can be represented safely in a typed ModSpec.
 
 Exact properties and prototype types are allow-listed as capabilities are implemented and tested.
@@ -37,7 +38,8 @@ M6A requirements:
 - the result is one installable ZIP with semantic validation for every requested change;
 - supported prototype-property scope includes reviewed speed parameters for furnaces, assembling machines, mining drills, transport belts, inserters, and labs, in addition to the existing recipe/research primitives;
 - unsupported parts of a compound request must cause an explicit unsupported result rather than silent partial fulfillment;
-- a user can revise an accepted successful tweak bundle through a follow-up request without learning or editing Lua; each revision is a new generation and the source result remains immutable.
+- a user can revise an accepted successful tweak bundle through a follow-up request without learning or editing Lua; each revision is a new generation and the source result remains immutable;
+- reviewed recipe crafting time, existing recipe result amounts, and item stack sizes are available as typed primitives for common throughput/inventory rebalance bundles.
 
 `mixed` is a ModSpec composition marker, not an unconstrained generation mode: every contained change must still be an allow-listed typed primitive. Follow-up editing uses the same rule: the Revision Planner returns the complete resulting typed bundle, while the application preserves metadata and revalidates the whole result.
 

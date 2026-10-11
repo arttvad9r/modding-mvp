@@ -223,3 +223,45 @@ describe("mixed ModSpec", () => {
     expect(ModSpecSchema.safeParse({ ...mixedSpec, assertions: [mixedSpec.assertions[0]] }).success).toBe(false);
   });
 });
+
+describe("M6A rebalance ModSpec families", () => {
+  it("accepts recipe crafting time with matching assertion", () => {
+    const spec = {
+      title: "Fast gears", slug: "fast-gears", target, capability: "recipe_crafting_time",
+      changes: [{ type: "recipe_crafting_time", recipeName: "iron-gear-wheel", operation: { type: "multiply", factor: 0.5 } }],
+      assertions: [{ type: "recipe_crafting_time_matches", recipeName: "iron-gear-wheel", expectation: { type: "multiply", factor: 0.5 } }],
+    } as const;
+    expect(ModSpecSchema.parse(spec)).toEqual(spec);
+  });
+
+  it("accepts recipe result and item stack size families", () => {
+    const resultSpec = {
+      title: "More belts", slug: "more-belts", target, capability: "recipe_result",
+      changes: [{ type: "recipe_result", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", operation: { type: "multiply", factor: 2 } }],
+      assertions: [{ type: "recipe_result_matches", recipeName: "transport-belt", resultType: "item", resultName: "transport-belt", expectation: { type: "multiply", factor: 2 } }],
+    } as const;
+    const stackSpec = {
+      title: "Bigger stacks", slug: "bigger-stacks", target, capability: "item_stack_size",
+      changes: [{ type: "item_stack_size", itemName: "electronic-circuit", operation: { type: "set", value: 500 } }],
+      assertions: [{ type: "item_stack_size_matches", itemName: "electronic-circuit", expectation: { type: "set", value: 500 } }],
+    } as const;
+    expect(ModSpecSchema.parse(resultSpec)).toEqual(resultSpec);
+    expect(ModSpecSchema.parse(stackSpec)).toEqual(stackSpec);
+  });
+
+  it("keeps exact semantic coverage for new families in mixed bundles", () => {
+    const spec = {
+      title: "Factory rebalance", slug: "factory-rebalance", target, capability: "mixed",
+      changes: [
+        { type: "recipe_crafting_time", recipeName: "iron-gear-wheel", operation: { type: "multiply", factor: 0.5 } },
+        { type: "item_stack_size", itemName: "electronic-circuit", operation: { type: "set", value: 500 } },
+      ],
+      assertions: [
+        { type: "recipe_crafting_time_matches", recipeName: "iron-gear-wheel", expectation: { type: "multiply", factor: 0.5 } },
+        { type: "item_stack_size_matches", itemName: "electronic-circuit", expectation: { type: "set", value: 500 } },
+      ],
+    } as const;
+    expect(ModSpecSchema.safeParse(spec).success).toBe(true);
+    expect(ModSpecSchema.safeParse({ ...spec, assertions: [spec.assertions[0]] }).success).toBe(false);
+  });
+});
