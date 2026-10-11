@@ -1,5 +1,6 @@
 import { ProjectError } from "@project/domain";
 
+import { FallbackLlmProvider } from "./fallback-provider.js";
 import { OpenAIChatCompletionsProvider } from "./openai-chat-completions.js";
 import { OpenAIResponsesProvider } from "./openai-responses.js";
 import type { LlmProvider } from "./provider.js";
@@ -19,8 +20,14 @@ export interface ConfiguredLlmProviderDependencies {
   readonly fetchImpl?: typeof fetch;
 }
 
+export interface ConfiguredLlmProviderChain {
+  readonly primary: ConfiguredLlmProvider;
+  readonly fallback?: ConfiguredLlmProvider;
+  readonly provider: LlmProvider;
+}
+
 const OLLAMA_CLOUD_BASE_URL = "https://ollama.com/v1";
-const DEFAULT_OLLAMA_CLOUD_MODEL = "deepseek-v4.1-flash:cloud";
+const DEFAULT_OLLAMA_CLOUD_MODEL = "glm-5.3-flash";
 const DEFAULT_ZAI_MODEL = "glm-5.3-flash";
 const ZAI_GENERAL_BASE_URL = "https://api.z.ai/api/paas/v4";
 const ZAI_CODING_BASE_URL = "https://api.z.ai/api/coding/paas/v4";
@@ -178,6 +185,37 @@ export function createConfiguredLlmProvider(
       jsonMode: "prompt_only",
       ...(fetchImpl === undefined ? {} : { fetchImpl }),
       ...pricing(env, "ZAI"),
+    }),
+  };
+}
+
+
+export function createConfiguredLlmProviderChain(
+  env: NodeJS.ProcessEnv = process.env,
+  dependencies: ConfiguredLlmProviderDependencies = {},
+  onFailOver?: (error: unknown) => void,
+): ConfiguredLlmProviderChain {
+  const primaryId = value(env, "LLM_PRIMARY_PROVIDER") ?? value(env, "LLM_PROVIDER") ?? "openai";
+  const primary = createConfiguredLlmProvider({ ...env, LLM_PROVIDER: primaryId }, dependencies);
+  const fallbackId = value(env, "LLM_FALLBACK_PROVIDER");
+  if (fallbackId === undefined) return { primary, provider: primary.provider };
+
+  const fallback = createConfiguredLlmProvider({ ...env, LLM_PROVIDER: fallbackId }, dependencies);
+  if (fallback.id === primary.id) {
+    throw new ProjectError({
+      code: "input_error",
+      stage: "input",
+      message: "LLM fallback provider must differ from the primary provider",
+    });
+  }
+
+  return {
+    primary,
+    fallback,
+    provider: new FallbackLlmProvider({
+      primary: primary.provider,
+      fallback: fallback.provider,
+      ...(onFailOver === undefined ? {} : { onFailOver }),
     }),
   };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createConfiguredLlmProvider } from "../src/index.js";
+import { createConfiguredLlmProvider, createConfiguredLlmProviderChain } from "../src/index.js";
 
 const noopFetch: typeof fetch = async () =>
   new Response(JSON.stringify({ choices: [{ message: { content: "{}" } }] }), {
@@ -20,7 +20,7 @@ describe("createConfiguredLlmProvider", () => {
 
     expect(configured).toMatchObject({
       id: "ollama-cloud",
-      model: "deepseek-v4.1-flash:cloud",
+      model: "glm-5.3-flash",
       baseUrl: "https://ollama.com/v1",
       transport: "chat_completions",
     });
@@ -47,6 +47,70 @@ describe("createConfiguredLlmProvider", () => {
     });
 
     expect(capturedBody?.reasoning_effort).toBe("low");
+  });
+
+  it("creates an Ollama primary with Z.ai fallback without sharing provider-specific model settings", () => {
+    const chain = createConfiguredLlmProviderChain(
+      {
+        LLM_PRIMARY_PROVIDER: "ollama-cloud",
+        LLM_FALLBACK_PROVIDER: "zai",
+        OLLAMA_API_KEY: "ollama-key",
+        OLLAMA_MODEL: "glm-5.3-flash",
+        ZAI_API_KEY: "zai-key",
+        ZAI_MODEL: "glm-5.3-flash",
+        ZAI_API_MODE: "coding",
+      },
+      { fetchImpl: noopFetch },
+    );
+
+    expect(chain.primary).toMatchObject({ id: "ollama-cloud", model: "glm-5.3-flash" });
+    expect(chain.fallback).toMatchObject({
+      id: "zai",
+      model: "glm-5.3-flash",
+      baseUrl: "https://api.z.ai/api/coding/paas/v4",
+    });
+  });
+
+  it("fails over from Ollama transport errors to Z.ai", async () => {
+    const urls: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.startsWith("https://ollama.com/")) {
+        return new Response(JSON.stringify({ error: { code: "rate_limit", message: "slow down" } }), {
+          status: 429,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(
+        JSON.stringify({ model: "glm-5.3-flash", choices: [{ message: { content: '{"status":"unsupported","reason":"x"}' } }] }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    };
+    const chain = createConfiguredLlmProviderChain(
+      {
+        LLM_PRIMARY_PROVIDER: "ollama-cloud",
+        LLM_FALLBACK_PROVIDER: "zai",
+        OLLAMA_API_KEY: "ollama-key",
+        OLLAMA_MODEL: "glm-5.3-flash",
+        ZAI_API_KEY: "zai-key",
+        ZAI_MODEL: "glm-5.3-flash",
+        ZAI_API_MODE: "coding",
+      },
+      { fetchImpl },
+    );
+
+    const result = await chain.provider.generateJson({
+      messages: [{ role: "user", content: "x" }],
+      schemaName: "x",
+      schemaDescription: "x",
+    });
+
+    expect(result.provider).toBe("zai");
+    expect(urls).toEqual([
+      "https://ollama.com/v1/chat/completions",
+      "https://api.z.ai/api/coding/paas/v4/chat/completions",
+    ]);
   });
 
   it("creates Z.ai general and coding presets with distinct official base URLs", () => {

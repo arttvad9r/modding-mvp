@@ -96,7 +96,7 @@ pnpm prompt:plan -- "Make steel furnaces twice as fast"
 
 For a Z.ai Coding Plan API key, additionally set `ZAI_API_MODE=coding`; the project then uses the coding-only base URL instead of the general API URL. OpenAI remains available with `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
 
-The dev/eval defaults are `deepseek-v4.1-flash:cloud` for Ollama Cloud and `glm-5.3-flash` for Z.ai. Override either with `LLM_MODEL` (or the provider-specific model variable).
+The current dev/eval defaults are `glm-5.3-flash` for both Ollama Cloud and Z.ai. The beta worker uses Ollama Cloud as primary and Z.ai Coding Plan as provider-level fallback; local CLI/eval commands still select one provider with `LLM_PROVIDER`. Override a model with `LLM_MODEL` (or the provider-specific model variable).
 
 `prompt:plan`, `prompt:build`, `planner:eval`, and `repair:eval` automatically load a git-ignored `.env.local` from the repository root when it exists. This is the preferred local-key workflow; copy `.env.example` to `.env.local`, add only local credentials, and never commit the file.
 
@@ -177,7 +177,7 @@ Apply versioned service migrations, provision a tester, then run API and worker 
 DATABASE_URL=... pnpm db:migrate
 DATABASE_URL=... pnpm beta:user:create -- "Tester label"
 DATABASE_URL=... S3_BUCKET=... API_IP_HASH_SALT=... pnpm api:start
-DATABASE_URL=... S3_BUCKET=... LLM_PROVIDER=zai pnpm worker:start
+DATABASE_URL=... S3_BUCKET=... LLM_PRIMARY_PROVIDER=ollama-cloud LLM_FALLBACK_PROVIDER=zai pnpm worker:start
 ```
 
 `beta:user:create` prints the high-entropy bearer token once; only its SHA-256 hash is stored. The implemented endpoints are `POST /v1/generations`, `GET /v1/generations/:id`, `POST /v1/generations/:id/feedback`, and `GET /v1/generations/:id/download`. Generation work always stays in the worker.

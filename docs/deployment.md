@@ -62,7 +62,7 @@ Deployment evidence from 2026-10-11:
 Before exposing the private beta, provide:
 - a PostgreSQL database reachable by both web and worker processes;
 - a private S3-compatible bucket;
-- one supported LLM provider credential for the worker;
+- an Ollama Cloud credential for the primary worker provider and a Z.ai credential for the beta fallback;
 - a TLS-terminating reverse proxy/load balancer in front of the web process;
 - a random deployment-secret `API_IP_HASH_SALT` of at least 16 characters;
 - a decision on trusted-proxy handling (`API_TRUST_PROXY` must stay `false` unless the proxy is controlled and strips untrusted forwarding headers).
@@ -104,8 +104,9 @@ Worker needs:
 - optional `PG_BOSS_SCHEMA`
 - `S3_BUCKET`, `S3_REGION`, optional `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`
 - S3 credentials able to upload artifacts
-- LLM provider/model credential variables from `.env.example`
-- optional worker heartbeat/recovery/concurrency variables
+- `LLM_PRIMARY_PROVIDER=ollama-cloud`, `OLLAMA_API_KEY`, and `OLLAMA_MODEL=glm-5.3-flash`;
+- `LLM_FALLBACK_PROVIDER=zai`, `ZAI_API_KEY`, `ZAI_MODEL=glm-5.3-flash`, and `ZAI_API_MODE=coding` while the Coding Plan fallback remains available;
+- optional provider pricing variables for telemetry plus worker heartbeat/recovery/concurrency variables
 - `FACTORIO_BIN=/app/.tools/factorio/bin/x64/factorio` is already set by the worker image
 
 The one-off S3 provider smoke additionally needs permission to `PutObject`, `GetObject`, and `DeleteObject` under the smoke prefix.

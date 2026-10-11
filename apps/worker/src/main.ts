@@ -1,5 +1,5 @@
 import { createFactorioGenerationExecutor } from "@project/factorio-service-executor";
-import { createConfiguredLlmProvider } from "@project/llm";
+import { createConfiguredLlmProviderChain } from "@project/llm";
 import {
   PgBossGenerationQueue,
   PostgresGenerationRepository,
@@ -38,7 +38,10 @@ function positiveInteger(name: string): number | undefined {
 
 async function main(): Promise<void> {
   const connectionString = required("DATABASE_URL");
-  const llm = createConfiguredLlmProvider(process.env);
+  const llm = createConfiguredLlmProviderChain(process.env, {}, (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(JSON.stringify({ type: "llm_provider_failover", message }));
+  });
   const database = createServicePostgresClient({ connectionString });
   const repository = new PostgresGenerationRepository(database.db);
   const queue = new PgBossGenerationQueue({
@@ -89,8 +92,9 @@ async function main(): Promise<void> {
     JSON.stringify({
       status: "READY",
       workerId: runtime.workerId,
-      provider: llm.id,
-      model: llm.model,
+      provider: llm.primary.id,
+      model: llm.primary.model,
+      ...(llm.fallback === undefined ? {} : { fallbackProvider: llm.fallback.id, fallbackModel: llm.fallback.model }),
       queue: queue.queueName,
     }),
   );
