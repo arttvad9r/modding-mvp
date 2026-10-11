@@ -212,6 +212,49 @@ describe("private-beta HTTP API", () => {
     expect(response.status).toBe(404);
   });
 
+  it("retries only retryable failures by creating a new immutable generation", async () => {
+    const api = await startApi();
+    const created = (await (await submit(api)).json()) as { generation: { id: string } };
+    const queued = api.repository.records.get(created.generation.id);
+    if (!queued) throw new Error("Missing queued generation");
+
+    const tooEarly = await fetch(`${api.baseUrl}/v1/generations/${queued.id}/retry`, {
+      method: "POST",
+      headers: auth(api.token),
+    });
+    expect(tooEarly.status).toBe(409);
+
+    const failed = GenerationRecordSchema.parse({
+      ...queued,
+      revision: 1,
+      status: "failed",
+      updatedAt: "2026-10-11T00:00:02.000Z",
+      finishedAt: "2026-10-11T00:00:02.000Z",
+      error: {
+        code: "process_error",
+        stage: "process",
+        message: "Transient worker failure",
+        retryable: true,
+      },
+    });
+    api.repository.records.set(queued.id, failed);
+
+    const retriedResponse = await fetch(`${api.baseUrl}/v1/generations/${queued.id}/retry`, {
+      method: "POST",
+      headers: auth(api.token),
+    });
+    expect(retriedResponse.status).toBe(202);
+    const retriedBody = (await retriedResponse.json()) as {
+      generation: { id: string; status: string; prompt: string };
+      retriedFromGenerationId: string;
+    };
+    expect(retriedBody.retriedFromGenerationId).toBe(queued.id);
+    expect(retriedBody.generation).toMatchObject({ status: "queued", prompt: queued.prompt });
+    expect(retriedBody.generation.id).not.toBe(queued.id);
+    expect(api.repository.records.get(queued.id)).toEqual(failed);
+    expect(api.submissionStore.jobs).toHaveLength(2);
+  });
+
   it("accepts feedback only after terminal state and redirects downloads through a signer", async () => {
     const api = await startApi();
     const created = (await (await submit(api)).json()) as { generation: { id: string } };

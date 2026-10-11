@@ -76,7 +76,7 @@ A successful generation stores a private object reference such as `generations/<
 9. Preserve Planner/Repair attempt metadata, usage/cost, validation metadata, and duration.
 10. A separate recovery pass may mark a running record `failed` with retryable `process_error` only when its heartbeat is older than the configured stale threshold; CAS prevents racing a live worker.
 
-Cancellation and explicit retry scheduling/requeue remain later M6 slices and must be added explicitly rather than inferred.
+Cancellation remains deferred. Retry behavior is explicit: generation jobs have no automatic pg-boss retries, terminal records are never reopened, and a retryable failure may be retried only by creating a new generation through the owner-scoped retry endpoint; see ADR-0014.
 
 ## Authentication and ownership
 Private-beta users are operator-provisioned and authenticate with `Authorization: Bearer <opaque-token>`. Only a SHA-256 hash of the high-entropy token is stored. Each generation has an immutable `userId`; another user's generation ID resolves as not found rather than disclosing ownership. See ADR-0013.
@@ -88,6 +88,7 @@ API rate limits are backed by PostgreSQL fixed-window counters for both user ID 
 - `POST /v1/generations` — authenticate, rate-limit, atomically persist+enqueue, return `202`.
 - `GET /v1/generations/:id` — owner-scoped status/result; internal `userId` and object-store key are omitted.
 - `POST /v1/generations/:id/feedback` — owner-scoped feedback for terminal results only.
+- `POST /v1/generations/:id/retry` — only for owner-scoped `failed` records whose typed error is retryable; creates a new queued generation with the same prompt and leaves the original terminal record unchanged.
 - `GET /v1/generations/:id/download` — owner-scoped 60-second presigned object URL only after success. Default clients receive a `302`; clients sending `Accept: application/json` receive `{ downloadUrl, expiresInSeconds }`, which lets the same-origin tester UI navigate to object storage without forwarding the bearer token.
 
 ## Tester UI

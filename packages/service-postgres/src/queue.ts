@@ -3,6 +3,11 @@ import { PgBoss } from "pg-boss";
 import { GenerationJobSchema, type GenerationJob, type GenerationQueue } from "@project/service-core";
 
 export const GENERATION_QUEUE_NAME = "factorio-generation";
+export const GENERATION_QUEUE_OPTIONS = {
+  retryLimit: 0,
+  expireInSeconds: 900,
+  deleteAfterSeconds: 604_800,
+} as const;
 
 export interface PgBossGenerationQueueOptions {
   readonly connectionString: string;
@@ -28,18 +33,14 @@ export class PgBossGenerationQueue implements GenerationQueue {
   async start(): Promise<void> {
     if (this.started) return;
     await this.boss.start();
-    await this.boss.createQueue(this.queueName, {
-      retryLimit: 0,
-      expireInSeconds: 900,
-      deleteAfterSeconds: 604_800,
-    });
+    await this.boss.createQueue(this.queueName, GENERATION_QUEUE_OPTIONS);
     this.started = true;
   }
 
   async enqueue(input: GenerationJob): Promise<void> {
     if (!this.started) throw new Error("PgBossGenerationQueue must be started before enqueue");
     const job = GenerationJobSchema.parse(input);
-    const id = await this.boss.send(this.queueName, job, { retryLimit: 0 });
+    const id = await this.boss.send(this.queueName, job, { retryLimit: GENERATION_QUEUE_OPTIONS.retryLimit });
     if (id === null) throw new Error("pg-boss did not create generation job");
   }
 

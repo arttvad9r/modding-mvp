@@ -257,6 +257,27 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
         return;
       }
 
+      const retryId = generationIdFromPath(url.pathname, "/retry");
+      if (method === "POST" && retryId !== null) {
+        await applyRouteLimits(dependencies, context, "create");
+        const current = await findGenerationForUser(dependencies.repository, retryId, context.user.id);
+        if (current === null) throw new HttpError(404, "not_found", "Generation not found");
+        if (current.status !== "failed" || current.error.retryable !== true) {
+          throw new HttpError(409, "not_retryable", "Only retryable failed generations can be retried");
+        }
+        const retried = await submitGenerationAtomically({
+          submissionStore: dependencies.submissionStore,
+          userId: context.user.id,
+          prompt: current.prompt,
+          ...(dependencies.now === undefined ? {} : { now: dependencies.now }),
+        });
+        sendJson(response, 202, {
+          generation: publicGeneration(retried),
+          retriedFromGenerationId: current.id,
+        });
+        return;
+      }
+
       const feedbackId = generationIdFromPath(url.pathname, "/feedback");
       if (method === "POST" && feedbackId !== null) {
         await applyRouteLimits(dependencies, context, "feedback");

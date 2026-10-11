@@ -50,6 +50,7 @@ const INDEX_HTML = String.raw`<!doctype html>
       <p id="result-message"></p>
       <div id="result-actions" class="actions hidden">
         <button id="download" type="button">Download ZIP</button>
+        <button id="retry" type="button" class="secondary hidden">Retry</button>
       </div>
       <div id="feedback" class="feedback hidden">
         <label for="feedback-note">Was this useful?</label>
@@ -82,6 +83,7 @@ const APP_JS = String.raw`(() => {
   const resultMessage = document.querySelector("#result-message");
   const resultActions = document.querySelector("#result-actions");
   const downloadButton = document.querySelector("#download");
+  const retryButton = document.querySelector("#retry");
   const feedback = document.querySelector("#feedback");
   const feedbackNote = document.querySelector("#feedback-note");
   const feedbackState = document.querySelector("#feedback-state");
@@ -133,7 +135,11 @@ const APP_JS = String.raw`(() => {
     if (record.modSpec && record.modSpec.capability) addMeta("Capability", record.modSpec.capability);
     if (record.telemetry && typeof record.telemetry.durationMs === "number") addMeta("Duration", (record.telemetry.durationMs / 1000).toFixed(1) + " s");
 
-    resultActions.classList.toggle("hidden", record.status !== "succeeded");
+    const canDownload = record.status === "succeeded";
+    const canRetry = record.status === "failed" && record.error && record.error.retryable === true;
+    resultActions.classList.toggle("hidden", !canDownload && !canRetry);
+    downloadButton.classList.toggle("hidden", !canDownload);
+    retryButton.classList.toggle("hidden", !canRetry);
     const terminal = ["succeeded", "failed", "unsupported"].includes(record.status);
     feedback.classList.toggle("hidden", !terminal);
 
@@ -195,6 +201,26 @@ const APP_JS = String.raw`(() => {
     } catch (error) {
       requestState.textContent = error instanceof Error ? error.message : String(error);
       generateButton.disabled = false;
+    }
+  });
+
+  retryButton.addEventListener("click", async () => {
+    if (!generationId) return;
+    retryButton.disabled = true;
+    requestState.textContent = "Retrying as a new generation…";
+    try {
+      const body = await api("/v1/generations/" + encodeURIComponent(generationId) + "/retry", {
+        method: "POST",
+      });
+      generationId = body.generation.id;
+      render(body.generation);
+      generateButton.disabled = true;
+      requestState.textContent = "Working…";
+      pollTimer = window.setTimeout(poll, 500);
+    } catch (error) {
+      requestState.textContent = error instanceof Error ? error.message : String(error);
+    } finally {
+      retryButton.disabled = false;
     }
   });
 

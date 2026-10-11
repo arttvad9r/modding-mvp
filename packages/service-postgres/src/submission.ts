@@ -10,7 +10,7 @@ import {
 } from "@project/service-core";
 
 import type { ServicePostgresDb } from "./db.js";
-import { PgBossGenerationQueue } from "./queue.js";
+import { GENERATION_QUEUE_OPTIONS, PgBossGenerationQueue } from "./queue.js";
 import { generationRecordValues } from "./repository.js";
 import { generations } from "./schema.js";
 
@@ -31,7 +31,7 @@ export class PostgresGenerationSubmissionStore implements GenerationSubmissionSt
     await this.db.transaction(async (tx) => {
       await tx.insert(generations).values(generationRecordValues(record));
       const jobId = await this.queue.boss.send(this.queue.queueName, job, {
-        retryLimit: 0,
+        retryLimit: GENERATION_QUEUE_OPTIONS.retryLimit,
         db: fromDrizzle(tx, sql),
       });
       if (jobId === null) throw new Error("pg-boss did not create generation job");

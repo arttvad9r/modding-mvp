@@ -201,7 +201,7 @@ Before starting M2:
 - [x] Add operator-provisioned opaque bearer tokens stored only as SHA-256 hashes, generation ownership, and PostgreSQL per-user/salted-IP rate limits.
 - [x] Add minimal same-origin private-beta tester UI for token entry, prompt submission, status polling, ZIP download, and feedback.
 - [x] Add running-generation heartbeat and CAS-safe stale-running recovery to retryable `failed`.
-- [ ] Add explicit retry/requeue policy before deployment.
+- [x] Add explicit retry policy: no automatic pg-boss retries; retryable failures create a new generation through owner-scoped `/retry`.
 
 ### Private deployment/beta
 - [ ] Deploy API, worker, PostgreSQL, and private object storage.

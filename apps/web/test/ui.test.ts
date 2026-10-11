@@ -44,6 +44,7 @@ describe("private-beta tester UI", () => {
       expect(javascript).toContain("sessionStorage");
       expect(javascript).toContain('Accept: "application/json"');
       expect(javascript).toContain("/feedback");
+      expect(javascript).toContain("/retry");
 
       const css = await fetch(`${baseUrl}/app.css`);
       expect(css.status).toBe(200);

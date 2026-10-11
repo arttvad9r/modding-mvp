@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   GENERATION_QUEUE_NAME,
+  GENERATION_QUEUE_OPTIONS,
   generations,
   rateLimitBuckets,
   serviceUsers,
@@ -59,7 +60,12 @@ describe("service-postgres schema", () => {
     expect(limits.checks.map((check) => check.name)).toEqual(["rate_limit_count_positive"]);
   });
 
-  it("uses one stable generation queue name", () => {
+  it("uses one stable generation queue with automatic retries disabled", () => {
     expect(GENERATION_QUEUE_NAME).toBe("factorio-generation");
+    expect(GENERATION_QUEUE_OPTIONS).toEqual({
+      retryLimit: 0,
+      expireInSeconds: 900,
+      deleteAfterSeconds: 604_800,
+    });
   });
 });

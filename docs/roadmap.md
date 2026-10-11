@@ -128,6 +128,7 @@ Completed first slice:
 - `packages/service-postgres` with Drizzle migration, revision-CAS repository, pg-boss queue, and atomic record+job submission;
 - checksum-pinned PostgreSQL 18.6 local integration runtime proving migration/CAS/queue/transaction rollback;
 - `packages/service-s3` private ZIP artifact adapter with safe key/name validation and 30–900 second presigned GET URLs;
+- explicit retry policy with automatic pg-boss retries disabled and owner-triggered fresh-generation retries for retryable failures;
 - AWS SDK HTTP integration smoke plus Docker-backed S3-compatible PutObject/presigned-GetObject byte round-trip;
 - initial HTTP/service contract in `docs/service-contract.md`;
 - ADR-0011 asynchronous service/worker boundary;
@@ -140,7 +141,6 @@ Completed first slice:
 
 Remaining scope:
 - minimal tester web UI over the implemented HTTP API;
-- explicit retry/requeue policy;
 - private deployment and smoke against the selected hosted S3-compatible provider;
 - 30+ testers target.
 
