@@ -61,6 +61,15 @@ const INDEX_HTML = String.raw`<!doctype html>
           <span id="feedback-state" class="muted" role="status" aria-live="polite"></span>
         </div>
       </div>
+      <div id="survey" class="feedback hidden">
+        <label>Would you pay for this service if generated mods keep working?</label>
+        <div class="actions">
+          <button type="button" class="secondary" data-wtp="yes">Yes</button>
+          <button type="button" class="secondary" data-wtp="maybe">Maybe</button>
+          <button type="button" class="secondary" data-wtp="no">No</button>
+          <span id="survey-state" class="muted" role="status" aria-live="polite"></span>
+        </div>
+      </div>
     </section>
   </main>
   <script src="/app.js" defer></script>
@@ -87,6 +96,8 @@ const APP_JS = String.raw`(() => {
   const feedback = document.querySelector("#feedback");
   const feedbackNote = document.querySelector("#feedback-note");
   const feedbackState = document.querySelector("#feedback-state");
+  const survey = document.querySelector("#survey");
+  const surveyState = document.querySelector("#survey-state");
   let generationId = null;
   let pollTimer = null;
 
@@ -142,6 +153,7 @@ const APP_JS = String.raw`(() => {
     retryButton.classList.toggle("hidden", !canRetry);
     const terminal = ["succeeded", "failed", "unsupported"].includes(record.status);
     feedback.classList.toggle("hidden", !terminal);
+    survey.classList.toggle("hidden", record.status !== "succeeded");
 
     if (record.status === "queued") resultMessage.textContent = "Queued for generation.";
     else if (record.status === "running") resultMessage.textContent = "Generating and validating in Factorio.";
@@ -255,6 +267,22 @@ const APP_JS = String.raw`(() => {
       }
     });
   });
+  survey.querySelectorAll("[data-wtp]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      surveyState.textContent = "Saving…";
+      try {
+        await api("/v1/survey", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ willingnessToPay: button.dataset.wtp }),
+        });
+        surveyState.textContent = "Answer saved.";
+      } catch (error) {
+        surveyState.textContent = error instanceof Error ? error.message : String(error);
+      }
+    });
+  });
+
 })();`;
 
 function sendStatic(response: ServerResponse, contentType: string, body: string): void {

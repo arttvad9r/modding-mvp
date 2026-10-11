@@ -7,10 +7,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run test/adapters.test.ts",
+    "test": "vitest run test/adapters.test.ts test/kpis.test.ts",
     "test:integration": "vitest run test/postgres.integration.test.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/migrate-cli.ts"
+    "db:migrate": "tsx src/migrate-cli.ts",
+    "kpis": "tsx src/kpi-cli.ts"
   },
   "dependencies": {
     "@project/service-core": "workspace:*",

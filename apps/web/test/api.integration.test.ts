@@ -8,6 +8,7 @@ import type { LlmJsonRequest, LlmJsonResponse, LlmProvider } from "@project/llm"
 import { createServiceUser } from "@project/service-core";
 import {
   PgBossGenerationQueue,
+  PostgresBetaSurveyRepository,
   PostgresGenerationRepository,
   PostgresGenerationSubmissionStore,
   PostgresRateLimitStore,
@@ -105,6 +106,7 @@ describe("private-beta HTTP API through real service infrastructure", () => {
     });
     const repository = new PostgresGenerationRepository(database.db);
     const submissionStore = new PostgresGenerationSubmissionStore(database.db, queue);
+    const surveys = new PostgresBetaSurveyRepository(database.db);
     const artifactStore = createS3ArtifactStore({
       endpoint: required("PROJECT_SERVICE_S3_ENDPOINT"),
       bucket: required("PROJECT_SERVICE_S3_BUCKET"),
@@ -130,6 +132,7 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       submissionStore,
       rateLimits: new PostgresRateLimitStore(database.db),
       artifactDownloads: artifactStore,
+      surveys,
       ipHashSalt: "http-integration-ip-hash-salt",
     });
     const handler = createPrivateBetaWebHandler(apiHandler);
@@ -188,6 +191,14 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       expect(feedbackResponse.status).toBe(200);
       const feedback = (await feedbackResponse.json()) as { generation: { feedback: { rating: string } } };
       expect(feedback.generation.feedback.rating).toBe("up");
+
+      const surveyResponse = await fetch(`${baseUrl}/v1/survey`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ willingnessToPay: "yes" }),
+      });
+      expect(surveyResponse.status).toBe(200);
+      expect(await surveys.get(createdUser.user.id)).toMatchObject({ willingnessToPay: "yes" });
     } finally {
       await closeServer(server).catch(() => undefined);
       await worker.stop().catch(() => undefined);

@@ -12,7 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import type { GenerationRecord } from "@project/service-core";
+import type { GenerationRecord, WillingnessToPay } from "@project/service-core";
 
 export const serviceUsers = pgTable(
   "service_users",
@@ -26,6 +26,24 @@ export const serviceUsers = pgTable(
   (table) => [
     uniqueIndex("service_users_token_hash_uidx").on(table.tokenHash),
     index("service_users_created_idx").on(table.createdAt),
+  ],
+);
+
+export const betaSurveyResponses = pgTable(
+  "beta_survey_responses",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => serviceUsers.id, { onDelete: "cascade" }),
+    willingnessToPay: text("willingness_to_pay").$type<WillingnessToPay>().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull(),
+  },
+  (table) => [
+    check(
+      "beta_survey_willingness_valid",
+      sql`${table.willingnessToPay} in ('yes', 'maybe', 'no')`,
+    ),
+    index("beta_survey_updated_idx").on(table.updatedAt),
   ],
 );
 
@@ -70,5 +88,6 @@ export const rateLimitBuckets = pgTable(
   ],
 );
 
+export type BetaSurveyResponseRow = typeof betaSurveyResponses.$inferSelect;
 export type GenerationRow = typeof generations.$inferSelect;
 export type ServiceUserRow = typeof serviceUsers.$inferSelect;

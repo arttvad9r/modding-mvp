@@ -137,12 +137,13 @@ Completed first slice:
 - Docker-backed full service integration proving atomic submit -> worker -> real Factorio -> object storage -> persisted success -> presigned download;
 - authenticated HTTP API for create/get/feedback/download with generation ownership;
 - operator-provisioned opaque beta tokens, PostgreSQL per-user/salted-IP rate limits, migration/user-provisioning CLIs, and ADR-0013;
-- Docker-backed HTTP integration proving bearer auth -> API -> queue -> worker -> real Factorio -> download -> feedback.
+- Docker-backed HTTP integration proving bearer auth -> API -> queue -> worker -> real Factorio -> download -> feedback;
+- same-origin tester UI with explicit retry and willingness-to-pay survey;
+- `pnpm beta:kpis` report for active/repeat testers, success/direct-success, duration/Factorio validation, feedback/false-success proxy, WTP, tokens/cost, and Repair attempts.
 
 Remaining scope:
-- minimal tester web UI over the implemented HTTP API;
 - private deployment and smoke against the selected hosted S3-compatible provider;
-- 30+ testers target.
+- recruit 30+ active testers and evaluate the product hypotheses from observed beta data.
 
 Exit criteria are the product hypotheses in `product-spec.md`, especially success rate, false-success rate, repeat usage, and willingness to pay.
 

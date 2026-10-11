@@ -90,6 +90,10 @@ API rate limits are backed by PostgreSQL fixed-window counters for both user ID 
 - `POST /v1/generations/:id/feedback` — owner-scoped feedback for terminal results only.
 - `POST /v1/generations/:id/retry` — only for owner-scoped `failed` records whose typed error is retryable; creates a new queued generation with the same prompt and leaves the original terminal record unchanged.
 - `GET /v1/generations/:id/download` — owner-scoped 60-second presigned object URL only after success. Default clients receive a `302`; clients sending `Accept: application/json` receive `{ downloadUrl, expiresInSeconds }`, which lets the same-origin tester UI navigate to object storage without forwarding the bearer token.
+- `POST /v1/survey` — authenticated per-user upsert of `{ willingnessToPay: "yes" | "maybe" | "no" }` for the private-beta willingness-to-pay hypothesis.
 
 ## Tester UI
-`GET /` serves the minimal private-beta tester interface from the same `apps/web` process. The page stores the beta token only in tab-scoped `sessionStorage`, submits prompts through the authenticated API, polls until terminal state, exposes the signed ZIP download on success, and records optional up/down feedback. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.
+`GET /` serves the minimal private-beta tester interface from the same `apps/web` process. The page stores the beta token only in tab-scoped `sessionStorage`, submits prompts through the authenticated API, polls until terminal state, exposes the signed ZIP download on success, records optional up/down feedback, and asks the explicit willingness-to-pay survey after success. Static UI routes remain separate from authenticated generation routes and use restrictive CSP/no-store headers.
+
+## Beta KPI report
+`pnpm beta:kpis` reads the deployment PostgreSQL database and emits one JSON report covering active/provisioned testers, distinct-prompt repeat usage, supported terminal success, direct success without Repair, prompt-to-result and Factorio-validation medians, feedback coverage and the reported false-success proxy, willingness to pay, token/cost coverage, and Repair attempts. The report is observational; it does not mark M6 hypotheses as achieved until real beta data reaches their thresholds.

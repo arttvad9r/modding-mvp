@@ -4,6 +4,8 @@ import {
   GenerationRecordSchema,
   createServiceUser,
   type ArtifactDownloadSigner,
+  type BetaSurveyRepository,
+  type BetaSurveyResponse,
   type GenerationJob,
   type GenerationRecord,
   type GenerationRepository,
@@ -52,6 +54,12 @@ class MemorySubmissionStore implements GenerationSubmissionStore {
   }
 }
 
+class MemorySurveys implements BetaSurveyRepository {
+  readonly responses = new Map<string, BetaSurveyResponse>();
+  async upsert(response: BetaSurveyResponse) { this.responses.set(response.userId, response); }
+  async get(userId: string) { return this.responses.get(userId) ?? null; }
+}
+
 class MemoryRateLimits implements RateLimitStore {
   private readonly counts = new Map<string, number>();
   async consume(input: RateLimitConsumeInput): Promise<RateLimitDecision> {
@@ -79,6 +87,7 @@ interface TestApi {
   readonly repository: MemoryRepository;
   readonly submissionStore: MemorySubmissionStore;
   readonly signer: FixedDownloadSigner;
+  readonly surveys: MemorySurveys;
   readonly user: ServiceUser;
   readonly token: string;
   readonly otherUser: ServiceUser;
@@ -102,6 +111,7 @@ async function startApi(policy: ApiRateLimitPolicy = DEFAULT_API_RATE_LIMIT_POLI
   const users = new MemoryUsers();
   const submissionStore = new MemorySubmissionStore(repository);
   const signer = new FixedDownloadSigner();
+  const surveys = new MemorySurveys();
   const first = createServiceUser({
     label: "First tester",
     userId: () => "11111111-1111-4111-8111-111111111111",
@@ -120,6 +130,7 @@ async function startApi(policy: ApiRateLimitPolicy = DEFAULT_API_RATE_LIMIT_POLI
     submissionStore,
     rateLimits: new MemoryRateLimits(),
     artifactDownloads: signer,
+    surveys,
     ipHashSalt: "0123456789abcdef-test-salt",
     rateLimitPolicy: policy,
     now: () => new Date("2026-10-11T00:00:00.000Z"),
@@ -133,6 +144,7 @@ async function startApi(policy: ApiRateLimitPolicy = DEFAULT_API_RATE_LIMIT_POLI
     repository,
     submissionStore,
     signer,
+    surveys,
     user: first.user,
     token: first.accessToken,
     otherUser: second.user,
@@ -210,6 +222,23 @@ describe("private-beta HTTP API", () => {
       headers: auth(api.otherToken),
     });
     expect(response.status).toBe(404);
+  });
+
+  it("records willingness-to-pay survey responses per authenticated beta user", async () => {
+    const api = await startApi();
+    const response = await fetch(`${api.baseUrl}/v1/survey`, {
+      method: "POST",
+      headers: auth(api.token),
+      body: JSON.stringify({ willingnessToPay: "yes" }),
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      survey: { willingnessToPay: "yes" },
+    });
+    expect(await api.surveys.get(api.user.id)).toMatchObject({
+      userId: api.user.id,
+      willingnessToPay: "yes",
+    });
   });
 
   it("retries only retryable failures by creating a new immutable generation", async () => {

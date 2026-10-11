@@ -85,6 +85,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `infra/compose.integration.yaml` plus `pnpm test:service-integration` prove the full infrastructure path with Docker PostgreSQL and S3Mock while using real Factorio and a fake typed Planner provider.
 - `apps/web` exposes the private-beta HTTP API with opaque bearer authentication, owner-scoped generation access, PostgreSQL-backed user/IP rate limiting, terminal feedback, and short-lived signed artifact downloads. The API never runs Planner/Factorio synchronously.
 - The same process serves a dependency-free tester UI at `/`. It keeps the beta token in tab-scoped `sessionStorage`, submits prompts asynchronously, polls generation state, obtains signed download URLs through the authenticated API, and records feedback.
+- `beta_survey_responses` stores one explicit `yes | maybe | no` willingness-to-pay answer per tester. `pnpm beta:kpis` computes the private-beta hypothesis report from service users, generation records, feedback, telemetry, and survey responses without a second analytics datastore.
 - `service_users` stores only SHA-256 hashes of high-entropy beta tokens; generation rows carry immutable `userId`. Raw client IPs are salted+hashed before rate-limit keys are persisted. See ADR-0013.
 - ADR-0011 defines the asynchronous service boundary. ADR-0012 selects PostgreSQL + Drizzle/node-postgres + pg-boss and private S3-compatible object storage for the private-beta adapters.
 

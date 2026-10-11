@@ -205,7 +205,8 @@ Before starting M2:
 
 ### Private deployment/beta
 - [ ] Deploy API, worker, PostgreSQL, and private object storage.
-- [ ] Instrument product KPIs and recruit 30+ testers.
+- [x] Instrument private-beta KPI report plus explicit willingness-to-pay survey.
+- [ ] Recruit 30+ testers and evaluate the M6 product hypotheses from observed data.
 
 ## Agent task template
 A task sent to Codex/Claude should include:

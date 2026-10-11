@@ -229,9 +229,11 @@ PostgreSQL is the accepted private-beta persistence default. Minimum entities:
 - generation attempts;
 - persisted ModSpec;
 - artifacts;
-- feedback.
+- feedback;
+- one per-user private-beta willingness-to-pay survey response.
 
 Each generation attempt should capture model/provider, token/cost data, duration, validation status, and normalized failure type.
+Private-beta KPI reporting is computed directly from PostgreSQL. Repeat usage requires two distinct prompts, and `reportedFalseSuccessRate` is a feedback-based proxy that must be reported with feedback coverage.
 
 ## Security boundaries
 - LLM output does not receive arbitrary shell access.

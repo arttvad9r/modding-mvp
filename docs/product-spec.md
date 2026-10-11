@@ -73,3 +73,11 @@ For every generation record:
 - user feedback on whether the downloaded mod worked.
 
 Pricing decisions should be based on this observed unit economics and user behavior rather than assumed cost per generated mod.
+
+### Beta KPI measurement conventions
+- An active tester has submitted at least one generation.
+- A repeat tester has submitted at least two **distinct prompts**; an explicit retry of the same prompt does not count as a second mod.
+- Supported terminal success rate is `succeeded / (succeeded + failed)`; `unsupported` requests are reported separately rather than weakening the supported-set denominator.
+- Direct-success rate uses the same denominator and counts only succeeded generations whose validation telemetry reports no Repair.
+- `reportedFalseSuccessRate` is the share of succeeded generations with feedback that received `down`/"Needs work" feedback. It is a product-signal proxy, not ground-truth false-success, and must always be read together with succeeded-feedback coverage.
+- Willingness to pay is an explicit per-user beta survey (`yes | maybe | no`); the initial hypothesis is reached only by `yes` responses.

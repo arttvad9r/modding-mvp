@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 
 import {
   PgBossGenerationQueue,
+  PostgresBetaSurveyRepository,
   PostgresGenerationRepository,
   PostgresGenerationSubmissionStore,
   PostgresRateLimitStore,
@@ -67,6 +68,7 @@ async function main(): Promise<void> {
   const repository = new PostgresGenerationRepository(database.db);
   const users = new PostgresServiceUserRepository(database.db);
   const rateLimits = new PostgresRateLimitStore(database.db);
+  const surveys = new PostgresBetaSurveyRepository(database.db);
   const submissionStore = new PostgresGenerationSubmissionStore(database.db, queue);
   const apiHandler = createGenerationApiHandler({
     users,
@@ -74,6 +76,7 @@ async function main(): Promise<void> {
     rateLimits,
     submissionStore,
     artifactDownloads: artifactStore,
+    surveys,
     ipHashSalt: required("API_IP_HASH_SALT"),
     trustProxy: boolean("API_TRUST_PROXY", false),
   });

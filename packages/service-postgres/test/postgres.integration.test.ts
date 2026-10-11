@@ -19,10 +19,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   GENERATION_QUEUE_NAME,
   PgBossGenerationQueue,
+  PostgresBetaSurveyRepository,
   PostgresGenerationRepository,
   PostgresGenerationSubmissionStore,
   PostgresRateLimitStore,
   PostgresServiceUserRepository,
+  buildBetaKpiReport,
   createServicePostgresClient,
 } from "../src/index.js";
 
@@ -162,6 +164,30 @@ describe("PostgreSQL service adapters", () => {
         now: new Date("2026-10-11T00:01:00.000Z"),
       }),
     ).resolves.toMatchObject({ allowed: true, remaining: 1 });
+  });
+
+  it("upserts beta willingness-to-pay survey responses and exposes them in KPI reporting", async () => {
+    const surveys = new PostgresBetaSurveyRepository(client.db);
+    await surveys.upsert({
+      userId,
+      willingnessToPay: "yes",
+      updatedAt: "2026-10-11T00:00:20.000Z",
+    });
+    await expect(surveys.get(userId)).resolves.toMatchObject({ willingnessToPay: "yes" });
+
+    await surveys.upsert({
+      userId,
+      willingnessToPay: "maybe",
+      updatedAt: "2026-10-11T00:00:30.000Z",
+    });
+    await expect(surveys.get(userId)).resolves.toMatchObject({
+      willingnessToPay: "maybe",
+      updatedAt: "2026-10-11T00:00:30.000Z",
+    });
+
+    const report = await buildBetaKpiReport(client.db, "2026-10-11T00:00:40.000Z");
+    expect(report.testers.provisioned).toBeGreaterThanOrEqual(1);
+    expect(report.willingnessToPay).toMatchObject({ maybe: 1, targetYes: 3, targetReached: false });
   });
 
   it("migrates, persists/reloads records with revision CAS, and round-trips pg-boss jobs", async () => {

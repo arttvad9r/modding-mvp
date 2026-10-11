@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   GENERATION_QUEUE_NAME,
   GENERATION_QUEUE_OPTIONS,
+  betaSurveyResponses,
   generations,
   rateLimitBuckets,
   serviceUsers,
@@ -58,6 +59,19 @@ describe("service-postgres schema", () => {
     ]);
     expect(limits.primaryKeys).toHaveLength(1);
     expect(limits.checks.map((check) => check.name)).toEqual(["rate_limit_count_positive"]);
+  });
+
+  it("keeps beta willingness-to-pay survey storage explicit", () => {
+    const survey = getTableConfig(betaSurveyResponses);
+    expect(survey.columns.map((column) => column.name)).toEqual([
+      "user_id",
+      "willingness_to_pay",
+      "updated_at",
+    ]);
+    expect(survey.primaryKeys).toHaveLength(0);
+    expect(survey.foreignKeys).toHaveLength(1);
+    expect(survey.indexes.map((index) => index.config.name)).toEqual(["beta_survey_updated_idx"]);
+    expect(survey.checks.map((check) => check.name)).toEqual(["beta_survey_willingness_valid"]);
   });
 
   it("uses one stable generation queue with automatic retries disabled", () => {

@@ -2,3 +2,4 @@ export * from "./auth.js";
 export * from "./contracts.js";
 export * from "./service.js";
 export * from "./worker.js";
+export * from "./survey.js";

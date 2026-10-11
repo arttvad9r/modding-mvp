@@ -3,12 +3,15 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { ProjectError } from "@project/domain";
 import {
+  BetaSurveyResponseSchema,
   SubmitGenerationRequestSchema,
+  WillingnessToPaySchema,
   authenticateAccessToken,
   findGenerationForUser,
   recordGenerationFeedback,
   submitGenerationAtomically,
   type ArtifactDownloadSigner,
+  type BetaSurveyRepository,
   type GenerationRecord,
   type GenerationRepository,
   type GenerationSubmissionStore,
@@ -21,6 +24,10 @@ import { z, ZodError } from "zod";
 const FeedbackBodySchema = z.strictObject({
   rating: z.enum(["up", "down"]),
   note: z.string().trim().min(1).max(2_000).optional(),
+});
+
+const SurveyBodySchema = z.strictObject({
+  willingnessToPay: WillingnessToPaySchema,
 });
 
 const MAX_JSON_BODY_BYTES = 16 * 1024;
@@ -40,6 +47,8 @@ export interface ApiRateLimitPolicy {
   readonly feedbackIp: ApiRateLimitRule;
   readonly downloadUser: ApiRateLimitRule;
   readonly downloadIp: ApiRateLimitRule;
+  readonly surveyUser: ApiRateLimitRule;
+  readonly surveyIp: ApiRateLimitRule;
 }
 
 export const DEFAULT_API_RATE_LIMIT_POLICY: ApiRateLimitPolicy = {
@@ -52,6 +61,8 @@ export const DEFAULT_API_RATE_LIMIT_POLICY: ApiRateLimitPolicy = {
   feedbackIp: { limit: 100, windowMs: 60 * 60_000 },
   downloadUser: { limit: 120, windowMs: 60 * 60_000 },
   downloadIp: { limit: 300, windowMs: 60 * 60_000 },
+  surveyUser: { limit: 20, windowMs: 60 * 60_000 },
+  surveyIp: { limit: 100, windowMs: 60 * 60_000 },
 };
 
 export interface GenerationApiDependencies {
@@ -60,6 +71,7 @@ export interface GenerationApiDependencies {
   readonly submissionStore: GenerationSubmissionStore;
   readonly rateLimits: RateLimitStore;
   readonly artifactDownloads: ArtifactDownloadSigner;
+  readonly surveys: BetaSurveyRepository;
   readonly ipHashSalt: string;
   readonly trustProxy?: boolean;
   readonly rateLimitPolicy?: ApiRateLimitPolicy;
@@ -198,7 +210,7 @@ async function authenticateRequest(
 async function applyRouteLimits(
   dependencies: GenerationApiDependencies,
   context: RequestContext,
-  scope: "create" | "read" | "feedback" | "download",
+  scope: "create" | "read" | "feedback" | "download" | "survey",
 ): Promise<void> {
   const policy = dependencies.rateLimitPolicy ?? DEFAULT_API_RATE_LIMIT_POLICY;
   const now = (dependencies.now ?? (() => new Date()))();
@@ -243,6 +255,22 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
       }
 
       const context = await authenticateRequest(request, dependencies);
+
+      if (method === "POST" && url.pathname === "/v1/survey") {
+        await applyRouteLimits(dependencies, context, "survey");
+        const body = SurveyBodySchema.parse(await readJsonBody(request));
+        const updatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
+        const survey = BetaSurveyResponseSchema.parse({
+          userId: context.user.id,
+          willingnessToPay: body.willingnessToPay,
+          updatedAt,
+        });
+        await dependencies.surveys.upsert(survey);
+        sendJson(response, 200, {
+          survey: { willingnessToPay: survey.willingnessToPay, updatedAt: survey.updatedAt },
+        });
+        return;
+      }
 
       if (method === "POST" && url.pathname === "/v1/generations") {
         await applyRouteLimits(dependencies, context, "create");

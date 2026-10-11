@@ -45,6 +45,7 @@ describe("private-beta tester UI", () => {
       expect(javascript).toContain('Accept: "application/json"');
       expect(javascript).toContain("/feedback");
       expect(javascript).toContain("/retry");
+      expect(javascript).toContain("/v1/survey");
 
       const css = await fetch(`${baseUrl}/app.css`);
       expect(css.status).toBe(200);
