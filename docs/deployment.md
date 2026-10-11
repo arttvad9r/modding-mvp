@@ -9,7 +9,7 @@ The initial production-like environment runs on the Helsinki Debian VPS using `i
 Pinned infrastructure:
 - PostgreSQL `18.6-alpine3.24` at digest `sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873`;
 - SeaweedFS 4.39 at digest `sha256:c7d6c721b30ae711db766bbbfd40192776e263d4e51e22f57baef7bef93c12c6`, running `weed mini` with a persistent `/data` volume;
-- application web/worker images built from application revision `52cebaa`;
+- application web/worker images built from runtime revision `fc00697` (production-only dependency layer);
 - persistent volumes for PostgreSQL, object storage, and `/app/.tools` Factorio runtime cache;
 - fixed compose subnet `172.30.0.0/24`; worker concurrency starts at `1`.
 
@@ -52,7 +52,8 @@ Deployment evidence from 2026-10-11:
 - the deployed worker reported `zai` / `glm-5.3-flash`;
 - the first server generation succeeded directly without Repair in 19,074 ms using 2,205 tokens; Factorio validation took 11,249 ms;
 - the ZIP downloaded through the HTTPS presigned endpoint and passed archive validation;
-- feedback and willingness-to-pay survey writes succeeded.
+- feedback and willingness-to-pay survey writes succeeded;
+- runtime images were upgraded to `fc00697`: web 528 MB and worker 551 MB locally versus 758/781 MB before slimming, then both restarted successfully on the VPS with the Factorio cache preserved.
 
 ## Preconditions
 
@@ -142,6 +143,12 @@ docker run --rm \
   --env-file <database-env-file> \
   <registry>/project-web:<git-sha> \
   node --conditions=production apps/web/dist/src/user-create-cli.js "Tester label"
+
+# Operator/deployment smoke account; authenticates normally but is excluded from beta KPI reporting.
+docker run --rm \
+  --env-file <database-env-file> \
+  <registry>/project-web:<git-sha> \
+  node --conditions=production apps/web/dist/src/user-create-cli.js --internal "Deployment smoke"
 ```
 
 The opaque token is printed once. Store/deliver it through an appropriate secret channel; PostgreSQL stores only its SHA-256 hash.
@@ -188,7 +195,7 @@ Start with worker concurrency 1. Increase it only after observing Factorio CPU/m
 
 After web and worker are running:
 1. Verify `/health/live` through the public HTTPS route.
-2. Create a dedicated smoke beta user and submit one supported request through the tester UI.
+2. Create a dedicated `--internal` smoke user and submit one supported request through the tester UI. Internal users authenticate normally but their generations/surveys are excluded from product KPI reporting.
 3. Confirm the generation reaches `succeeded`, download the ZIP, and install/test it in Factorio.
 4. Verify feedback and willingness-to-pay survey writes.
 5. Run the KPI report:

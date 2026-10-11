@@ -1,0 +1,1 @@
+ALTER TABLE "service_users" ADD COLUMN "metrics_eligible" boolean DEFAULT true NOT NULL;

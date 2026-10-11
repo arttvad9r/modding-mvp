@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   integer,
@@ -20,6 +21,7 @@ export const serviceUsers = pgTable(
     id: uuid("id").primaryKey(),
     label: text("label").notNull(),
     tokenHash: text("token_hash").notNull(),
+    metricsEligible: boolean("metrics_eligible").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
     disabledAt: timestamp("disabled_at", { withTimezone: true, mode: "date" }),
   },

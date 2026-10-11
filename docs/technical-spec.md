@@ -203,7 +203,7 @@ Private-beta API security:
 - successful API responses omit internal ownership and object-store key fields;
 - per-user and salted-IP fixed-window rate-limit counters live in PostgreSQL; raw IP addresses are not used as bucket keys;
 - proxy forwarding headers are trusted only when explicitly configured;
-- artifact downloads require ownership and redirect to a short-lived presigned URL. See ADR-0013. `apps/worker` is the executable pg-boss consumer and wires the configured LLM provider, Factorio executor, PostgreSQL repository, and S3 artifact store. Local service integration uses pinned Docker PostgreSQL 18.6 plus Adobe S3Mock 5.2.3 and proves atomic submission -> queue consumption -> real Factorio validation -> S3-compatible upload -> persisted success -> presigned download. The integration Planner is a typed fake provider so this infrastructure test does not spend external LLM quota. The selected hosted object-storage provider still requires a deployment smoke before beta.
+- artifact downloads require ownership and redirect to a short-lived presigned URL. See ADR-0013. `apps/worker` is the executable pg-boss consumer and wires the configured LLM provider, Factorio executor, PostgreSQL repository, and S3 artifact store. Local service integration uses pinned Docker PostgreSQL 18.6 plus Adobe S3Mock 5.2.3 and proves atomic submission -> queue consumption -> real Factorio validation -> S3-compatible upload -> persisted success -> presigned download. The integration Planner is a typed fake provider so this infrastructure test does not spend external LLM quota. The selected beta object-storage provider is SeaweedFS 4.39 on the Helsinki VPS and has passed the deployment upload/presigned-download/delete smoke.
 
 ## Package boundaries
 Current and planned repository boundaries:
@@ -233,7 +233,7 @@ PostgreSQL is the accepted private-beta persistence default. Minimum entities:
 - one per-user private-beta willingness-to-pay survey response.
 
 Each generation attempt should capture model/provider, token/cost data, duration, validation status, and normalized failure type.
-Private-beta KPI reporting is computed directly from PostgreSQL. Repeat usage requires two distinct prompts, and `reportedFalseSuccessRate` is a feedback-based proxy that must be reported with feedback coverage.
+Private-beta KPI reporting is computed directly from PostgreSQL. Users marked `metricsEligible=false` (operator/deployment smoke accounts) and all of their generations/surveys are excluded. Repeat usage requires two distinct prompts, and `reportedFalseSuccessRate` is a feedback-based proxy that must be reported with feedback coverage.
 
 ## Security boundaries
 - LLM output does not receive arbitrary shell access.

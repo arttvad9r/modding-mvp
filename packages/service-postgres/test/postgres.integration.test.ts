@@ -166,28 +166,51 @@ describe("PostgreSQL service adapters", () => {
     ).resolves.toMatchObject({ allowed: true, remaining: 1 });
   });
 
-  it("upserts beta willingness-to-pay survey responses and exposes them in KPI reporting", async () => {
+  it("excludes internal users, their generations, and surveys from beta KPI reporting", async () => {
     const surveys = new PostgresBetaSurveyRepository(client.db);
     await surveys.upsert({
       userId,
-      willingnessToPay: "yes",
-      updatedAt: "2026-10-11T00:00:20.000Z",
+      willingnessToPay: "maybe",
+      updatedAt: "2026-10-11T00:00:30.000Z",
     });
-    await expect(surveys.get(userId)).resolves.toMatchObject({ willingnessToPay: "yes" });
 
+    const internalUserId = "00000000-0000-4000-8000-000000000099";
+    const internal = createServiceUser({
+      label: "Deployment smoke",
+      metricsEligible: false,
+      userId: () => internalUserId,
+      token: () => "beta_internal_integration_token_1234567890abcdef",
+      now: () => new Date("2026-10-11T00:00:00.000Z"),
+    });
+    await new PostgresServiceUserRepository(client.db).insert(internal.user);
     await surveys.upsert({
-      userId,
-      willingnessToPay: "maybe",
-      updatedAt: "2026-10-11T00:00:30.000Z",
+      userId: internalUserId,
+      willingnessToPay: "yes",
+      updatedAt: "2026-10-11T00:00:35.000Z",
     });
-    await expect(surveys.get(userId)).resolves.toMatchObject({
-      willingnessToPay: "maybe",
-      updatedAt: "2026-10-11T00:00:30.000Z",
+
+    const internalGenerationId = "99999999-9999-4999-8999-999999999999";
+    await submitGeneration({
+      userId: internalUserId,
+      repository: new PostgresGenerationRepository(client.db),
+      queue,
+      prompt: "Make steel furnaces twice as fast",
+      generationId: () => internalGenerationId,
+      now: () => new Date("2026-10-11T00:00:36.000Z"),
     });
+    const [internalJob] = await queue.boss.fetch<{ schemaVersion: 1; generationId: string }>(GENERATION_QUEUE_NAME);
+    expect(internalJob?.data.generationId).toBe(internalGenerationId);
+    if (internalJob) await queue.boss.complete(GENERATION_QUEUE_NAME, internalJob.id);
 
     const report = await buildBetaKpiReport(client.db, "2026-10-11T00:00:40.000Z");
-    expect(report.testers.provisioned).toBeGreaterThanOrEqual(1);
-    expect(report.willingnessToPay).toMatchObject({ maybe: 1, targetYes: 3, targetReached: false });
+    expect(report.testers).toMatchObject({ provisioned: 1, active: 0 });
+    expect(report.generations.total).toBe(0);
+    expect(report.willingnessToPay).toMatchObject({
+      yes: 0,
+      maybe: 1,
+      targetYes: 3,
+      targetReached: false,
+    });
   });
 
   it("migrates, persists/reloads records with revision CAS, and round-trips pg-boss jobs", async () => {

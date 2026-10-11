@@ -13,6 +13,7 @@ export const ServiceUserSchema = z.strictObject({
   id: UserIdSchema,
   label: UserLabelSchema,
   tokenHash: AccessTokenHashSchema,
+  metricsEligible: z.boolean().default(true),
   createdAt: z.string().datetime({ offset: true }),
   disabledAt: z.string().datetime({ offset: true }).optional(),
 });
@@ -47,6 +48,7 @@ export interface CreateServiceUserOptions {
   readonly label: string;
   readonly userId?: () => string;
   readonly token?: () => string;
+  readonly metricsEligible?: boolean;
   readonly now?: () => Date;
 }
 
@@ -70,6 +72,7 @@ export function createServiceUser(options: CreateServiceUserOptions): CreatedSer
     id: UserIdSchema.parse((options.userId ?? randomUUID)()),
     label: options.label,
     tokenHash: hashAccessToken(accessToken),
+    metricsEligible: options.metricsEligible ?? true,
     createdAt: timestamp,
   });
   return { user, accessToken };

@@ -16,14 +16,16 @@ function loadLocalEnv(): void {
 
 async function main(): Promise<void> {
   loadLocalEnv();
-  const label = process.argv.slice(2).join(" ").trim();
-  if (!label) throw new Error('Usage: pnpm beta:user:create -- "Tester label"');
+  const args = process.argv.slice(2);
+  const metricsEligible = !args.includes("--internal");
+  const label = args.filter((arg) => arg !== "--internal").join(" ").trim();
+  if (!label) throw new Error('Usage: pnpm beta:user:create -- [--internal] "Tester label"');
   const connectionString = process.env.DATABASE_URL?.trim();
   if (!connectionString) throw new Error("DATABASE_URL is required");
 
   const database = createServicePostgresClient({ connectionString });
   try {
-    const created = createServiceUser({ label });
+    const created = createServiceUser({ label, metricsEligible });
     await new PostgresServiceUserRepository(database.db).insert(created.user);
     process.stdout.write(
       `${JSON.stringify(
@@ -32,6 +34,7 @@ async function main(): Promise<void> {
           user: {
             id: created.user.id,
             label: created.user.label,
+            metricsEligible: created.user.metricsEligible,
             createdAt: created.user.createdAt,
           },
           accessToken: created.accessToken,

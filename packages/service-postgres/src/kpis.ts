@@ -192,20 +192,30 @@ export async function buildBetaKpiReport(
   generatedAt = new Date().toISOString(),
 ): Promise<BetaKpiReport> {
   const [userRows, generationRows, surveyRows] = await Promise.all([
-    db.select({ id: serviceUsers.id }).from(serviceUsers),
+    db.select({ id: serviceUsers.id, metricsEligible: serviceUsers.metricsEligible }).from(serviceUsers),
     db.select({ record: generations.record }).from(generations),
     db.select().from(betaSurveyResponses),
   ]);
 
+  const eligibleUserIds = new Set(
+    userRows.filter((row) => row.metricsEligible).map((row) => row.id),
+  );
+  const eligibleGenerationRecords = generationRows
+    .map((row) => GenerationRecordSchema.parse(row.record))
+    .filter((record) => eligibleUserIds.has(record.userId));
+  const eligibleSurveyResponses = surveyRows
+    .filter((row) => eligibleUserIds.has(row.userId))
+    .map((row) => ({
+      userId: row.userId,
+      willingnessToPay: row.willingnessToPay,
+      updatedAt: row.updatedAt.toISOString(),
+    }));
+
   return calculateBetaKpis(
     {
-      provisionedUserIds: userRows.map((row) => row.id),
-      generationRecords: generationRows.map((row) => GenerationRecordSchema.parse(row.record)),
-      surveyResponses: surveyRows.map((row) => ({
-        userId: row.userId,
-        willingnessToPay: row.willingnessToPay,
-        updatedAt: row.updatedAt.toISOString(),
-      })),
+      provisionedUserIds: [...eligibleUserIds],
+      generationRecords: eligibleGenerationRecords,
+      surveyResponses: eligibleSurveyResponses,
     },
     generatedAt,
   );

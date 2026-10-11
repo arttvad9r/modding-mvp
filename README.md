@@ -124,12 +124,14 @@ The service backend now has separate migration, worker, API/UI, and beta-user pr
 ```bash
 DATABASE_URL=... pnpm db:migrate
 DATABASE_URL=... pnpm beta:user:create -- "Tester label"
+DATABASE_URL=... pnpm beta:user:create -- --internal "Deployment smoke"
+DATABASE_URL=... pnpm beta:user:create -- --internal "Deployment smoke"
 DATABASE_URL=... pnpm beta:kpis
 pnpm worker:start
 pnpm web:start
 ```
 
-`beta:user:create` prints the opaque access token only when it is created; only its SHA-256 hash is persisted. `web:start` serves the tester UI at `/` and the authenticated `/v1` API from the same origin. Required PostgreSQL, S3, LLM, Factorio, and API security environment variables are listed in `.env.example`. The beta token entered in the UI is kept only in the current browser tab's `sessionStorage`.
+`beta:user:create` prints the opaque access token only when it is created; only its SHA-256 hash is persisted. Use `--internal` for deployment/smoke accounts so their generations, feedback, and WTP responses are excluded from product KPI reporting. `web:start` serves the tester UI at `/` and the authenticated `/v1` API from the same origin. Required PostgreSQL, S3, LLM, Factorio, and API security environment variables are listed in `.env.example`. The beta token entered in the UI is kept only in the current browser tab's `sessionStorage`.
 
 For a reproducible backend regression using Docker PostgreSQL + S3Mock and real Factorio, run `pnpm test:service-integration`. This does not replace the required smoke against the eventual hosted S3-compatible provider.
 

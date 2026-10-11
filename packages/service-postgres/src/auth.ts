@@ -18,6 +18,7 @@ function rowToUser(row: ServiceUserRow): ServiceUser {
     id: row.id,
     label: row.label,
     tokenHash: row.tokenHash,
+    metricsEligible: row.metricsEligible,
     createdAt: row.createdAt.toISOString(),
     ...(row.disabledAt === null ? {} : { disabledAt: row.disabledAt.toISOString() }),
   });
@@ -32,6 +33,7 @@ export class PostgresServiceUserRepository implements ServiceUserRepository {
       id: user.id,
       label: user.label,
       tokenHash: user.tokenHash,
+      metricsEligible: user.metricsEligible,
       createdAt: new Date(user.createdAt),
       ...(user.disabledAt === undefined ? {} : { disabledAt: new Date(user.disabledAt) }),
     });

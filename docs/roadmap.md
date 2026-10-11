@@ -139,8 +139,8 @@ Completed slices:
 - operator-provisioned opaque beta tokens, PostgreSQL per-user/salted-IP rate limits, migration/user-provisioning CLIs, and ADR-0013;
 - Docker-backed HTTP integration proving bearer auth -> API -> queue -> worker -> real Factorio -> download -> feedback;
 - same-origin tester UI with explicit retry and willingness-to-pay survey;
-- `pnpm beta:kpis` report for active/repeat testers, success/direct-success, duration/Factorio validation, feedback/false-success proxy, WTP, tokens/cost, and Repair attempts.
-- production-conditional workspace exports, compiled-runtime smoke, separate web/worker Docker targets, provider-neutral deployment runbook, and hosted S3 smoke command;
+- `pnpm beta:kpis` report for active/repeat testers, success/direct-success, duration/Factorio validation, feedback/false-success proxy, WTP, tokens/cost, and Repair attempts, with explicit internal/smoke users excluded.
+- production-conditional workspace exports, compiled-runtime smoke, slim production-only web/worker Docker targets, provider-neutral deployment runbook, and hosted S3 smoke command;
 - Helsinki VPS beta stack with pinned PostgreSQL 18.6 + SeaweedFS 4.39, persistent volumes, fixed private Docker subnet, and tailnet-only HTTPS via Tailscale Serve;
 - hosted SeaweedFS smoke proving upload -> presigned GET -> byte comparison -> delete;
 - deployed live Z.ai `glm-5.3-flash` E2E proving API -> pg-boss -> worker -> real Factorio -> private object storage -> presigned ZIP -> feedback/survey; the first server smoke succeeded directly in 19.1 s using 2,205 tokens.

@@ -47,7 +47,7 @@ M0 through M5 are complete and should be treated as stable boundaries unless a t
 - Do not modify unrelated files while completing a task.
 - Do not silently bypass ModSpec for supported product generation flows.
 - User-facing generation access must be owner-scoped by immutable `userId`; another user's generation ID must not disclose the record.
-- Private-beta bearer tokens are high-entropy secrets; persist only their SHA-256 hashes and never log/token-echo them outside explicit provisioning output.
+- Private-beta bearer tokens are high-entropy secrets; persist only their SHA-256 hashes and never log/token-echo them outside explicit provisioning output. Provision operator/smoke users as metrics-ineligible so product KPI reports contain only real testers.
 - Raw client IP addresses must not be persisted for rate limiting; use the deployment-salted hash contract from ADR-0013.
 
 ## ADR policy
@@ -82,6 +82,7 @@ Small refactors, implementation details, and patch dependency upgrades normally 
 - `pnpm api:start`
 - `pnpm db:migrate`
 - `pnpm beta:user:create -- "<label>"`
+- `pnpm beta:user:create -- --internal "<operator/smoke label>"`
 
 ## Definition of done
 A task is done only when:

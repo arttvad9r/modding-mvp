@@ -42,6 +42,7 @@ describe("service-postgres schema", () => {
       "id",
       "label",
       "token_hash",
+      "metrics_eligible",
       "created_at",
       "disabled_at",
     ]);

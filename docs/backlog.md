@@ -209,6 +209,7 @@ Before starting M2:
 - [x] Run deployed live Z.ai `glm-5.3-flash` E2E: API -> pg-boss -> worker -> Factorio -> SeaweedFS -> presigned ZIP -> feedback/survey.
 - [ ] Enable public HTTPS ingress for testers outside the tailnet (Tailscale Funnel approval or a conventional public domain/reverse proxy).
 - [x] Instrument private-beta KPI report plus explicit willingness-to-pay survey.
+- [x] Exclude explicit internal/operator smoke accounts and all of their activity from product KPI reporting.
 - [ ] Recruit 30+ testers and evaluate the M6 product hypotheses from observed data.
 
 ## Agent task template

@@ -37,6 +37,7 @@ describe("private-beta access tokens", () => {
       id: "77777777-7777-4777-8777-777777777777",
       label: "Beta tester one",
       tokenHash: hashAccessToken(created.accessToken),
+      metricsEligible: true,
     });
     expect(JSON.stringify(created.user)).not.toContain(created.accessToken);
 
@@ -46,6 +47,11 @@ describe("private-beta access tokens", () => {
     await expect(
       authenticateAccessToken(repository, "beta_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcde"),
     ).rejects.toMatchObject({ code: "input_error" });
+  });
+
+  it("can mark an operator account as excluded from product metrics", () => {
+    const created = createServiceUser({ label: "Deployment smoke", metricsEligible: false });
+    expect(created.user.metricsEligible).toBe(false);
   });
 
   it("rejects a valid token after its user is disabled", async () => {

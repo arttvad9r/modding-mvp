@@ -75,6 +75,7 @@ For every generation record:
 Pricing decisions should be based on this observed unit economics and user behavior rather than assumed cost per generated mod.
 
 ### Beta KPI measurement conventions
+- Only users explicitly eligible for product metrics are included. Operator/deployment smoke accounts are excluded together with their generations, feedback, and survey responses.
 - An active tester has submitted at least one generation.
 - A repeat tester has submitted at least two **distinct prompts**; an explicit retry of the same prompt does not count as a second mod.
 - Supported terminal success rate is `succeeded / (succeeded + failed)`; `unsupported` requests are reported separately rather than weakening the supported-set denominator.
