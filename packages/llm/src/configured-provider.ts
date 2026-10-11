@@ -151,7 +151,7 @@ export function createConfiguredLlmProvider(
         model,
         baseUrl,
         jsonMode: "response_format",
-        reasoningEffort: "none",
+        reasoningEffort: model.startsWith("glm-5.3") ? "low" : "none",
         ...(fetchImpl === undefined ? {} : { fetchImpl }),
         ...pricing(env, "OLLAMA"),
       }),

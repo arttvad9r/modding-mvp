@@ -26,6 +26,29 @@ describe("createConfiguredLlmProvider", () => {
     });
   });
 
+  it("uses low reasoning for Ollama GLM 5.3 so reasoning stays separate from JSON content", async () => {
+    let capturedBody: Record<string, unknown> | undefined;
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      capturedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(JSON.stringify({ choices: [{ message: { content: "{}" } }] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    const configured = createConfiguredLlmProvider(
+      { LLM_PROVIDER: "ollama-cloud", OLLAMA_API_KEY: "test-key", LLM_MODEL: "glm-5.3-flash" },
+      { fetchImpl },
+    );
+
+    await configured.provider.generateJson({
+      messages: [{ role: "user", content: "x" }],
+      schemaName: "x",
+      schemaDescription: "x",
+    });
+
+    expect(capturedBody?.reasoning_effort).toBe("low");
+  });
+
   it("creates Z.ai general and coding presets with distinct official base URLs", () => {
     const general = createConfiguredLlmProvider(
       {
