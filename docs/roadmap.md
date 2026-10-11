@@ -127,7 +127,7 @@ Completed M6A slices:
 - real-Factorio integration proving a six-change fast-start bundle across prototype, recipe, and research families;
 - updated live Z.ai Planner gate: 24/24 classification and 14/14 exact supported ModSpecs on the 24-case corpus;
 - live natural-language four-change mixed smoke: one Planner attempt -> real Factorio validation -> ZIP in 8.1 s, no Repair.
-- compound-request and follow-up-revision beta UX deployed tailnet-only on the home server from runtime commit `aa9bdcc`; live UI/health, apps-health, and `verify-stack` pass (30 OK / 0 warnings / 0 failures).
+- compound-request, follow-up-revision, and high-value rebalance beta UX deployed tailnet-only on the home server from runtime commit `cc672d5`; live UI/health, apps-health, and `verify-stack` pass (30 OK / 0 warnings / 0 failures).
 - iterative follow-up revision flow: an owned successful generation can create a new immutable child generation carrying `sourceGenerationId` plus an accepted `baseModSpec` snapshot; the Revision Planner emits the complete resulting typed bundle and the normal Factorio validation/ZIP pipeline runs again;
 - Docker service E2E proves initial generation -> `/revise` -> second queue job -> real Factorio -> second S3 artifact; live Z.ai `glm-5.3-flash` revision smoke preserved unchanged tweaks, removed a restored-to-base research tweak, changed furnace `×1.5 -> ×1.875`, and produced a validated ZIP in about 12.4 s with no Repair.
 - reviewed `recipe_crafting_time`, `recipe_result`, and `item_stack_size` primitives with registry-derived Planner/Revision support and real-Factorio semantic validation; a mixed regression bundle changes gear crafting time, belt output, and circuit stack size in one validated ZIP.
