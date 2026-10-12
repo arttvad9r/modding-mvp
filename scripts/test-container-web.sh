@@ -43,5 +43,14 @@ for _ in $(seq 1 40); do
 done
 
 curl -fsS "http://127.0.0.1:${port}/health/live" >/dev/null
-curl -fsS "http://127.0.0.1:${port}/" | grep -Fq "Generate a Factorio mod"
+# Assert stable DOM/route invariants rather than marketing copy, which changes with the UI.
+page="$(curl -fsS "http://127.0.0.1:${port}/")"
+grep -Fq 'id="generation-form"' <<<"$page"
+grep -Fq 'src="/app.js"' <<<"$page"
+script="$(curl -fsS "http://127.0.0.1:${port}/app.js")"
+grep -Fq '/v1/generations' <<<"$script"
+# A malformed request-target must be answered with 400 without taking the process down.
+status="$(curl -sS -o /dev/null -w '%{http_code}' --request-target '//[' "http://127.0.0.1:${port}/")"
+test "$status" = "400"
+curl -fsS "http://127.0.0.1:${port}/health/live" >/dev/null
 echo '{"status":"OK","containerWebSmoke":true}'

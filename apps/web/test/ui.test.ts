@@ -1,8 +1,9 @@
 import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { connect, type AddressInfo } from "node:net";
 
 import { describe, expect, it } from "vitest";
 
+import { createWebRequestListener } from "../src/server.js";
 import { createPrivateBetaWebHandler } from "../src/ui.js";
 
 async function listen(server: Server): Promise<string> {
@@ -113,4 +114,54 @@ describe("private-beta tester UI", () => {
       await close(server);
     }
   });
+
+  it("answers a malformed request-target with 400 and keeps serving", async () => {
+    const handler = createPrivateBetaWebHandler(async (_request, response) => {
+      response.statusCode = 204;
+      response.end();
+    });
+    const server = createServer(createWebRequestListener(handler, () => undefined));
+    const baseUrl = await listen(server);
+    const { port } = server.address() as AddressInfo;
+
+    try {
+      const raw = await rawHttpRequest(port, "GET //[ HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+      expect(raw).toMatch(/^HTTP\/1\.1 400 /);
+      expect(raw).toContain("invalid_request_target");
+      const page = await fetch(`${baseUrl}/`);
+      expect(page.status).toBe(200);
+    } finally {
+      await close(server);
+    }
+  });
+
+  it("converts a rejected handler into a bounded 500 instead of an unhandled rejection", async () => {
+    const logged: string[] = [];
+    const server = createServer(createWebRequestListener(async () => {
+      throw new Error("boom");
+    }, (message) => logged.push(message)));
+    const baseUrl = await listen(server);
+
+    try {
+      const response = await fetch(`${baseUrl}/anything`);
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: { code: "internal_error", message: "Unexpected server error" } });
+      expect(logged).toHaveLength(1);
+      expect(logged[0]).toContain("REQUEST_ERROR");
+    } finally {
+      await close(server);
+    }
+  });
 });
+
+function rawHttpRequest(port: number, payload: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const socket = connect(port, "127.0.0.1");
+    let received = "";
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk) => { received += chunk; });
+    socket.on("end", () => resolve(received));
+    socket.on("error", reject);
+    socket.write(payload);
+  });
+}

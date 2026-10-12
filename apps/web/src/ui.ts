@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
+import { parseRequestUrl, sendInvalidRequestTarget } from "./api.js";
+
 const INDEX_HTML = String.raw`<!doctype html>
 <html lang="en">
 <head>
@@ -307,7 +309,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:
 @media(max-width:430px){.row{grid-template-columns:1fr}.row input{grid-column:auto}.section-head,.result-head{align-items:flex-start}.proof-row{gap:6px}.history-item{grid-template-columns:1fr}.history-meta{white-space:normal}}
 `;
 
-const APP_JS = String.raw`(() => {
+export const APP_JS = String.raw`(() => {
   const TOKEN_KEY = "project.betaToken";
   const LANGUAGE_KEY = "project.language";
   const dictionaries = {
@@ -336,7 +338,7 @@ const APP_JS = String.raw`(() => {
       "footer":"Private beta · Factorio stable 2.0.x · ZIPs are offered only after automated runtime validation.",
       "status.queued":"queued","status.running":"building","status.succeeded":"ready","status.unsupported":"unsupported","status.failed":"failed",
       "message.queued":"Request received. It is waiting for the generation worker.","message.running":"Building the mod and checking every requested change in real Factorio…","message.succeeded":"Validated successfully. Your installable ZIP is ready.","message.unsupportedSuffix":"Try a supported tweak pack or one of the examples above.","message.failed":"Generation failed.","message.retryable":"You can try again with a fresh generation.",
-      "state.example":"Example loaded. Edit it or build it as-is.","state.enterToken":"Paste your beta token first.","state.tokenSaved":"Beta access is ready for this tab.","state.tokenCleared":"Beta token cleared.","state.describe":"Describe the Factorio changes you want first.","state.submitting":"Sending request…","state.running":"Building your mod…","state.finished":"Finished.","state.retrying":"Starting a fresh generation…","state.revisionEmpty":"Describe what you want to change from this version.","state.revisionSubmitting":"Sending revision…","state.revisionRunning":"Building the revised mod…","state.feedbackSaving":"Saving…","state.feedbackNeedIntent":"Choose whether MyModz understood your request.","state.feedbackSaved":"Feedback saved. Thank you.","state.surveySaved":"Answer saved. Thank you.",
+      "state.example":"Example loaded. Edit it or build it as-is.","state.enterToken":"Paste your beta token first.","state.tokenSaved":"Beta access is ready for this tab.","state.tokenCleared":"Beta token cleared.","state.describe":"Describe the Factorio changes you want first.","state.submitting":"Sending request…","state.running":"Building your mod…","state.finished":"Finished.","state.reconnecting":"Connection hiccup — checking again shortly…","state.retrying":"Starting a fresh generation…","state.revisionEmpty":"Describe what you want to change from this version.","state.revisionSubmitting":"Sending revision…","state.revisionRunning":"Building the revised mod…","state.feedbackSaving":"Saving…","state.feedbackNeedIntent":"Choose whether MyModz understood your request.","state.feedbackSaved":"Feedback saved. Thank you.","state.surveySaved":"Answer saved. Thank you.",
       "error.auth":"Beta token is missing or invalid.","error.rate":"Rate limit reached. Try again after the cooldown.","error.generic":"Request failed",
       "meta.generation":"Generation","meta.capability":"Type","meta.totalTime":"Total time","meta.factorio":"Factorio check","meta.artifact":"File","meta.size":"ZIP size",
       "cap.prototype_property":"Machine property","cap.recipe_ingredient":"Recipe ingredient","cap.recipe_crafting_time":"Crafting time","cap.recipe_result":"Recipe output","cap.item_stack_size":"Stack size","cap.technology_cost":"Research cost","cap.technology_prerequisite":"Research prerequisite","cap.new_machine":"New machine","cap.new_recipe":"New recipe","cap.new_item":"New material","cap.mixed":"Mod bundle",
@@ -368,7 +370,7 @@ const APP_JS = String.raw`(() => {
       "footer":"Закрытая бета · Factorio stable 2.0.x · ZIP выдаётся только после автоматической проверки запуска.",
       "status.queued":"в очереди","status.running":"собирается","status.succeeded":"готово","status.unsupported":"не поддерживается","status.failed":"ошибка",
       "message.queued":"Запрос принят и ждёт свободный worker.","message.running":"Собираем мод и проверяем каждое запрошенное изменение в Factorio…","message.succeeded":"Проверка прошла успешно. ZIP мода готов.","message.unsupportedSuffix":"Попробуй поддерживаемый набор изменений или один из примеров выше.","message.failed":"Не удалось собрать мод.","message.retryable":"Можно запустить новую попытку.",
-      "state.example":"Пример загружен. Его можно изменить или сразу отправить.","state.enterToken":"Сначала вставь бета-токен.","state.tokenSaved":"Доступ к бете готов для этой вкладки.","state.tokenCleared":"Бета-токен очищен.","state.describe":"Сначала опиши, что хочешь изменить в Factorio.","state.submitting":"Отправляем запрос…","state.running":"Собираем мод…","state.finished":"Готово.","state.retrying":"Запускаем новую попытку…","state.revisionEmpty":"Опиши, что нужно изменить в этой версии.","state.revisionSubmitting":"Отправляем изменения…","state.revisionRunning":"Собираем новую версию…","state.feedbackSaving":"Сохраняем…","state.feedbackNeedIntent":"Укажи, правильно ли MyModz понял запрос.","state.feedbackSaved":"Отзыв сохранён. Спасибо.","state.surveySaved":"Ответ сохранён. Спасибо.",
+      "state.example":"Пример загружен. Его можно изменить или сразу отправить.","state.enterToken":"Сначала вставь бета-токен.","state.tokenSaved":"Доступ к бете готов для этой вкладки.","state.tokenCleared":"Бета-токен очищен.","state.describe":"Сначала опиши, что хочешь изменить в Factorio.","state.submitting":"Отправляем запрос…","state.running":"Собираем мод…","state.finished":"Готово.","state.reconnecting":"Связь прервалась — скоро проверим снова…","state.retrying":"Запускаем новую попытку…","state.revisionEmpty":"Опиши, что нужно изменить в этой версии.","state.revisionSubmitting":"Отправляем изменения…","state.revisionRunning":"Собираем новую версию…","state.feedbackSaving":"Сохраняем…","state.feedbackNeedIntent":"Укажи, правильно ли MyModz понял запрос.","state.feedbackSaved":"Отзыв сохранён. Спасибо.","state.surveySaved":"Ответ сохранён. Спасибо.",
       "error.auth":"Бета-токен отсутствует или неверный.","error.rate":"Слишком много запросов. Попробуй позже.","error.generic":"Ошибка запроса",
       "meta.generation":"Генерация","meta.capability":"Тип","meta.totalTime":"Общее время","meta.factorio":"Проверка Factorio","meta.artifact":"Файл","meta.size":"Размер ZIP",
       "cap.prototype_property":"Параметр машины","cap.recipe_ingredient":"Ингредиент рецепта","cap.recipe_crafting_time":"Время крафта","cap.recipe_result":"Результат рецепта","cap.item_stack_size":"Размер стака","cap.technology_cost":"Стоимость исследования","cap.technology_prerequisite":"Зависимость исследования","cap.new_machine":"Новая машина","cap.new_recipe":"Новый рецепт","cap.new_item":"Новый материал","cap.mixed":"Набор мода",
@@ -427,6 +429,10 @@ const APP_JS = String.raw`(() => {
   if (!dictionaries[language]) language = "en";
   let generationId = null;
   let pollTimer = null;
+  let pollEpoch = 0;
+  let pollController = null;
+  let pollFailures = 0;
+  const MAX_POLL_FAILURES = 8;
   let currentRecord = null;
   let historyRecords = [];
   let feedbackIntent = null;
@@ -492,9 +498,23 @@ const APP_JS = String.raw`(() => {
     const body = contentType.includes("application/json") ? await response.json() : null;
     if (!response.ok) {
       const message = body && body.error && body.error.message ? body.error.message : t("error.generic") + " (" + response.status + ")";
-      throw new Error(message);
+      const error = new Error(message);
+      error.status = response.status;
+      const retryAfter = Number(response.headers.get("retry-after"));
+      if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterSeconds = retryAfter;
+      throw error;
     }
     return body;
+  }
+  function isAbort(error) { return Boolean(error) && error.name === "AbortError"; }
+  function isTransient(error) {
+    if (isAbort(error)) return false;
+    if (typeof error.status !== "number") return true;
+    return error.status === 429 || error.status === 502 || error.status === 503 || error.status === 504;
+  }
+  function retryDelayMs(error, failures) {
+    if (error && typeof error.retryAfterSeconds === "number") return Math.min(60000, error.retryAfterSeconds * 1000);
+    return Math.min(30000, 1000 * Math.pow(2, failures));
   }
 
   function addMeta(label, value) {
@@ -606,14 +626,48 @@ const APP_JS = String.raw`(() => {
     return terminal;
   }
 
-  async function poll() {
-    if (!generationId) return;
+  // One polling lifecycle: every selection change bumps the epoch and aborts the in-flight
+  // request, so a late response for an older generation or token can never be rendered.
+  function stopPolling() {
+    pollEpoch += 1;
+    if (pollTimer !== null) window.clearTimeout(pollTimer);
+    pollTimer = null;
+    if (pollController) pollController.abort();
+    pollController = null;
+    pollFailures = 0;
+    return pollEpoch;
+  }
+  function isCurrent(epoch, id, authToken) {
+    return epoch === pollEpoch && id === generationId && authToken === token();
+  }
+  function startPolling(id, delay) {
+    const epoch = stopPolling();
+    generationId = id;
+    pollTimer = window.setTimeout(() => void poll(epoch), delay);
+  }
+  async function poll(epoch) {
+    if (epoch !== pollEpoch || !generationId) return;
+    pollTimer = null;
+    const id = generationId; const authToken = token();
+    const controller = new AbortController(); pollController = controller;
     try {
-      const body = await api("/v1/generations/" + encodeURIComponent(generationId));
+      const body = await api("/v1/generations/" + encodeURIComponent(id), { signal: controller.signal });
+      if (!isCurrent(epoch, id, authToken)) return;
+      pollController = null; pollFailures = 0;
       const terminal = render(body.generation);
-      if (terminal) { generateButton.disabled = false; requestState.textContent = t("state.finished"); pollTimer = null; void loadHistory(); return; }
-      pollTimer = window.setTimeout(poll, 1000);
-    } catch (error) { requestState.textContent = friendlyError(error); generateButton.disabled = false; pollTimer = null; }
+      if (terminal) { generateButton.disabled = false; requestState.textContent = t("state.finished"); void loadHistory(); return; }
+      pollTimer = window.setTimeout(() => void poll(epoch), 1000);
+    } catch (error) {
+      if (!isCurrent(epoch, id, authToken) || isAbort(error)) return;
+      pollController = null;
+      if (isTransient(error) && pollFailures < MAX_POLL_FAILURES) {
+        pollFailures += 1;
+        requestState.textContent = t("state.reconnecting");
+        pollTimer = window.setTimeout(() => void poll(epoch), retryDelayMs(error, pollFailures));
+        return;
+      }
+      requestState.textContent = friendlyError(error); generateButton.disabled = false;
+    }
   }
 
   saveToken.addEventListener("click", () => {
@@ -622,6 +676,7 @@ const APP_JS = String.raw`(() => {
     sessionStorage.setItem(TOKEN_KEY, value); setAccessState(true); requestState.textContent = t("state.tokenSaved"); void loadHistory();
   });
   clearToken.addEventListener("click", () => {
+    stopPolling(); generationId = null; currentRecord = null; resultPanel.classList.add("hidden"); generateButton.disabled = false;
     sessionStorage.removeItem(TOKEN_KEY); tokenInput.value = ""; setAccessState(false); requestState.textContent = t("state.tokenCleared"); historyRecords = []; historyPanel.classList.add("hidden"); historyList.replaceChildren(); tokenInput.focus();
   });
 
@@ -637,11 +692,15 @@ const APP_JS = String.raw`(() => {
       const created = record.createdAt ? new Date(record.createdAt).toLocaleString(language === "ru" ? "ru-RU" : "en-US") : "";
       meta.textContent = statusLabel(record.status) + (created ? " · " + created : ""); button.append(prompt, meta);
       button.addEventListener("click", async () => {
+        const epoch = stopPolling(); const authToken = token();
         try {
-          const body = await api("/v1/generations/" + encodeURIComponent(record.id)); generationId = body.generation.id;
+          const body = await api("/v1/generations/" + encodeURIComponent(record.id));
+          if (epoch !== pollEpoch || authToken !== token()) return;
+          generationId = body.generation.id;
           const terminal = render(body.generation); resultPanel.scrollIntoView({ behavior:"smooth", block:"start" });
-          if (!terminal) { generateButton.disabled = true; if (pollTimer !== null) window.clearTimeout(pollTimer); pollTimer = window.setTimeout(poll, 500); }
-        } catch (error) { requestState.textContent = friendlyError(error); }
+          generateButton.disabled = !terminal;
+          if (!terminal) startPolling(body.generation.id, 500);
+        } catch (error) { if (epoch === pollEpoch) requestState.textContent = friendlyError(error); }
       });
       historyList.append(button);
     });
@@ -659,29 +718,33 @@ const APP_JS = String.raw`(() => {
     event.preventDefault();
     if (!token()) { requestState.textContent = t("state.enterToken"); tokenInput.focus(); return; }
     if (!promptInput.value.trim()) { requestState.textContent = t("state.describe"); promptInput.focus(); return; }
-    if (pollTimer !== null) window.clearTimeout(pollTimer);
+    const epoch = stopPolling(); const authToken = token();
     generationId = null; currentRecord = null; feedbackIntent = null; feedbackGame = null; feedbackIssue.value = ""; feedbackState.textContent = ""; surveyState.textContent = ""; revisionState.textContent = ""; revisionPrompt.value = ""; feedbackNote.value = ""; resultPanel.classList.add("hidden"); generateButton.disabled = true; requestState.textContent = t("state.submitting");
     try {
       const body = await api("/v1/generations", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ prompt:promptInput.value.trim() }) });
-      generationId = body.generation.id; render(body.generation); resultPanel.scrollIntoView({ behavior:"smooth", block:"start" }); requestState.textContent = t("state.running"); pollTimer = window.setTimeout(poll, 500);
-    } catch (error) { requestState.textContent = friendlyError(error); generateButton.disabled = false; }
+      if (epoch !== pollEpoch || authToken !== token()) return;
+      generationId = body.generation.id; render(body.generation); resultPanel.scrollIntoView({ behavior:"smooth", block:"start" }); requestState.textContent = t("state.running"); startPolling(body.generation.id, 500);
+    } catch (error) { if (epoch === pollEpoch) { requestState.textContent = friendlyError(error); generateButton.disabled = false; } }
   });
 
   retryButton.addEventListener("click", async () => {
     if (!generationId) return; retryButton.disabled = true; requestState.textContent = t("state.retrying");
-    try { const body = await api("/v1/generations/" + encodeURIComponent(generationId) + "/retry", { method:"POST" }); generationId = body.generation.id; revisionPrompt.value = ""; feedbackState.textContent = ""; surveyState.textContent = ""; render(body.generation); generateButton.disabled = true; requestState.textContent = t("state.running"); pollTimer = window.setTimeout(poll, 500); }
-    catch (error) { requestState.textContent = friendlyError(error); }
+    const sourceId = generationId; const epoch = stopPolling(); const authToken = token();
+    try { const body = await api("/v1/generations/" + encodeURIComponent(sourceId) + "/retry", { method:"POST" }); if (epoch !== pollEpoch || authToken !== token()) return; generationId = body.generation.id; revisionPrompt.value = ""; feedbackState.textContent = ""; surveyState.textContent = ""; render(body.generation); generateButton.disabled = true; requestState.textContent = t("state.running"); startPolling(body.generation.id, 500); }
+    catch (error) { if (epoch === pollEpoch) requestState.textContent = friendlyError(error); }
     finally { retryButton.disabled = false; }
   });
 
   reviseButton.addEventListener("click", async () => {
     if (!generationId) return; const prompt = revisionPrompt.value.trim();
     if (!prompt) { revisionState.textContent = t("state.revisionEmpty"); revisionPrompt.focus(); return; }
-    if (pollTimer !== null) window.clearTimeout(pollTimer); reviseButton.disabled = true; revisionState.textContent = t("state.revisionSubmitting"); requestState.textContent = t("state.revisionRunning");
+    const sourceGenerationId = generationId; const epoch = stopPolling(); const authToken = token();
+    reviseButton.disabled = true; revisionState.textContent = t("state.revisionSubmitting"); requestState.textContent = t("state.revisionRunning");
     try {
-      const sourceGenerationId = generationId; const body = await api("/v1/generations/" + encodeURIComponent(sourceGenerationId) + "/revise", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ prompt }) });
-      generationId = body.generation.id; revisionPrompt.value = ""; feedbackState.textContent = ""; surveyState.textContent = ""; revisionState.textContent = ""; render(body.generation); generateButton.disabled = true; requestState.textContent = t("state.revisionRunning"); pollTimer = window.setTimeout(poll, 500);
-    } catch (error) { revisionState.textContent = friendlyError(error); }
+      const body = await api("/v1/generations/" + encodeURIComponent(sourceGenerationId) + "/revise", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ prompt }) });
+      if (epoch !== pollEpoch || authToken !== token()) return;
+      generationId = body.generation.id; revisionPrompt.value = ""; feedbackState.textContent = ""; surveyState.textContent = ""; revisionState.textContent = ""; render(body.generation); generateButton.disabled = true; requestState.textContent = t("state.revisionRunning"); startPolling(body.generation.id, 500);
+    } catch (error) { if (epoch === pollEpoch) revisionState.textContent = friendlyError(error); }
     finally { reviseButton.disabled = false; }
   });
 
@@ -737,7 +800,11 @@ export function createPrivateBetaWebHandler(
 ) {
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     const method = request.method ?? "GET";
-    const url = new URL(request.url ?? "/", "http://localhost");
+    const url = parseRequestUrl(request.url);
+    if (url === null) {
+      sendInvalidRequestTarget(response);
+      return;
+    }
     if (method === "GET" && url.pathname === "/") {
       sendStatic(response, "text/html; charset=utf-8", INDEX_HTML);
       return;

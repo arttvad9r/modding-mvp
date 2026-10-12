@@ -42,6 +42,7 @@ class MemoryRepository implements GenerationRepository {
       .slice(0, limit);
   }
   async listRunningUpdatedBefore() { return []; }
+  async listQueuedCreatedBefore() { return []; }
 }
 
 class MemoryUsers implements ServiceUserRepository {
@@ -312,6 +313,63 @@ describe("private-beta HTTP API", () => {
     expect(api.submissionStore.jobs).toHaveLength(2);
   });
 
+  it("retries a failed revision with its base snapshot and source lineage", async () => {
+    const api = await startApi();
+    const created = (await (await submit(api)).json()) as { generation: { id: string } };
+    const source = api.repository.records.get(created.generation.id);
+    if (!source) throw new Error("Missing source generation");
+    const succeeded = GenerationRecordSchema.parse({
+      ...source,
+      revision: 1,
+      status: "succeeded",
+      startedAt: "2026-10-11T00:00:01.000Z",
+      finishedAt: "2026-10-11T00:00:02.000Z",
+      updatedAt: "2026-10-11T00:00:02.000Z",
+      modSpec,
+      artifact: {
+        key: `generations/${source.id}/faster-steel-furnaces_0.1.0.zip`,
+        fileName: "faster-steel-furnaces_0.1.0.zip",
+        contentType: "application/zip",
+        sizeBytes: 321,
+      },
+      telemetry,
+    });
+    api.repository.records.set(source.id, succeeded);
+
+    const revisedResponse = await fetch(`${api.baseUrl}/v1/generations/${source.id}/revise`, {
+      method: "POST",
+      headers: auth(api.token),
+      body: JSON.stringify({ prompt: "Keep the rest, make steel furnaces 25% faster again" }),
+    });
+    const revisedId = ((await revisedResponse.json()) as { generation: { id: string } }).generation.id;
+    const revisedQueued = api.repository.records.get(revisedId);
+    if (!revisedQueued) throw new Error("Missing revision");
+    const failedRevision = GenerationRecordSchema.parse({
+      ...revisedQueued,
+      revision: 1,
+      status: "failed",
+      updatedAt: "2026-10-11T00:00:03.000Z",
+      finishedAt: "2026-10-11T00:00:03.000Z",
+      error: { code: "process_error", stage: "process", message: "Transient provider failure", retryable: true },
+    });
+    api.repository.records.set(revisedId, failedRevision);
+
+    const retried = await fetch(`${api.baseUrl}/v1/generations/${revisedId}/retry`, {
+      method: "POST",
+      headers: auth(api.token),
+    });
+    expect(retried.status).toBe(202);
+    const retriedId = ((await retried.json()) as { generation: { id: string } }).generation.id;
+    expect(api.repository.records.get(retriedId)).toMatchObject({
+      status: "queued",
+      prompt: "Keep the rest, make steel furnaces 25% faster again",
+      sourceGenerationId: source.id,
+      baseModSpec: modSpec,
+    });
+    expect(api.repository.records.get(revisedId)).toEqual(failedRevision);
+    expect(api.repository.records.get(source.id)).toEqual(succeeded);
+  });
+
   it("revises only an owned successful generation by creating a new immutable generation", async () => {
     const api = await startApi();
     const created = (await (await submit(api)).json()) as { generation: { id: string } };
@@ -485,6 +543,34 @@ describe("private-beta HTTP API", () => {
       `generations/${queued.id}/faster-steel-furnaces_0.1.0.zip`,
       `generations/${queued.id}/faster-steel-furnaces_0.1.0.zip`,
     ]);
+  });
+
+  it("does not cap successful polling below the read budgets", async () => {
+    const api = await startApi();
+    const created = (await (await submit(api)).json()) as { generation: { id: string } };
+    // Two polling tabs at one request per second for a minute behind the same IP.
+    for (let index = 0; index < 150; index += 1) {
+      const response = await fetch(`${api.baseUrl}/v1/generations/${created.generation.id}`, { headers: auth(api.token) });
+      expect(response.status).toBe(200);
+    }
+    expect(DEFAULT_API_RATE_LIMIT_POLICY.authIp.limit).toBeGreaterThan(
+      DEFAULT_API_RATE_LIMIT_POLICY.readIp.limit,
+    );
+  });
+
+  it("limits failed authentication separately and answers it with 429", async () => {
+    const api = await startApi({
+      ...DEFAULT_API_RATE_LIMIT_POLICY,
+      authFailureIp: { limit: 2, windowMs: 60_000 },
+    });
+    const bad = () => fetch(`${api.baseUrl}/v1/generations`, { headers: auth("beta_wrong_token_abcdefghijklmnopqrstuvwxyz") });
+    expect((await bad()).status).toBe(401);
+    expect((await bad()).status).toBe(401);
+    const limited = await bad();
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBeTruthy();
+    // A valid token from the same IP is unaffected by the failure bucket.
+    expect((await fetch(`${api.baseUrl}/v1/generations`, { headers: auth(api.token) })).status).toBe(200);
   });
 
   it("returns 429 when the per-user generation-create bucket is exhausted", async () => {

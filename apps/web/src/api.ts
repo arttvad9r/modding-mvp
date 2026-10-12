@@ -48,7 +48,10 @@ export interface ApiRateLimitRule {
 }
 
 export interface ApiRateLimitPolicy {
+  /** Pre-authentication request budget per client IP; must exceed every route budget it fronts. */
   readonly authIp: ApiRateLimitRule;
+  /** Failed bearer-token attempts per client IP; successful requests never consume it. */
+  readonly authFailureIp: ApiRateLimitRule;
   readonly createUser: ApiRateLimitRule;
   readonly createIp: ApiRateLimitRule;
   readonly readUser: ApiRateLimitRule;
@@ -62,11 +65,12 @@ export interface ApiRateLimitPolicy {
 }
 
 export const DEFAULT_API_RATE_LIMIT_POLICY: ApiRateLimitPolicy = {
-  authIp: { limit: 120, windowMs: 60_000 },
+  authIp: { limit: 1_800, windowMs: 60_000 },
+  authFailureIp: { limit: 30, windowMs: 60_000 },
   createUser: { limit: 10, windowMs: 60 * 60_000 },
   createIp: { limit: 30, windowMs: 60 * 60_000 },
   readUser: { limit: 300, windowMs: 60_000 },
-  readIp: { limit: 600, windowMs: 60_000 },
+  readIp: { limit: 1_200, windowMs: 60_000 },
   feedbackUser: { limit: 30, windowMs: 60 * 60_000 },
   feedbackIp: { limit: 100, windowMs: 60 * 60_000 },
   downloadUser: { limit: 120, windowMs: 60 * 60_000 },
@@ -121,6 +125,29 @@ function sendJson(
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   for (const [name, value] of Object.entries(headers)) response.setHeader(name, value);
   response.end(`${JSON.stringify(body)}\n`);
+}
+
+/** Parses the HTTP request-target; malformed targets are rejected instead of throwing. */
+export function parseRequestUrl(rawUrl: string | undefined): URL | null {
+  try {
+    return new URL(rawUrl ?? "/", "http://localhost");
+  } catch {
+    return null;
+  }
+}
+
+export function sendInvalidRequestTarget(response: ServerResponse): void {
+  sendJson(response, 400, { error: { code: "invalid_request_target", message: "Malformed request target" } });
+}
+
+/** Last-resort response for an unexpected handler rejection; never rethrows. */
+export function sendUnexpectedServerError(response: ServerResponse): void {
+  if (response.writableEnded) return;
+  if (response.headersSent) {
+    response.destroy();
+    return;
+  }
+  sendJson(response, 500, { error: { code: "internal_error", message: "Unexpected server error" } });
 }
 
 function changeKey(change: ModChange): string {
@@ -263,6 +290,7 @@ async function authenticateRequest(
   try {
     user = await authenticateAccessToken(dependencies.users, bearerToken(request));
   } catch (error) {
+    await consumeLimit(dependencies.rateLimits, `ip:${ipHash}:auth-failure`, policy.authFailureIp, now);
     if (error instanceof HttpError) throw error;
     throw new HttpError(401, "unauthorized", "Authentication required");
   }
@@ -310,7 +338,11 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     try {
       const method = request.method ?? "GET";
-      const url = new URL(request.url ?? "/", "http://localhost");
+      const url = parseRequestUrl(request.url);
+      if (url === null) {
+        sendInvalidRequestTarget(response);
+        return;
+      }
       if (method === "GET" && url.pathname === "/health/live") {
         sendJson(response, 200, { status: "ok" });
         return;
@@ -387,10 +419,15 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
         if (current.status !== "failed" || current.error.retryable !== true) {
           throw new HttpError(409, "not_retryable", "Only retryable failed generations can be retried");
         }
+        // A retry repeats the same user action: a failed revision keeps its accepted base
+        // snapshot and source lineage so the worker runs the Revision Planner again.
         const retried = await submitGenerationAtomically({
           submissionStore: dependencies.submissionStore,
           userId: context.user.id,
           prompt: current.prompt,
+          ...(current.sourceGenerationId === undefined || current.baseModSpec === undefined
+            ? {}
+            : { sourceGenerationId: current.sourceGenerationId, baseModSpec: current.baseModSpec }),
           ...(dependencies.now === undefined ? {} : { now: dependencies.now }),
         });
         sendJson(response, 202, {

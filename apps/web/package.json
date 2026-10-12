@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run test/api.test.ts test/ui.test.ts",
+    "test": "vitest run test/api.test.ts test/ui.test.ts test/ui-client.test.ts",
     "test:service-integration": "vitest run test/api.integration.test.ts",
     "start": "tsx src/main.ts",
     "user:create": "tsx src/user-create-cli.ts",
