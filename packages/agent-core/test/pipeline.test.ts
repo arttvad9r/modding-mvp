@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { ProjectError, type ModSpec } from "@project/domain";
+import type { GeneratedFactorioMod } from "@project/factorio-generator";
 import type { LlmJsonRequest, LlmJsonResponse, LlmProvider } from "@project/llm";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -157,6 +158,7 @@ describe("runLocalFactorioGeneration", () => {
       response({ dataLua: "-- repaired lua\n" }, 50, 30),
     ]);
     let validations = 0;
+    const repairedValidations: Array<{ spec: ModSpec; generated: GeneratedFactorioMod }> = [];
 
     const result = await runLocalFactorioGeneration(
       {
@@ -169,13 +171,14 @@ describe("runLocalFactorioGeneration", () => {
         generationId: () => "generation-repaired",
         validate: async () => {
           validations += 1;
-          if (validations === 1) {
-            throw new ProjectError({
-              code: "semantic_assertion_failed",
-              stage: "validation",
-              message: "expected=4 actual=2",
-            });
-          }
+          throw new ProjectError({
+            code: "semantic_assertion_failed",
+            stage: "validation",
+            message: "expected=4 actual=2",
+          });
+        },
+        validateRepaired: async (spec, generated) => {
+          repairedValidations.push({ spec, generated });
           return { ok: true, durationMs: 77 };
         },
       },
@@ -183,7 +186,11 @@ describe("runLocalFactorioGeneration", () => {
 
     expect(result.status).toBe("success");
     if (result.status !== "success") throw new Error("expected repaired success");
-    expect(validations).toBe(2);
+    expect(validations).toBe(1);
+    expect(repairedValidations).toHaveLength(1);
+    expect(repairedValidations[0]?.spec).toEqual(result.modSpec);
+    expect(repairedValidations[0]?.generated.manifest.files.find((file) => file.path === "data.lua")?.content)
+      .toBe("-- repaired lua\n");
     expect(provider.requests).toHaveLength(2);
     expect(result.telemetry.repairAttempts).toHaveLength(1);
     expect(result.telemetry.usage).toMatchObject({ inputTokens: 130, outputTokens: 50, totalTokens: 180, estimatedCostUsd: 0.006 });

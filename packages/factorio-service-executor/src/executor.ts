@@ -93,7 +93,7 @@ export function createFactorioGenerationExecutor(
   options: CreateFactorioGenerationExecutorOptions,
 ): GenerationExecutor {
   return {
-    async execute({ generationId, prompt, baseModSpec }) {
+    async execute({ generationId, prompt, baseModSpec, signal }) {
       const parent = options.tempDirectory ?? tmpdir();
       const workRoot = await mkdtemp(path.join(parent, "factorio-service-generation-"));
       try {
@@ -105,6 +105,7 @@ export function createFactorioGenerationExecutor(
             outputDirectory: path.join(workRoot, "dist"),
             runDirectory: path.join(workRoot, "runs"),
             ...(options.factorioBin === undefined ? {} : { factorioBin: options.factorioBin }),
+            ...(signal === undefined ? {} : { signal }),
           },
           { generationId: () => generationId },
         );

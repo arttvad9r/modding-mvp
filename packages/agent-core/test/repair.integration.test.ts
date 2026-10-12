@@ -7,6 +7,7 @@ import {
 import {
   generateFactorioMod,
   validateGeneratedFactorioMod,
+  validateRepairedFactorioMod,
   type GeneratedFactorioMod,
 } from "@project/factorio-generator";
 import type { LlmJsonRequest, LlmJsonResponse, LlmProvider } from "@project/llm";
@@ -106,8 +107,8 @@ describe("Repair loop against real Factorio", () => {
         spec,
         priorManifest: fixture.generated.manifest,
         failure,
-        validateCandidate: async ({ manifest }) =>
-          validateGeneratedFactorioMod({ generated: { ...correct, manifest } }),
+        validateCandidate: async ({ spec: acceptedSpec, manifest }) =>
+          validateRepairedFactorioMod({ spec: acceptedSpec, generated: { ...correct, manifest } }),
       });
 
       expect(result.status).toBe("repaired");
@@ -120,5 +121,33 @@ describe("Repair loop against real Factorio", () => {
         correct.manifest.files.find((file) => file.path === "info.json")?.content,
       );
     }
-  });
+  }, 120_000);
+
+  it("does not accept a repair that passes assertions but also changes unrequested prototypes", async () => {
+    const correct = generateFactorioMod(spec);
+    const correctDataLua = correct.manifest.files.find((file) => file.path === "data.lua")?.content;
+    if (!correctDataLua) throw new Error("Generated fixture lacks data.lua");
+    const broken = replaceDataLua(correct, "-- intentionally misses requested mutation\n");
+    const failure = await captureValidationFailure(broken);
+
+    const overreachingLua = `${correctDataLua}\ndata.raw["furnace"]["stone-furnace"].crafting_speed = 100\n`;
+    const validatorAwareLua = `${correctDataLua}\nif not mods["zz-project-semantic-validator"] then data.raw["furnace"]["steel-furnace"].crafting_speed = 99 end\n`;
+    for (const candidate of [overreachingLua, validatorAwareLua]) {
+      const provider = new FixedRepairProvider(candidate);
+      const result = await repairFactorioManifest({
+        provider,
+        spec,
+        priorManifest: broken.manifest,
+        failure,
+        maxAttempts: 1,
+        validateCandidate: async ({ spec: acceptedSpec, manifest }) =>
+          validateRepairedFactorioMod({ spec: acceptedSpec, generated: { ...correct, manifest } }),
+      });
+
+      expect(result.status).toBe("failed");
+      if (result.status !== "failed") throw new Error("Expected integrity failure");
+      expect(result.error.code).toBe("semantic_assertion_failed");
+      expect(result.attempts[0]?.outcome).toBe("validation_failed");
+    }
+  }, 120_000);
 });

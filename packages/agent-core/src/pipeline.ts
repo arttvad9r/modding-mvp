@@ -14,6 +14,7 @@ import {
   createFactorioZip,
   generateFactorioMod,
   validateGeneratedFactorioMod,
+  validateRepairedFactorioMod,
   type GeneratedFactorioMod,
 } from "@project/factorio-generator";
 import {
@@ -106,6 +107,8 @@ export interface LocalGenerationOptions {
   readonly maxRepairAttempts?: number;
   readonly baseModSpec?: ModSpec;
   readonly onProgress?: (event: PipelineProgressEvent) => void;
+  /** Execution deadline: cancels provider calls and Factorio runs, then fails the run as retryable. */
+  readonly signal?: AbortSignal;
 }
 
 interface ValidationLike {
@@ -115,7 +118,18 @@ interface ValidationLike {
 
 export interface LocalGenerationDependencies {
   readonly generate?: (spec: ModSpec) => GeneratedFactorioMod;
-  readonly validate?: (generated: GeneratedFactorioMod, factorioBin?: string) => Promise<ValidationLike>;
+  readonly validate?: (
+    generated: GeneratedFactorioMod,
+    factorioBin?: string,
+    signal?: AbortSignal,
+  ) => Promise<ValidationLike>;
+  /** Validates a model-repaired candidate, including its data.raw integrity against the ModSpec. */
+  readonly validateRepaired?: (
+    spec: ModSpec,
+    generated: GeneratedFactorioMod,
+    factorioBin?: string,
+    signal?: AbortSignal,
+  ) => Promise<ValidationLike>;
   readonly writeArtifact?: (
     manifest: GeneratedFileManifest,
     directoryName: string,
@@ -151,10 +165,42 @@ function defaultNow(): number {
 async function defaultValidate(
   generated: GeneratedFactorioMod,
   factorioBin?: string,
+  signal?: AbortSignal,
 ): Promise<ValidationLike> {
   return validateGeneratedFactorioMod({
     generated,
     ...(factorioBin === undefined ? {} : { factorioBin }),
+    ...(signal === undefined ? {} : { signal }),
+  });
+}
+
+async function defaultValidateRepaired(
+  spec: ModSpec,
+  generated: GeneratedFactorioMod,
+  factorioBin?: string,
+  signal?: AbortSignal,
+): Promise<ValidationLike> {
+  return validateRepairedFactorioMod({
+    spec,
+    generated,
+    ...(factorioBin === undefined ? {} : { factorioBin }),
+    ...(signal === undefined ? {} : { signal }),
+  });
+}
+
+function withSignal(provider: LlmProvider, signal: AbortSignal | undefined): LlmProvider {
+  if (signal === undefined) return provider;
+  return { generateJson: (request) => provider.generateJson({ ...request, signal }) };
+}
+
+function ensureNotCancelled(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) return;
+  throw new ProjectError({
+    code: "process_error",
+    stage: "process",
+    message: "Generation exceeded its execution deadline",
+    retryable: true,
+    details: { cancelled: true },
   });
 }
 
@@ -221,6 +267,9 @@ export async function runLocalFactorioGeneration(
   const runDirectory = options.runDirectory ?? ".runs";
   const generate = dependencies.generate ?? generateFactorioMod;
   const validate = dependencies.validate ?? defaultValidate;
+  const validateRepaired = dependencies.validateRepaired ?? defaultValidateRepaired;
+  const provider = withSignal(options.provider, options.signal);
+  const signal = options.signal;
   const writeArtifact = dependencies.writeArtifact ?? defaultWriteArtifact;
   const progress: PipelineProgressEvent[] = [];
   let sequence = 0;
@@ -265,13 +314,14 @@ export async function runLocalFactorioGeneration(
     );
     const plan =
       options.baseModSpec === undefined
-        ? await planFactorioPrompt({ provider: options.provider, prompt: options.prompt })
+        ? await planFactorioPrompt({ provider, prompt: options.prompt })
         : await planFactorioRevision({
-            provider: options.provider,
+            provider,
             baseModSpec: options.baseModSpec,
             prompt: options.prompt,
           });
     plannerAttempts = plan.attempts;
+    ensureNotCancelled(signal);
 
     if (plan.status === "unsupported") {
       emit("unsupported", plan.reason);
@@ -291,7 +341,7 @@ export async function runLocalFactorioGeneration(
 
     emit("validating", "Validating generated artifact in real Factorio");
     try {
-      const validation = await validate(generated, options.factorioBin);
+      const validation = await validate(generated, options.factorioBin, signal);
       validationSummary = {
         initialStatus: "passed",
         finalDurationMs: validation.durationMs,
@@ -309,21 +359,23 @@ export async function runLocalFactorioGeneration(
         repaired: false,
       };
       if (!isRepairable(serialized)) throw projectErrorFromSerialized(serialized);
+      ensureNotCancelled(signal);
 
       emit("repairing", `Repairing ${serialized.code} without changing accepted ModSpec`);
       const repair = await repairFactorioManifest({
-        provider: options.provider,
+        provider,
         spec: modSpec,
         priorManifest: generated.manifest,
         failure: serialized,
         ...(options.maxRepairAttempts === undefined
           ? {}
           : { maxAttempts: options.maxRepairAttempts }),
-        validateCandidate: async ({ manifest }) =>
-          validate({ ...generated, manifest }, options.factorioBin),
+        validateCandidate: async ({ spec, manifest }) =>
+          validateRepaired(spec, { ...generated, manifest }, options.factorioBin, signal),
       });
       repairAttempts = repair.attempts;
 
+      ensureNotCancelled(signal);
       if (repair.status === "failed") {
         throw projectErrorFromSerialized(repair.error);
       }
@@ -337,6 +389,7 @@ export async function runLocalFactorioGeneration(
       };
     }
 
+    ensureNotCancelled(signal);
     emit("packaging", "Packaging validated installable ZIP");
     const zipPath = await writeArtifact(
       generated.manifest,

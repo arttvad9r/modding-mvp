@@ -10,6 +10,7 @@ import {
 import {
   generateFactorioMod,
   validateGeneratedFactorioMod,
+  validateRepairedFactorioMod,
   type GeneratedFactorioMod,
 } from "@project/factorio-generator";
 import { aggregateLlmUsage, type AggregatedLlmUsage, type LlmProvider } from "@project/llm";
@@ -136,8 +137,8 @@ export async function runRepairEval(
         spec,
         priorManifest: broken.manifest,
         failure: initialFailure,
-        validateCandidate: async ({ manifest }) =>
-          validateGeneratedFactorioMod({ generated: { ...correct, manifest } }),
+        validateCandidate: async ({ spec: acceptedSpec, manifest }) =>
+          validateRepairedFactorioMod({ spec: acceptedSpec, generated: { ...correct, manifest } }),
       });
 
       if (repair.status === "repaired") {

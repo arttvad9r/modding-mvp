@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -10,10 +10,18 @@ import {
   type GeneratedTextFile,
   type ModSpec,
 } from "@project/domain";
-import { runFactorioModTest, type HarnessResult } from "@project/factorio-harness";
+import { defaultFactorioBinPath, runFactorioModTest, type HarnessResult } from "@project/factorio-harness";
 import { strToU8, zipSync } from "fflate";
 
 import { generateFactorioMod, type GeneratedFactorioMod } from "./generator.js";
+import {
+  diffDataRaw,
+  findFootprintViolations,
+  fingerprintDataRaw,
+  modSpecFootprint,
+  summarizeAddresses,
+  type DataRawFingerprint,
+} from "./integrity.js";
 
 const allowedFiles = new Map<string, GeneratedTextFile["role"]>([
   ["info.json", "metadata"],
@@ -36,6 +44,11 @@ export interface BuildFactorioArtifactResult {
 export interface ValidateGeneratedFactorioModOptions {
   readonly generated: GeneratedFactorioMod;
   readonly factorioBin?: string;
+  readonly signal?: AbortSignal;
+}
+
+export interface ValidateRepairedFactorioModOptions extends ValidateGeneratedFactorioModOptions {
+  readonly spec: ModSpec;
 }
 
 function packagingError(message: string, cause?: unknown): ProjectError {
@@ -152,38 +165,161 @@ export async function validateGeneratedFactorioMod(
       options.generated.directoryName,
     );
 
-    let validation: HarnessResult;
-    try {
-      validation = await runFactorioModTest({
+    return await runHarness({
+      modPath,
+      semanticAssertionLua: options.generated.semanticAssertionLua,
+      ...(options.factorioBin ? { factorioBin: options.factorioBin } : {}),
+      ...(options.signal ? { signal: options.signal } : {}),
+    });
+  } finally {
+    await rm(buildRoot, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+async function runHarness(options: Parameters<typeof runFactorioModTest>[0]): Promise<HarnessResult> {
+  let validation: HarnessResult;
+  try {
+    validation = await runFactorioModTest(options);
+  } catch (error) {
+    throw normalizeProjectError(error, {
+      code: "process_error",
+      stage: "process",
+      message: "Factorio validation process failed",
+      retryable: true,
+    });
+  }
+
+  if (!validation.ok) {
+    const code = validation.errorType ?? "process_error";
+    throw new ProjectError({
+      code,
+      stage: code === "process_error" ? "process" : "validation",
+      message: validation.summary ?? "Factorio validation failed",
+      retryable: code === "process_error",
+      details: {
+        exitCode: validation.exitCode,
+        signal: validation.signal,
+        durationMs: validation.durationMs,
+      },
+    });
+  }
+
+  return validation;
+}
+
+async function readFingerprint(dumpPath: string): Promise<DataRawFingerprint> {
+  try {
+    return fingerprintDataRaw(JSON.parse(await readFile(dumpPath, "utf8")));
+  } catch (error) {
+    throw normalizeProjectError(error, {
+      code: "process_error",
+      stage: "process",
+      message: "Failed to read Factorio data-raw dump",
+      retryable: true,
+    });
+  }
+}
+
+const baseGameFingerprints = new Map<string, Promise<DataRawFingerprint>>();
+
+async function dumpFingerprint(
+  scratch: string,
+  label: string,
+  options: Omit<Parameters<typeof runFactorioModTest>[0], "dataRawDumpPath">,
+): Promise<DataRawFingerprint> {
+  const dumpPath = path.join(scratch, `${label}.json`);
+  await runHarness({ ...options, dataRawDumpPath: dumpPath });
+  try {
+    return await readFingerprint(dumpPath);
+  } finally {
+    await rm(dumpPath, { force: true }).catch(() => undefined);
+  }
+}
+
+function baseGameFingerprint(scratch: string, factorioBin: string | undefined): Promise<DataRawFingerprint> {
+  const key = path.resolve(factorioBin ?? process.env.FACTORIO_BIN ?? defaultFactorioBinPath());
+  const cached = baseGameFingerprints.get(key);
+  if (cached) return cached;
+  const pending = dumpFingerprint(scratch, "base-game", { factorioBin: key });
+  baseGameFingerprints.set(key, pending);
+  pending.catch(() => baseGameFingerprints.delete(key));
+  return pending;
+}
+
+function integrityFailure(message: string, addresses: readonly string[]): ProjectError {
+  return new ProjectError({
+    code: "semantic_assertion_failed",
+    stage: "validation",
+    message: `${message}: ${summarizeAddresses(addresses)}`,
+    details: { addresses: addresses.slice(0, 50) },
+  });
+}
+
+/** Awaits every run so no Factorio process outlives cleanup, then reports the first failure in order. */
+async function settleAll<T extends readonly unknown[]>(
+  pending: { readonly [K in keyof T]: Promise<T[K]> },
+): Promise<T> {
+  const outcomes = await Promise.allSettled(pending);
+  const failed = outcomes.find((outcome) => outcome.status === "rejected");
+  if (failed) throw failed.reason;
+  return outcomes.map((outcome) => (outcome as PromiseFulfilledResult<unknown>).value) as unknown as T;
+}
+
+/**
+ * Validates a model-repaired manifest. Repair returns arbitrary data-stage Lua, so passing the
+ * accepted assertions is not enough: the installed mod (without the companion validator) must
+ * produce exactly the validated `data.raw`, and that state may differ from the base game only
+ * inside the footprint of the accepted ModSpec.
+ */
+export async function validateRepairedFactorioMod(
+  options: ValidateRepairedFactorioModOptions,
+): Promise<HarnessResult> {
+  let buildRoot: string;
+  try {
+    buildRoot = await mkdtemp(path.join(tmpdir(), "factorio-repair-validate-"));
+  } catch (error) {
+    throw normalizeProjectError(error, {
+      code: "packaging_error",
+      stage: "packaging",
+      message: "Failed to create temporary validation directory",
+    });
+  }
+
+  try {
+    const modPath = await materializeManifest(
+      options.generated.manifest,
+      buildRoot,
+      options.generated.directoryName,
+    );
+    const bin = {
+      ...(options.factorioBin ? { factorioBin: options.factorioBin } : {}),
+      ...(options.signal ? { signal: options.signal } : {}),
+    };
+    // The four Factorio runs use isolated write-data, so they can run concurrently.
+    const [created, validated, installed, baseline] = await settleAll([
+      runHarness({ modPath, semanticAssertionLua: options.generated.semanticAssertionLua, ...bin }),
+      dumpFingerprint(buildRoot, "with-validator", {
         modPath,
         semanticAssertionLua: options.generated.semanticAssertionLua,
-        ...(options.factorioBin ? { factorioBin: options.factorioBin } : {}),
-      });
-    } catch (error) {
-      throw normalizeProjectError(error, {
-        code: "process_error",
-        stage: "process",
-        message: "Factorio validation process failed",
-        retryable: true,
-      });
+        ...bin,
+      }),
+      dumpFingerprint(buildRoot, "installed", { modPath, ...bin }),
+      baseGameFingerprint(buildRoot, options.factorioBin),
+    ] as const);
+
+    const divergent = diffDataRaw(validated, installed);
+    if (divergent.length > 0) {
+      throw integrityFailure(
+        "Repaired data.lua produces different prototypes when the semantic validator is absent",
+        divergent,
+      );
+    }
+    const violations = findFootprintViolations(baseline, installed, modSpecFootprint(options.spec));
+    if (violations.length > 0) {
+      throw integrityFailure("Repaired data.lua changes prototypes outside the accepted ModSpec", violations);
     }
 
-    if (!validation.ok) {
-      const code = validation.errorType ?? "process_error";
-      throw new ProjectError({
-        code,
-        stage: code === "process_error" ? "process" : "validation",
-        message: validation.summary ?? "Factorio validation failed",
-        retryable: code === "process_error",
-        details: {
-          exitCode: validation.exitCode,
-          signal: validation.signal,
-          durationMs: validation.durationMs,
-        },
-      });
-    }
-
-    return validation;
+    return created;
   } finally {
     await rm(buildRoot, { recursive: true, force: true }).catch(() => undefined);
   }
