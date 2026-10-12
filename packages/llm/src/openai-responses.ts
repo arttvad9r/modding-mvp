@@ -1,5 +1,11 @@
 import { ProjectError } from "@project/domain";
 
+import {
+  DEFAULT_LLM_MAX_RESPONSE_BYTES,
+  DEFAULT_LLM_REQUEST_TIMEOUT_MS,
+  postJsonBounded,
+  retryableHttpStatus,
+} from "./http.js";
 import type { LlmJsonRequest, LlmJsonResponse, LlmProvider, LlmUsage } from "./provider.js";
 
 export interface OpenAIResponsesProviderOptions {
@@ -7,6 +13,9 @@ export interface OpenAIResponsesProviderOptions {
   readonly model: string;
   readonly baseUrl?: string;
   readonly fetchImpl?: typeof fetch;
+  /** Deadline for one complete provider call, including the response body. */
+  readonly timeoutMs?: number;
+  readonly maxResponseBytes?: number;
   readonly inputUsdPerMillionTokens?: number;
   readonly outputUsdPerMillionTokens?: number;
 }
@@ -70,10 +79,6 @@ function usageFromResponse(
   };
 }
 
-function retryableStatus(status: number): boolean {
-  return status === 408 || status === 409 || status === 429 || status >= 500;
-}
-
 export class OpenAIResponsesProvider implements LlmProvider {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
@@ -109,56 +114,37 @@ export class OpenAIResponsesProvider implements LlmProvider {
       .filter((message) => message.role !== "system")
       .map((message) => ({ role: message.role, content: message.content }));
 
-    let response: Response;
-    try {
-      response = await this.fetchImpl(`${this.baseUrl}/responses`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.options.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: this.options.model,
-          instructions,
-          input,
-          text: { format: { type: "json_object" } },
-          store: false,
-          ...(request.maxOutputTokens === undefined
-            ? {}
-            : { max_output_tokens: request.maxOutputTokens }),
-          ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
-        }),
-      });
-    } catch (error) {
-      throw new ProjectError({
-        code: "process_error",
-        stage: "planning",
-        message: `OpenAI request failed: ${error instanceof Error ? error.message : String(error)}`,
-        retryable: true,
-        cause: error,
-      });
-    }
-
-    let body: OpenAIResponsesBody;
-    try {
-      body = (await response.json()) as OpenAIResponsesBody;
-    } catch (error) {
-      throw new ProjectError({
-        code: "process_error",
-        stage: "planning",
-        message: `OpenAI returned a non-JSON HTTP response (status ${response.status})`,
-        retryable: retryableStatus(response.status),
-        details: { httpStatus: response.status },
-        cause: error,
-      });
-    }
+    const response = await postJsonBounded({
+      providerName: "OpenAI",
+      fetchImpl: this.fetchImpl,
+      url: `${this.baseUrl}/responses`,
+      headers: {
+        Authorization: `Bearer ${this.options.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: this.options.model,
+        instructions,
+        input,
+        text: { format: { type: "json_object" } },
+        store: false,
+        ...(request.maxOutputTokens === undefined
+          ? {}
+          : { max_output_tokens: request.maxOutputTokens }),
+        ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
+      }),
+      timeoutMs: this.options.timeoutMs ?? DEFAULT_LLM_REQUEST_TIMEOUT_MS,
+      maxResponseBytes: this.options.maxResponseBytes ?? DEFAULT_LLM_MAX_RESPONSE_BYTES,
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+    });
+    const body = (response.body ?? {}) as OpenAIResponsesBody;
 
     if (!response.ok || body.status === "failed" || body.error) {
       throw new ProjectError({
         code: "process_error",
         stage: "planning",
         message: body.error?.message ?? `OpenAI request failed with HTTP ${response.status}`,
-        retryable: retryableStatus(response.status),
+        retryable: retryableHttpStatus(response.status),
         details: {
           httpStatus: response.status,
           ...(body.error?.code === undefined ? {} : { providerCode: body.error.code }),

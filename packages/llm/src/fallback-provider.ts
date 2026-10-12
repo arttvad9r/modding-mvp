@@ -31,6 +31,8 @@ export class FallbackLlmProvider implements LlmProvider {
     try {
       return await this.options.primary.generateJson(request);
     } catch (error) {
+      // A cancelled generation must stop, not spend its remaining work on another provider.
+      if (request.signal?.aborted) throw error;
       const shouldFailOver = this.options.shouldFailOver ?? shouldFailOverLlmProvider;
       if (!shouldFailOver(error)) throw error;
       this.options.onFailOver?.(error);

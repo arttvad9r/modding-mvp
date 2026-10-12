@@ -1,5 +1,11 @@
 import { ProjectError } from "@project/domain";
 
+import {
+  DEFAULT_LLM_MAX_RESPONSE_BYTES,
+  DEFAULT_LLM_REQUEST_TIMEOUT_MS,
+  postJsonBounded,
+  retryableHttpStatus,
+} from "./http.js";
 import type { LlmJsonRequest, LlmJsonResponse, LlmProvider, LlmUsage } from "./provider.js";
 
 export type OpenAIChatJsonMode = "response_format" | "prompt_only";
@@ -12,6 +18,9 @@ export interface OpenAIChatCompletionsProviderOptions {
   readonly jsonMode?: OpenAIChatJsonMode;
   readonly reasoningEffort?: string;
   readonly fetchImpl?: typeof fetch;
+  /** Deadline for one complete provider call, including the response body. */
+  readonly timeoutMs?: number;
+  readonly maxResponseBytes?: number;
   readonly inputUsdPerMillionTokens?: number;
   readonly outputUsdPerMillionTokens?: number;
 }
@@ -33,10 +42,6 @@ interface OpenAIChatCompletionsBody {
     readonly code?: string;
     readonly message?: string;
   } | null;
-}
-
-function retryableStatus(status: number): boolean {
-  return status === 408 || status === 409 || status === 429 || status >= 500;
 }
 
 function usageFromResponse(
@@ -120,60 +125,41 @@ export class OpenAIChatCompletionsProvider implements LlmProvider {
       ...request.messages.filter((message) => message.role !== "system"),
     ];
 
-    let response: Response;
-    try {
-      response = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.options.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: this.options.model,
-          messages,
-          stream: false,
-          ...(this.jsonMode === "response_format"
-            ? { response_format: { type: "json_object" } }
-            : {}),
-          ...(request.maxOutputTokens === undefined
-            ? {}
-            : { max_tokens: request.maxOutputTokens }),
-          ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
-          ...(this.options.reasoningEffort === undefined
-            ? {}
-            : { reasoning_effort: this.options.reasoningEffort }),
-        }),
-      });
-    } catch (error) {
-      throw new ProjectError({
-        code: "process_error",
-        stage: "planning",
-        message: `${this.options.providerName} request failed: ${error instanceof Error ? error.message : String(error)}`,
-        retryable: true,
-        cause: error,
-      });
-    }
-
-    let body: OpenAIChatCompletionsBody;
-    try {
-      body = (await response.json()) as OpenAIChatCompletionsBody;
-    } catch (error) {
-      throw new ProjectError({
-        code: "process_error",
-        stage: "planning",
-        message: `${this.options.providerName} returned a non-JSON HTTP response (status ${response.status})`,
-        retryable: retryableStatus(response.status),
-        details: { httpStatus: response.status },
-        cause: error,
-      });
-    }
+    const response = await postJsonBounded({
+      providerName: this.options.providerName,
+      fetchImpl: this.fetchImpl,
+      url: `${this.baseUrl}/chat/completions`,
+      headers: {
+        Authorization: `Bearer ${this.options.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: this.options.model,
+        messages,
+        stream: false,
+        ...(this.jsonMode === "response_format"
+          ? { response_format: { type: "json_object" } }
+          : {}),
+        ...(request.maxOutputTokens === undefined
+          ? {}
+          : { max_tokens: request.maxOutputTokens }),
+        ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
+        ...(this.options.reasoningEffort === undefined
+          ? {}
+          : { reasoning_effort: this.options.reasoningEffort }),
+      }),
+      timeoutMs: this.options.timeoutMs ?? DEFAULT_LLM_REQUEST_TIMEOUT_MS,
+      maxResponseBytes: this.options.maxResponseBytes ?? DEFAULT_LLM_MAX_RESPONSE_BYTES,
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+    });
+    const body = (response.body ?? {}) as OpenAIChatCompletionsBody;
 
     if (!response.ok || body.error) {
       throw new ProjectError({
         code: "process_error",
         stage: "planning",
         message: body.error?.message ?? `${this.options.providerName} request failed with HTTP ${response.status}`,
-        retryable: retryableStatus(response.status),
+        retryable: retryableHttpStatus(response.status),
         details: {
           httpStatus: response.status,
           ...(body.error?.code === undefined ? {} : { providerCode: body.error.code }),

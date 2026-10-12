@@ -18,6 +18,8 @@ export interface LlmJsonRequest {
   readonly schemaDescription: string;
   readonly maxOutputTokens?: number;
   readonly temperature?: number;
+  /** Cancels the call when the owning generation reaches its execution deadline. */
+  readonly signal?: AbortSignal;
 }
 
 export interface LlmJsonResponse {

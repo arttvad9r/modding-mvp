@@ -122,6 +122,15 @@ export function createConfiguredLlmProvider(
 ): ConfiguredLlmProvider {
   const id = parseProviderId(value(env, "LLM_PROVIDER"));
   const fetchImpl = dependencies.fetchImpl;
+  const timeoutMs = optionalNumber(env, ["LLM_REQUEST_TIMEOUT_MS"]);
+  if (timeoutMs !== undefined && (!Number.isInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 600_000)) {
+    throw new ProjectError({
+      code: "input_error",
+      stage: "input",
+      message: "LLM_REQUEST_TIMEOUT_MS must be an integer in range 1000..600000",
+    });
+  }
+  const deadline = timeoutMs === undefined ? {} : { timeoutMs };
 
   if (id === "openai") {
     const apiKey = required(env, ["OPENAI_API_KEY"], "OpenAI API key");
@@ -137,6 +146,7 @@ export function createConfiguredLlmProvider(
         model,
         baseUrl,
         ...(fetchImpl === undefined ? {} : { fetchImpl }),
+        ...deadline,
         ...pricing(env, "OPENAI"),
       }),
     };
@@ -160,6 +170,7 @@ export function createConfiguredLlmProvider(
         jsonMode: "response_format",
         reasoningEffort: model.startsWith("glm-5.3") ? "low" : "none",
         ...(fetchImpl === undefined ? {} : { fetchImpl }),
+        ...deadline,
         ...pricing(env, "OLLAMA"),
       }),
     };
@@ -184,6 +195,7 @@ export function createConfiguredLlmProvider(
       baseUrl,
       jsonMode: "prompt_only",
       ...(fetchImpl === undefined ? {} : { fetchImpl }),
+        ...deadline,
       ...pricing(env, "ZAI"),
     }),
   };
