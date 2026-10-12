@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090a0b">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Describe the Factorio mod you want. MyModz builds supported mods on the website, validates them in Factorio 2.0.77, and gives you the ZIP.">
+  <title>MyModz — Build Factorio mods with plain language</title>
+  <link rel="icon" href="./assets/logo-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><symbol id="icon-browser" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></symbol><symbol id="icon-code" viewBox="0 0 24 24"><path d="m8 6-6 6 6 6m8-12 6 6-6 6m-3-14-2 16"/></symbol><symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6z"/><path d="m8 12 3 3 5-6"/></symbol><symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></symbol><symbol id="icon-bolt" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-12h-7z"/></symbol><symbol id="icon-recipe" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 14h6v6h-6zM14 4h6v6h-6zM4 14h6v6H4z"/></symbol><symbol id="icon-box" viewBox="0 0 24 24"><path d="m12 3 9 5v8l-9 5-9-5V8zm0 10v8M3 8l9 5 9-5M7.5 5.5l9 5"/></symbol><symbol id="icon-research" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4 19a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2L14 9V3M7 15h10"/></symbol><symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol><symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol><symbol id="icon-gear" viewBox="0 0 24 24"><path d="m9 3-.6 3-2.6 1.5L3 7l-1 3 2.3 2-1 3 2.5 2 2.6-.5L10 21h4l1.6-4.5 2.6.5 2.5-2-1-3L22 10l-1-3-2.8.5L15.6 6 15 3z"/><circle cx="12" cy="12" r="3"/></symbol></defs></svg>
+  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+
+  <header class="site-header" data-header>
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="MyModz home">
+        <img src="./assets/logo-mark.svg" width="38" height="38" alt="" aria-hidden="true">
+        <span>MyModz</span>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" data-nav-toggle>
+        <span class="sr-only" data-i18n="nav.menu">Open navigation</span>
+        <span aria-hidden="true"></span><span aria-hidden="true"></span>
+      </button>
+
+      <nav class="main-nav" id="main-nav" aria-label="Primary" data-nav>
+        <a href="#result" data-i18n="nav.result">What you get</a>
+        <a href="#build" data-i18n="nav.build">What it can build</a>
+        <a href="#validation" data-i18n="nav.validation">Validation</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <div class="header-actions">
+        <div class="language-switch" role="group" aria-label="Language">
+          <button type="button" data-lang="en" aria-pressed="true">EN</button>
+          <button type="button" data-lang="ru" aria-pressed="false">RU</button>
+        </div>
+        <a class="button button-small button-primary header-cta" href="#mod-workspace" data-action="build-mod" data-source="header" data-i18n="cta.build">Create a mod</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <p class="eyebrow" data-i18n="hero.eyebrow">YOUR FACTORIO. YOUR RULES.</p>
+          <h1 id="hero-title"><span data-i18n="hero.titleA">Make Factorio</span> <span class="accent" data-i18n="hero.titleB">play your way.</span></h1>
+          <p class="hero-lede" data-i18n="hero.lede">Faster factories, new materials, your own machines. Describe your idea — MyModz builds your mod on the website, checks it in Factorio and gives you a ready-to-install ZIP.</p>
+
+          <div class="browser-proof"><span class="proof-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-browser"/></svg></span><strong data-i18n="hero.browser">Create and refine in your browser. No MyModz app to install.</strong></div>
+
+          <div class="prompt-builder" id="hero-builder">
+            <label for="hero-prompt" data-i18n="hero.promptLabel">What would you change in Factorio?</label>
+            <textarea id="hero-prompt" rows="4" maxlength="4000" data-i18n-placeholder="hero.placeholder" placeholder="Example: Create a Reinforced Plate, then a Reinforced Furnace that uses it."></textarea>
+            <div class="prompt-examples" aria-label="Example requests">
+              <button type="button" data-example="rebalance" data-i18n="hero.exampleRebalance">Faster furnaces</button>
+              <button type="button" data-example="content" data-i18n="hero.exampleContent">New material + furnace</button>
+              <button type="button" data-example="throughput" data-i18n="hero.exampleThroughput">Recipes &amp; inventory</button>
+            </div>
+            <div class="prompt-actions">
+              <button class="button button-primary" type="button" data-action="build-mod" data-source="hero"><span data-i18n="cta.build">Create a mod</span><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-arrow"/></svg></button>
+              <a class="text-link" href="#result" data-i18n="cta.example">See the example</a>
+            </div>
+          </div>
+        </div>
+
+        <figure class="game-shot hero-game-shot reveal">
+          <img src="./assets/game/smelting.webp" width="1600" height="900" alt="Factorio smelting setup screenshot from the official Wube press kit.">
+          <div class="game-shot-shade" aria-hidden="true"></div>
+          <div class="shot-badge" data-i18n="hero.preview">EXAMPLE MOD · GAME ILLUSTRATION</div>
+          <div class="mod-tooltip">
+            <div class="mod-tooltip-head"><span class="machine-glyph"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-gear"/></svg></span><div><strong>Reinforced Furnace</strong><span data-i18n="hero.base">based on Electric Furnace</span></div></div>
+            <dl>
+              <div><dt data-i18n="hero.speed">Crafting speed</dt><dd>4.0</dd></div>
+              <div><dt data-i18n="hero.energy">Energy use</dt><dd>500 kW</dd></div>
+              <div><dt data-i18n="hero.modules">Module slots</dt><dd>4</dd></div>
+            </dl>
+            <div class="shot-pass"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg><span data-i18n="hero.verified">Validated in Factorio 2.0.77</span></div>
+          </div>
+          <figcaption data-i18n="hero.caption">A new furnace with its own recipe and research unlock. Uses the base game’s graphics.</figcaption>
+        </figure>
+        <div class="proof-strip reveal" aria-label="Product guarantees">
+          <div><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-browser"/></svg><div><strong data-i18n="proof.web">All on the website</strong><span data-i18n="proof.webCopy">From your idea to the download</span></div></div>
+          <div><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-code"/></svg><div><strong data-i18n="proof.noLua">No coding needed</strong><span data-i18n="proof.noLuaCopy">Describe it in English or Russian</span></div></div>
+          <div><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-shield"/></svg><div><strong data-i18n="proof.realGame">Checked in Factorio</strong><span data-i18n="proof.realGameCopy">Loads and verifies your changes</span></div></div>
+          <div><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-download"/></svg><div><strong data-i18n="proof.zip">Ready-to-install ZIP</strong><span data-i18n="proof.zipCopy">Download after validation passes</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section result-section" id="result" aria-labelledby="result-title">
+      <div class="container section-heading reveal">
+        <p class="eyebrow" data-i18n="result.eyebrow">FROM REQUEST TO GAME RESULT</p>
+        <h2 id="result-title" data-i18n="result.title">One idea. One coherent mod.</h2>
+        <p data-i18n="result.copy">Turn a new material into a production chain: its recipe, a furnace that uses it, and the research that unlocks both. All in one mod.</p>
+      </div>
+
+      <div class="container result-showcase">
+        <figure class="game-shot showcase-shot reveal">
+          <img src="./assets/game/factory.webp" width="1600" height="900" alt="Industrial Factorio factory scene from the official Wube press kit.">
+          <div class="game-shot-shade" aria-hidden="true"></div>
+          <div class="shot-badge" data-i18n="result.realScenario">A SUPPORTED MOD EXAMPLE</div>
+          <div class="showcase-callout">
+            <strong>Reinforced Plate → Reinforced Furnace</strong>
+            <span data-i18n="result.sameBundle">Created together in the same validated mod</span>
+          </div>
+        </figure>
+
+        <div class="result-story reveal">
+          <blockquote data-i18n="result.prompt">“Create a Reinforced Plate from steel and plastic, then create a Reinforced Furnace that uses 10 of them.”</blockquote>
+          <div class="result-chain">
+            <article><span class="result-index">01</span><div><strong>Reinforced Plate</strong><p data-i18n="result.plate">2 Steel Plates + 5 Plastic Bars → 1 plate · 2 s · stack 100</p></div></article>
+            <span class="chain-arrow" aria-hidden="true">↓</span>
+            <article><span class="result-index">02</span><div><strong>Reinforced Furnace</strong><p data-i18n="result.furnace">Electric Furnace + 10 Reinforced Plates + 5 Processing Units · speed 4</p></div></article>
+            <span class="chain-arrow" aria-hidden="true">↓</span>
+            <article><span class="result-index">03</span><div><strong>Advanced Material Processing 2</strong><p data-i18n="result.unlock">Unlocks the new material and furnace through research.</p></div></article>
+          </div>
+          <div class="result-proof"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-shield"/></svg><p><strong data-i18n="result.passTitle">This content chain passed real Factorio validation.</strong><small data-i18n="result.passCopy">Items, recipes, values and research unlocks verified.</small></p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section build-section" id="build" aria-labelledby="build-title">
+      <div class="container section-heading reveal">
+        <p class="eyebrow" data-i18n="build.eyebrow">WHAT YOU CAN BUILD</p>
+        <h2 id="build-title" data-i18n="build.title">Four ways to make Factorio yours.</h2>
+        <p data-i18n="build.copy">Speed up production, rethink recipes or add your own content. Combine supported changes into one mod.</p>
+      </div>
+
+      <div class="container capability-grid">
+        <article class="capability-card capability-image reveal">
+          <img src="./assets/game/mining-drills.webp" width="1000" height="1000" alt="Factorio mining drills artwork from the official Wube press kit.">
+          <div class="capability-overlay">
+            <span class="cap-number"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-bolt"/></svg></span>
+            <h3 data-i18n="build.rebalanceTitle">Rebalance machines</h3>
+            <p data-i18n="build.rebalanceCopy">Speed up furnaces, assemblers, drills and labs. Tune supported belts and inserters to match your factory.</p>
+            <div class="metric"><span>Electric Mining Drill</span><strong>0.5 → 1.0</strong></div>
+          </div>
+        </article>
+
+        <article class="capability-card reveal">
+          <span class="cap-number"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-recipe"/></svg></span>
+          <h3 data-i18n="build.recipeTitle">Recipes &amp; inventory</h3>
+          <p data-i18n="build.recipeCopy">Use fewer ingredients, craft faster, change output amounts or carry bigger stacks of supported items.</p>
+          <div class="recipe-preview">
+            <div><span data-i18n="build.before">Before</span><strong>2 × Iron Plate</strong><i>→</i><b>1 × Gear</b></div>
+            <div class="recipe-after"><span data-i18n="build.after">After</span><strong>1 × Iron Plate</strong><i>→</i><b>1 × Gear</b></div>
+          </div>
+        </article>
+
+        <article class="capability-card reveal">
+          <span class="cap-number"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-box"/></svg></span>
+          <h3 data-i18n="build.contentTitle">Create new content</h3>
+          <p data-i18n="build.contentCopy">Add materials, alternative recipes and machines based on supported templates. Connect them into a new production chain.</p>
+          <div class="content-nodes"><span data-i18n="build.nodeItem">ITEM</span><i>→</i><span data-i18n="build.nodeRecipe">RECIPE</span><i>→</i><span data-i18n="build.nodeMachine">MACHINE</span><i>→</i><span data-i18n="build.nodeTech">UNLOCK</span></div>
+        </article>
+
+        <article class="capability-card reveal">
+          <span class="cap-number"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-research"/></svg></span>
+          <h3 data-i18n="build.researchTitle">Shape progression</h3>
+          <p data-i18n="build.researchCopy">Adjust supported research costs and prerequisites. Choose the technology that unlocks your new content.</p>
+          <div class="tech-preview"><span>Logistics</span><i></i><span>Automation 2</span><b data-i18n="build.edge">research link</b></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section web-flow-section" id="web-flow" aria-labelledby="web-flow-title">
+      <div class="container flow-layout">
+        <div class="flow-copy reveal">
+          <p class="eyebrow" data-i18n="flow.eyebrow">FROM IDEA TO YOUR MODS FOLDER</p>
+          <h2 id="web-flow-title" data-i18n="flow.title">One website. Your whole workflow.</h2>
+          <p data-i18n="flow.copy">Write a request, see the changes and download your mod. Come back to your history whenever you want to refine it.</p>
+          <ul class="flow-points">
+            <li><span>1</span><p><strong data-i18n="flow.step1Title">Write the request</strong><small data-i18n="flow.step1Copy">One idea or several changes together.</small></p></li>
+            <li><span>2</span><p><strong data-i18n="flow.step2Title">Watch the build status</strong><small data-i18n="flow.step2Copy">Queued → Build + check → Ready.</small></p></li>
+            <li><span>3</span><p><strong data-i18n="flow.step3Title">See exactly what changes</strong><small data-i18n="flow.step3Copy">See what the mod actually changes before download.</small></p></li>
+            <li><span>4</span><p><strong data-i18n="flow.step4Title">Download the ZIP</strong><small data-i18n="flow.step4Copy">Put it in Factorio/mods without unpacking.</small></p></li>
+          </ul>
+        </div>
+
+        <div class="web-app-card reveal" aria-label="MyModz website generation flow">
+          <div class="web-app-top"><div><span></span><span></span><span></span></div><strong>mymodz / new mod</strong><em>Factorio 2.0</em></div>
+          <div class="web-app-body">
+            <div class="web-prompt"><span data-i18n="flow.promptLabel">YOUR REQUEST</span><p data-i18n="flow.prompt">Double electric mining drill speed and lab research speed.</p></div>
+            <div class="web-status"><span class="done">✓ <b data-i18n="flow.plan">Request understood</b></span><span class="done">✓ <b data-i18n="flow.building">Mod built</b></span><span class="done">✓ <b data-i18n="flow.checked">Factorio checked</b></span></div>
+            <div class="web-changes"><h3 data-i18n="flow.accepted">Accepted changes</h3><div><span>Electric Mining Drill</span><strong>mining speed ×2</strong><b>✓</b></div><div><span>Lab</span><strong>research speed ×2</strong><b>✓</b></div></div>
+            <button type="button" class="download-preview"><span>ZIP</span><p><strong>faster-production_0.1.0.zip</strong><small data-i18n="flow.validated">Validated and ready</small></p><b data-i18n="flow.download">Download</b></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section validation-section" id="validation" aria-labelledby="validation-title">
+      <div class="container validation-grid">
+        <figure class="game-shot validation-shot reveal">
+          <img src="./assets/game/rocket.webp" width="1600" height="900" alt="Factorio screenshot from the official Wube press kit.">
+          <div class="game-shot-shade" aria-hidden="true"></div>
+          <div class="validation-overlay">
+            <span class="validation-live"><i></i><span data-i18n="validation.runtime">FACTORIO 2.0.77</span></span>
+            <strong data-i18n="validation.loaded">Mod loaded successfully</strong>
+            <ul><li><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg> <span data-i18n="validation.assert1">New items and machines exist</span></li><li><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg> <span data-i18n="validation.assert2">Recipes and values match the request</span></li><li><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg> <span data-i18n="validation.assert3">Research unlocks are in place</span></li></ul>
+          </div>
+        </figure>
+
+        <div class="validation-copy reveal">
+          <p class="eyebrow" data-i18n="validation.eyebrow">CONFIDENCE BEFORE DOWNLOAD</p>
+          <h2 id="validation-title" data-i18n="validation.title">Checked by the game itself.</h2>
+          <p data-i18n="validation.copy">MyModz loads your mod in real Factorio 2.0.77 and checks its items, recipes, values and research against the accepted request. You get the ZIP only after these checks pass.</p>
+          <div class="trust-card"><strong data-i18n="validation.trustTitle">You know what you’re getting.</strong><p data-i18n="validation.trustCopy">If your request goes beyond the supported features, MyModz explains the limit instead of quietly leaving part of your idea out.</p></div>
+          <p class="boundary" data-i18n="validation.boundary">Validation covers base-game Factorio 2.0.77. Compatibility with other mods or Space Age needs a separate in-game check.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section revisions-section" id="revisions" aria-labelledby="revisions-title">
+      <div class="container section-heading reveal">
+        <p class="eyebrow" data-i18n="revision.eyebrow">FOLLOW-UP EDITS</p>
+        <h2 id="revisions-title" data-i18n="revision.title">Change the mod with another sentence.</h2>
+        <p data-i18n="revision.copy">Start from a mod you’ve already created. Describe what to change — the new version is built and checked again, while the original stays in your history.</p>
+      </div>
+      <div class="container revision-row reveal">
+        <article><span>V1</span><strong data-i18n="revision.v1">Steel Furnace ×1.5 · Automation cost ×0.5</strong><small>✓ <span data-i18n="revision.validated">validated</span></small></article>
+        <blockquote data-i18n="revision.followup">“Keep everything else, make the furnace another 25% faster and restore Automation cost.”</blockquote>
+        <article class="revision-new"><span>V2</span><strong data-i18n="revision.v2">Steel Furnace ×1.875 · Automation cost normal</strong><small>✓ <span data-i18n="revision.revalidated">revalidated</span></small></article>
+      </div>
+    </section>
+
+    <section class="section scope-section" aria-labelledby="scope-title">
+      <div class="container scope-box reveal">
+        <div><p class="eyebrow" data-i18n="scope.eyebrow">WHAT WORKS TODAY</p><h2 id="scope-title" data-i18n="scope.title">Useful changes. Clear boundaries.</h2><p data-i18n="scope.copy">Build within the supported Factorio 2.0 features. The site tells you when an idea goes beyond them.</p></div>
+        <div class="scope-columns">
+          <div><strong data-i18n="scope.yes">SUPPORTED NOW</strong><ul><li data-i18n="scope.rebalance">Supported machine, recipe and inventory changes</li><li data-i18n="scope.content">New materials, item recipes and supported machines</li><li data-i18n="scope.tech">Research costs, prerequisites and unlocks</li><li data-i18n="scope.bundle">Multiple supported changes in one mod</li></ul></div>
+          <div><strong data-i18n="scope.no">NOT CLAIMED YET</strong><ul><li data-i18n="scope.control">Arbitrary control.lua gameplay systems</li><li data-i18n="scope.assets">New artwork, sprites or sounds</li><li data-i18n="scope.space">Arbitrary Space Age-specific content</li><li data-i18n="scope.workshop">Steam Workshop publishing</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section faq-section" id="faq" aria-labelledby="faq-title">
+      <div class="container faq-grid">
+        <div class="faq-intro reveal"><p class="eyebrow">FAQ</p><h2 id="faq-title" data-i18n="faq.title">Before your first mod.</h2><p data-i18n="faq.copy">A few things to know before you turn your idea into a mod.</p></div>
+        <div class="faq-list reveal">
+          <details><summary data-i18n="faq.installQ">Do I install MyModz?</summary><p data-i18n="faq.installA">No. MyModz is a web service. You use the website to create and revise mods; the only file you download is the resulting Factorio mod ZIP.</p></details>
+          <details><summary data-i18n="faq.luaQ">Do I need Lua?</summary><p data-i18n="faq.luaA">No. Describe what you want in English or Russian. MyModz handles the supported changes, creates the mod files and checks the result.</p></details>
+          <details><summary data-i18n="faq.testedQ">Is the ZIP really tested?</summary><p data-i18n="faq.testedA">Yes. The mod is loaded in isolated base-game Factorio 2.0.77. Its items, recipes, values and research are checked against the accepted request before download.</p></details>
+          <details><summary data-i18n="faq.graphicsQ">Does a new machine get new graphics?</summary><p data-i18n="faq.graphicsA">New machines use the graphics and icons of supported base-game templates. You can change their name, recipe and supported properties; new artwork isn’t generated.</p></details>
+          <details><summary data-i18n="faq.modpacksQ">Does it guarantee compatibility with my modpack?</summary><p data-i18n="faq.modpacksA">No. Current validation proves the generated mod against isolated base-game Factorio 2.0.77. Third-party mod-stack compatibility still needs an in-game check.</p></details>
+          <details><summary data-i18n="faq.editQ">Can I refine a mod later?</summary><p data-i18n="faq.editA">Yes. Open a successful mod from your history and describe the next change. MyModz builds and checks a new version; your original remains available.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="section final-cta" aria-labelledby="final-title">
+      <div class="container final-box reveal">
+        <p class="eyebrow" data-i18n="final.eyebrow">WHAT WOULD YOU CHANGE?</p>
+        <h2 id="final-title" data-i18n="final.title">What will your factory do differently?</h2>
+        <p data-i18n="final.copy">Start with one idea. Create it on the website, check the result and take your mod into Factorio.</p>
+        <div class="final-builder"><textarea id="final-prompt" rows="3" maxlength="4000" data-i18n-placeholder="final.placeholder" placeholder="Example: Double mining drill speed, set circuit stack size to 500, and halve Automation research cost."></textarea><button class="button button-primary" type="button" data-action="build-mod" data-source="final"><span data-i18n="cta.build">Create a mod</span><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-arrow"/></svg></button></div>
+        <span class="final-note">Factorio stable 2.0.x · EN / RU · validated against 2.0.77</span>
+      </div>
+    </section>
+  </main>
+
+
+  <dialog class="workspace" id="mod-workspace" aria-labelledby="workspace-title" aria-describedby="workspace-subtitle">
+    <div class="workspace-shell">
+      <header class="workspace-header">
+        <div><p class="eyebrow">MYMODZ / FACTORIO</p><h2 id="workspace-title" data-i18n="workspace.title">Mod workshop</h2><p id="workspace-subtitle" data-i18n="workspace.subtitle">Your request, build status and result — in one place.</p></div>
+        <div class="workspace-controls"><div class="language-switch" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="ru" aria-pressed="false">RU</button></div><button type="button" class="workspace-close" data-workspace-close><span data-i18n="workspace.back">Back to website</span><span aria-hidden="true">×</span></button></div>
+      </header>
+      <div class="workspace-grid">
+        <form class="workspace-compose" id="workspace-form">
+          <label for="workspace-prompt" data-i18n="workspace.request">Describe your mod</label>
+          <textarea id="workspace-prompt" required maxlength="4000" rows="6" autofocus data-i18n-placeholder="workspace.placeholder" placeholder="What should change? Name the items, machines or recipes you want to adjust."></textarea>
+          <div class="workspace-examples"><button type="button" data-workspace-example="rebalance" data-i18n="hero.exampleRebalance">Faster furnaces</button><button type="button" data-workspace-example="content" data-i18n="hero.exampleContent">New material + furnace</button><button type="button" data-workspace-example="throughput" data-i18n="hero.exampleThroughput">Recipes &amp; inventory</button></div>
+          <button class="button button-primary" id="workspace-submit" type="submit"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-bolt"/></svg><span data-i18n="workspace.generate">Generate mod</span></button>
+          <p class="workspace-hint" data-i18n="workspace.hint">Factorio 2.0 · English or Russian · no coding needed</p>
+          <p class="workspace-message" id="workspace-message" role="status" aria-live="polite" hidden></p>
+        </form>
+        <section class="workspace-result" aria-labelledby="workspace-result-title">
+          <div class="workspace-result-heading"><h3 id="workspace-result-title" data-i18n="workspace.result">Your mod</h3><span class="workspace-status" id="workspace-status" role="status" data-i18n="workspace.idle">Ready for your idea</span></div>
+          <ol class="workspace-stages"><li><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-code"/></svg><span data-i18n="workspace.plan">Understand request</span></li><li><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-gear"/></svg><span data-i18n="workspace.build">Build mod</span></li><li><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-shield"/></svg><span data-i18n="workspace.check">Check in Factorio</span></li></ol>
+          <div class="workspace-empty" id="workspace-empty"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-box"/></svg><h3 data-i18n="workspace.emptyTitle">Your idea starts here.</h3><p data-i18n="workspace.emptyCopy">Describe a change on the left. Your accepted changes, validation result and download will appear here.</p></div>
+          <div class="workspace-artifact" id="workspace-artifact" hidden><h3 id="workspace-mod-title"></h3><h4 data-i18n="workspace.changes">What changes</h4><ul id="workspace-changes"></ul><button class="button button-primary" id="workspace-download" type="button"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-download"/></svg><span data-i18n="workspace.download">Download ZIP</span></button><form id="workspace-revision"><label for="workspace-revision-prompt" data-i18n="workspace.refine">Refine this mod</label><textarea id="workspace-revision-prompt" rows="2" maxlength="4000" required data-i18n-placeholder="workspace.revisionPlaceholder" placeholder="What would you change in this version?"></textarea><button type="submit" class="button"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-arrow"/></svg><span data-i18n="workspace.revise">Create new version</span></button></form></div>
+          <p class="workspace-validation-note"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-shield"/></svg><span data-i18n="workspace.validationNote">Validated against base-game Factorio 2.0.77. Other mods and Space Age need a separate check.</span></p>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <a class="brand footer-brand" href="#top"><img src="./assets/logo-mark.svg" width="30" height="30" alt=""><span>MyModz</span></a>
+      <p data-i18n="footer.copy">MyModz is an independent Factorio modding project.</p>
+      <p class="footer-note"><span data-i18n="footer.images">Factorio imagery: official Wube press kit.</span> <a href="https://factorio.com" target="_blank" rel="noreferrer">factorio.com</a></p>
+    </div>
+  </footer>
+</body>
+</html>

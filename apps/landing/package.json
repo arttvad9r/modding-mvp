@@ -1,0 +1,11 @@
+{
+  "name": "@project/landing",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "node --check app.js",
+    "test": "node test/smoke.mjs && node --test test/workspace.mjs"
+  }
+}
