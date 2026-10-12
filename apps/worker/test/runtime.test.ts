@@ -55,6 +55,7 @@ describe("generation worker runtime", () => {
 
     let started = 0;
     let stopped = 0;
+    let recoveries = 0;
     const inspectedJobs: string[] = [];
     let handler: ((jobs: Array<{ data: unknown }>) => Promise<void>) | undefined;
     const queue = {
@@ -96,8 +97,10 @@ describe("generation worker runtime", () => {
       artifactStore,
       executor,
       staleRecoveryIntervalMs: 1_000,
+      onRecoverySuccess() { recoveries += 1; },
     });
     expect(runtime.workerId).toBe("worker-123");
+    expect(recoveries).toBe(1);
     expect(started).toBe(1);
     expect(inspectedJobs).toEqual([id]);
     expect(await repository.get(id)).toMatchObject({ status: "queued" });

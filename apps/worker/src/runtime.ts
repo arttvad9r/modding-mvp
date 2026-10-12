@@ -26,6 +26,8 @@ export interface GenerationWorkerRuntimeOptions {
   readonly executionTimeoutMs?: number;
   readonly publishTimeoutMs?: number;
   readonly onRecoveryError?: (error: unknown) => void;
+  /** Called after every successful recovery pass (startup and interval); used as a liveness signal. */
+  readonly onRecoverySuccess?: () => void;
 }
 
 export interface GenerationWorkerRuntime {
@@ -88,6 +90,7 @@ export async function startGenerationWorker(
       jobs: options.queue,
       queuedForMs: orphanQueuedAfterMs,
     });
+    options.onRecoverySuccess?.();
   };
 
   await options.queue.start();

@@ -26,6 +26,8 @@ import {
 } from "@project/service-core";
 import { z, ZodError } from "zod";
 
+import type { ReadinessProbe } from "./readiness.js";
+
 const FeedbackBodySchema = z.strictObject({
   rating: z.enum(["up", "down"]).optional(),
   intentMatch: FeedbackIntentMatchSchema.optional(),
@@ -90,6 +92,8 @@ export interface GenerationApiDependencies {
   readonly trustProxy?: boolean;
   readonly rateLimitPolicy?: ApiRateLimitPolicy;
   readonly now?: () => Date;
+  /** Dependency readiness for `GET /health/ready`; the route is absent when not configured. */
+  readonly readiness?: ReadinessProbe;
 }
 
 interface RequestContext {
@@ -345,6 +349,14 @@ export function createGenerationApiHandler(dependencies: GenerationApiDependenci
       }
       if (method === "GET" && url.pathname === "/health/live") {
         sendJson(response, 200, { status: "ok" });
+        return;
+      }
+      if (method === "GET" && url.pathname === "/health/ready" && dependencies.readiness !== undefined) {
+        const report = await dependencies.readiness();
+        sendJson(response, report.ready ? 200 : 503, {
+          status: report.ready ? "ready" : "not_ready",
+          checks: report.checks,
+        });
         return;
       }
 

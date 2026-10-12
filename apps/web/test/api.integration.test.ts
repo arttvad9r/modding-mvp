@@ -20,6 +20,7 @@ import { startGenerationWorker } from "@project/worker";
 import { describe, expect, it } from "vitest";
 
 import { createGenerationApiHandler } from "../src/api.js";
+import { createReadinessProbe, serviceReadinessChecks } from "../src/readiness.js";
 import { createPrivateBetaWebHandler } from "../src/ui.js";
 
 class FixedPlannerProvider implements LlmProvider {
@@ -147,6 +148,9 @@ describe("private-beta HTTP API through real service infrastructure", () => {
       artifactDownloads: artifactStore,
       surveys,
       ipHashSalt: "http-integration-ip-hash-salt",
+      readiness: createReadinessProbe({
+        checks: serviceReadinessChecks({ database: database.pool, queue, storage: artifactStore }),
+      }),
     });
     const handler = createPrivateBetaWebHandler(apiHandler);
     const server = createServer((request, response) => void handler(request, response));
@@ -157,6 +161,13 @@ describe("private-beta HTTP API through real service infrastructure", () => {
     };
 
     try {
+      const readyResponse = await fetch(`${baseUrl}/health/ready`);
+      expect(readyResponse.status).toBe(200);
+      await expect(readyResponse.json()).resolves.toEqual({
+        status: "ready",
+        checks: { database: "ok", queue: "ok", storage: "ok" },
+      });
+
       const pageResponse = await fetch(`${baseUrl}/`);
       expect(pageResponse.status).toBe(200);
       expect(await pageResponse.text()).toContain("Make Factorio play your way.");

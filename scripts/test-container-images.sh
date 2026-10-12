@@ -15,6 +15,20 @@ docker build -f infra/Dockerfile --target worker -t "$worker_image" .
 docker run --rm --entrypoint sh "$worker_image" -lc \
   'test ! -e /app/.tools/factorio/bin/x64/factorio'
 
+# Exercise the image's own worker HEALTHCHECK command: fresh file healthy, stale or missing unhealthy.
+worker_health="$(docker inspect --format '{{index .Config.Healthcheck.Test 1}}' "$worker_image")"
+docker run --rm --entrypoint sh "$worker_image" -c \
+  "node -e 'require(\"fs\").writeFileSync(process.env.WORKER_HEALTH_FILE, String(Date.now()))' && $worker_health"
+if docker run --rm --entrypoint sh "$worker_image" -c \
+  "node -e 'require(\"fs\").writeFileSync(process.env.WORKER_HEALTH_FILE, String(Date.now() - 600000))' && $worker_health"; then
+  echo "Worker healthcheck accepted a stale health file" >&2
+  exit 1
+fi
+if docker run --rm --entrypoint sh "$worker_image" -c "$worker_health" 2>/dev/null; then
+  echo "Worker healthcheck accepted a missing health file" >&2
+  exit 1
+fi
+
 bash scripts/setup-factorio.sh >/dev/null
 set +e
 worker_output=$(docker run --rm \

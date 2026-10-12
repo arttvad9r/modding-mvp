@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   S3Client,
   type S3ClientConfig,
@@ -79,6 +80,14 @@ export class S3ArtifactStore implements ArtifactStore {
   async delete(keyInput: string): Promise<void> {
     const key = ArtifactKeySchema.parse(keyInput);
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  /** Readiness probe: verifies the bucket is reachable with the configured credentials. */
+  async checkAccess(signal?: AbortSignal): Promise<void> {
+    await this.client.send(
+      new HeadBucketCommand({ Bucket: this.bucket }),
+      signal === undefined ? {} : { abortSignal: signal },
+    );
   }
 
   async createDownloadUrl(

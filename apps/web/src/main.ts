@@ -13,6 +13,7 @@ import {
 import { createS3ArtifactStore } from "@project/service-s3";
 
 import { createGenerationApiHandler } from "./api.js";
+import { createReadinessProbe, serviceReadinessChecks } from "./readiness.js";
 import { createWebRequestListener } from "./server.js";
 import { createPrivateBetaWebHandler } from "./ui.js";
 
@@ -80,6 +81,16 @@ async function main(): Promise<void> {
   const rateLimits = new PostgresRateLimitStore(database.db);
   const surveys = new PostgresBetaSurveyRepository(database.db);
   const submissionStore = new PostgresGenerationSubmissionStore(database.db, queue);
+  const readiness = createReadinessProbe({
+    checks: serviceReadinessChecks({ database: database.pool, queue, storage: artifactStore }),
+    onCheckFailure: (component, error) => {
+      console.error(JSON.stringify({
+        type: "readiness_check_failed",
+        component,
+        message: error instanceof Error ? error.message : String(error),
+      }));
+    },
+  });
   const apiHandler = createGenerationApiHandler({
     users,
     repository,
@@ -89,6 +100,7 @@ async function main(): Promise<void> {
     surveys,
     ipHashSalt: required("API_IP_HASH_SALT"),
     trustProxy: boolean("API_TRUST_PROXY", false),
+    readiness,
   });
   const handler = createPrivateBetaWebHandler(apiHandler);
   const server = createServer(createWebRequestListener(handler));

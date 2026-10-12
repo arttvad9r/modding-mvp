@@ -35,8 +35,14 @@ RUN apt-get update \
   && chmod +x /app/infra/worker-entrypoint.sh
 
 ENV NODE_ENV=production \
-    FACTORIO_BIN=/app/.tools/factorio/bin/x64/factorio
+    FACTORIO_BIN=/app/.tools/factorio/bin/x64/factorio \
+    WORKER_HEALTH_FILE=/tmp/worker-health \
+    WORKER_HEALTH_MAX_AGE_S=180
 
 USER node
 STOPSIGNAL SIGTERM
+# The worker touches WORKER_HEALTH_FILE after every successful recovery pass (WORKER_RECOVERY_INTERVAL_MS,
+# default 60 s). The start period covers the first-run Factorio download (FACTORIO_INSTALL_TIMEOUT_S).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=16m --retries=3 \
+  CMD node -e "const fs=require('fs');const t=Number(fs.readFileSync(process.env.WORKER_HEALTH_FILE,'utf8'));process.exit(Date.now()-t<Number(process.env.WORKER_HEALTH_MAX_AGE_S)*1000?0:1)"
 ENTRYPOINT ["/app/infra/worker-entrypoint.sh"]

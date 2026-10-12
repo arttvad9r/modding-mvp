@@ -1,3 +1,5 @@
+import { writeFile } from "node:fs/promises";
+
 import { createFactorioGenerationExecutor } from "@project/factorio-service-executor";
 import { createConfiguredLlmProviderChain } from "@project/llm";
 import {
@@ -77,6 +79,7 @@ async function main(): Promise<void> {
   const executionTimeoutMs = positiveInteger("WORKER_EXECUTION_TIMEOUT_MS");
   const publishTimeoutMs = positiveInteger("WORKER_PUBLISH_TIMEOUT_MS");
   const orphanQueuedAfterMs = positiveInteger("WORKER_ORPHAN_QUEUED_AFTER_MS");
+  const healthFile = optional("WORKER_HEALTH_FILE");
   const runtime = await startGenerationWorker({
     queue,
     repository,
@@ -89,6 +92,14 @@ async function main(): Promise<void> {
     ...(executionTimeoutMs === undefined ? {} : { executionTimeoutMs }),
     ...(publishTimeoutMs === undefined ? {} : { publishTimeoutMs }),
     ...(orphanQueuedAfterMs === undefined ? {} : { orphanQueuedAfterMs }),
+    ...(healthFile === undefined ? {} : {
+      onRecoverySuccess() {
+        // Liveness for the container healthcheck: proves the event loop and database are working.
+        void writeFile(healthFile, String(Date.now())).catch((error) => {
+          console.error(JSON.stringify({ type: "worker_health_file_error", message: String(error) }));
+        });
+      },
+    }),
     onRecoveryError(error) {
       console.error(JSON.stringify({ type: "worker_recovery_error", message: String(error) }));
     },

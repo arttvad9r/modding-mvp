@@ -24,6 +24,7 @@ import {
   createGenerationApiHandler,
   type ApiRateLimitPolicy,
 } from "../src/api.js";
+import type { ReadinessProbe } from "../src/readiness.js";
 
 class MemoryRepository implements GenerationRepository {
   readonly records = new Map<string, GenerationRecord>();
@@ -113,7 +114,10 @@ afterEach(async () => {
   );
 });
 
-async function startApi(policy: ApiRateLimitPolicy = DEFAULT_API_RATE_LIMIT_POLICY): Promise<TestApi> {
+async function startApi(
+  policy: ApiRateLimitPolicy = DEFAULT_API_RATE_LIMIT_POLICY,
+  readiness?: ReadinessProbe,
+): Promise<TestApi> {
   const repository = new MemoryRepository();
   const users = new MemoryUsers();
   const submissionStore = new MemorySubmissionStore(repository);
@@ -141,6 +145,7 @@ async function startApi(policy: ApiRateLimitPolicy = DEFAULT_API_RATE_LIMIT_POLI
     ipHashSalt: "0123456789abcdef-test-salt",
     rateLimitPolicy: policy,
     now: () => new Date("2026-10-11T00:00:00.000Z"),
+    ...(readiness === undefined ? {} : { readiness }),
   });
   const server = createServer((request, response) => void handler(request, response));
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
@@ -205,9 +210,29 @@ describe("private-beta HTTP API", () => {
   it("keeps health public but requires a bearer token for generation routes", async () => {
     const api = await startApi();
     expect((await fetch(`${api.baseUrl}/health/live`)).status).toBe(200);
+    expect((await fetch(`${api.baseUrl}/health/ready`)).status).toBe(401); // not configured: no public route
     const response = await fetch(`${api.baseUrl}/v1/generations`);
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({ error: { code: "unauthorized" } });
+  });
+
+  it("reports dependency readiness without failure details", async () => {
+    let ready = false;
+    const api = await startApi(DEFAULT_API_RATE_LIMIT_POLICY, async () => ({
+      ready,
+      checks: { database: "ok", storage: ready ? "ok" : "fail" },
+    }));
+
+    const notReady = await fetch(`${api.baseUrl}/health/ready`);
+    expect(notReady.status).toBe(503);
+    await expect(notReady.json()).resolves.toEqual({
+      status: "not_ready",
+      checks: { database: "ok", storage: "fail" },
+    });
+    ready = true;
+    const response = await fetch(`${api.baseUrl}/health/ready`);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ status: "ready" });
   });
 
   it("submits an owned generation asynchronously and hides internal ownership metadata", async () => {

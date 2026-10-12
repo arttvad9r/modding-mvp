@@ -59,6 +59,14 @@ export class PgBossGenerationQueue implements GenerationQueue, GenerationJobInsp
     return jobs.length > 0 ? "finished" : "missing";
   }
 
+  /** Readiness probe: the queue must be started and its pg-boss queue must exist. */
+  async checkReady(): Promise<void> {
+    if (!this.started) throw new Error("PgBossGenerationQueue is not started");
+    if ((await this.boss.getQueue(this.queueName)) === null) {
+      throw new Error(`pg-boss queue ${this.queueName} does not exist`);
+    }
+  }
+
   async stop(): Promise<void> {
     if (!this.started) return;
     this.started = false;

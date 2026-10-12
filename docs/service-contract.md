@@ -126,7 +126,8 @@ Default policy (`DEFAULT_API_RATE_LIMIT_POLICY` in `apps/web`):
 The pre-auth IP budget is deliberately larger than every route budget behind it, so normal polling from several testers behind one NAT is limited by the per-route buckets rather than by authentication. The web process deletes buckets untouched for 24 h (the maximum accepted window) in bounded batches of 1,000 rows, at most 20 batches per run, every `RATE_LIMIT_CLEANUP_INTERVAL_MS` (default 15 min); runs that delete rows log `rate_limit_cleanup` with the deleted count and the planner's table-size estimate.
 
 ## Implemented HTTP endpoints
-- `GET /health/live` — unauthenticated liveness check.
+- `GET /health/live` — unauthenticated liveness check; never touches dependencies.
+- `GET /health/ready` — unauthenticated readiness: PostgreSQL `select 1`, pg-boss generation queue present, object-storage bucket reachable (`HeadBucket`). Returns `200 {"status":"ready","checks":{...}}` or `503 {"status":"not_ready","checks":{...}}` with only `ok`/`fail` per component; failure details go to the server log. Each check has a 2 s deadline and the report is cached for 5 s so the endpoint cannot amplify load. Use it for load-balancer/ingress routing, not for container restarts.
 - `POST /v1/generations` — authenticate, rate-limit, atomically persist+enqueue, return `202`.
 - `GET /v1/generations?limit=1..20` — owner-scoped newest-first recent-generation history.
 - `GET /v1/generations/:id` — owner-scoped status/result; internal `userId`, `baseModSpec`, and object-store key are omitted; successful revisions may include a derived public diff.

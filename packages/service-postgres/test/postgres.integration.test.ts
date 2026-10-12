@@ -30,6 +30,9 @@ import {
   buildBetaKpiReport,
   createServicePostgresClient,
   deleteExpiredRateLimitBuckets,
+  evaluateOpsStatus,
+  generations,
+  readOpsSnapshot,
 } from "../src/index.js";
 
 const execFileAsync = promisify(execFile);
@@ -370,6 +373,7 @@ describe("PostgreSQL service adapters", () => {
     if (job) await queue.boss.complete(GENERATION_QUEUE_NAME, job.id);
 
     await queue.boss.deleteQueue(GENERATION_QUEUE_NAME);
+    await expect(queue.checkReady()).rejects.toThrow(/does not exist/);
     const rolledBackId = "66666666-6666-4666-8666-666666666666";
     await expect(
       submitGenerationAtomically({
@@ -387,5 +391,42 @@ describe("PostgreSQL service adapters", () => {
       expireInSeconds: 900,
       deleteAfterSeconds: 604_800,
     });
+    await expect(queue.checkReady()).resolves.toBeUndefined();
+  });
+
+  it("reads queue age, running heartbeat age and windowed outcomes for ops alerting", async () => {
+    await client.db.execute(sql`delete from generations`);
+    const insert = async (id: string, status: string, createdAt: string, updatedAt: string) => {
+      await client.db.insert(generations).values({
+        id,
+        userId,
+        revision: 0,
+        status,
+        prompt: "ops status fixture",
+        record: {} as GenerationRecord,
+        createdAt: new Date(createdAt),
+        updatedAt: new Date(updatedAt),
+      });
+    };
+    await insert("88888888-8888-4888-8888-888888888881", "queued", "2026-10-11T01:00:00.000Z", "2026-10-11T01:00:00.000Z");
+    await insert("88888888-8888-4888-8888-888888888882", "queued", "2026-10-11T01:10:00.000Z", "2026-10-11T01:10:00.000Z");
+    await insert("88888888-8888-4888-8888-888888888883", "running", "2026-10-11T01:00:00.000Z", "2026-10-11T01:15:00.000Z");
+    await insert("88888888-8888-4888-8888-888888888884", "failed", "2026-10-11T01:00:00.000Z", "2026-10-11T01:18:00.000Z");
+    await insert("88888888-8888-4888-8888-888888888885", "succeeded", "2026-10-11T01:00:00.000Z", "2026-10-11T01:19:00.000Z");
+    // Outside the window: must not count.
+    await insert("88888888-8888-4888-8888-888888888886", "failed", "2026-10-11T00:00:00.000Z", "2026-10-11T00:30:00.000Z");
+
+    const snapshot = await readOpsSnapshot(client.db, {
+      windowMs: 30 * 60_000,
+      now: new Date("2026-10-11T01:20:00.000Z"),
+    });
+    expect(snapshot).toEqual({
+      queued: 2,
+      oldestQueuedAgeMs: 20 * 60_000,
+      running: 1,
+      oldestRunningHeartbeatAgeMs: 5 * 60_000,
+      window: { ms: 30 * 60_000, succeeded: 1, failed: 1, unsupported: 0 },
+    });
+    expect(evaluateOpsStatus(snapshot).alerts).toEqual(["queue_stalled"]);
   });
 });

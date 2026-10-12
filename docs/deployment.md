@@ -175,6 +175,14 @@ The reverse proxy should terminate HTTPS and forward only to this loopback/priva
 curl -fsS http://127.0.0.1:3000/health/live
 ```
 
+Readiness (database, pg-boss queue, object storage) is separate:
+
+```bash
+curl -fsS http://127.0.0.1:3000/health/ready
+```
+
+Route public traffic on readiness; keep the container healthcheck on liveness so a dependency outage does not restart-loop web.
+
 If `API_TRUST_PROXY=true`, configure it only behind the controlled proxy and ensure the proxy overwrites client forwarding headers.
 
 ## Start worker
@@ -191,7 +199,20 @@ docker run -d --name project-worker \
   <registry>/project-worker:<git-sha>
 ```
 
-The entrypoint checksum-verifies the pinned Factorio archive. Generation jobs have automatic pg-boss retries disabled; retryable terminal failures require the explicit owner retry flow from ADR-0014.
+The entrypoint checksum-verifies the pinned Factorio archive. The install holds a `flock` on `.tools/.factorio-install.lock`, so workers sharing one cache volume never install concurrently. It extracts into a staging directory and swaps it in, so an interrupted install never leaves a partial runtime. The whole install, including lock wait and download retries, is bounded by `FACTORIO_INSTALL_TIMEOUT_S` (default 900 s).
+
+The worker image has a `HEALTHCHECK` that fails when `WORKER_HEALTH_FILE` was not refreshed within `WORKER_HEALTH_MAX_AGE_S` (default 180 s). The worker refreshes the file after every successful stale/orphan recovery pass (`WORKER_RECOVERY_INTERVAL_MS`, default 60 s), so a healthy status proves the event loop and database access work. The 16-minute start period covers the first Factorio download. If you raise `WORKER_RECOVERY_INTERVAL_MS`, keep `WORKER_HEALTH_MAX_AGE_S` at about 3× the interval. Generation jobs have automatic pg-boss retries disabled; retryable terminal failures require the explicit owner retry flow from ADR-0014.
+
+Resource limits in `infra/compose.beta.yaml` are sized from measurement: one Factorio data-stage validation peaks near 200 MB RSS, and Repair may validate up to four candidates in parallel.
+
+| Service | Memory | CPUs | PIDs |
+|---|---|---|---|
+| worker | 2 GB | 2 | 256 |
+| web | 512 MB | 1 | 128 |
+| postgres | 1 GB | — | 256 |
+| object-storage | 1 GB | — | 256 |
+
+Apply the same limits to any host-specific Compose file; it lives outside this repository. Raise the worker limits together with `WORKER_CONCURRENCY`.
 
 Start with worker concurrency 1. Increase it only after observing Factorio CPU/memory usage and PostgreSQL/LLM/object-store behavior under beta load.
 
@@ -211,7 +232,54 @@ docker run --rm \
   node --conditions=production packages/service-postgres/dist/src/kpi-cli.js
 ```
 
+6. Run the ops status check (also suitable for a cron/systemd timer):
+
+```bash
+docker run --rm \
+  --env-file <database-env-file> \
+  <registry>/project-web:<git-sha> \
+  node --conditions=production packages/service-postgres/dist/src/ops-status-cli.js
+```
+
+It prints one JSON line and exits `0` (ok), `2` (alert) or `1` (the check itself failed). Each alert code in `alerts` has a default threshold and an environment override:
+
+| Alert code | Default threshold | Override |
+|---|---|---|
+| `queue_stalled` | oldest queued generation older than 15 min | `OPS_MAX_QUEUED_AGE_MS` |
+| `running_heartbeat_stale` | a running generation has no heartbeat for 10 min | `OPS_MAX_RUNNING_HEARTBEAT_AGE_MS` |
+| `failure_ratio_high` | `failed / (succeeded + failed)` above 0.5 in the last hour, judged only on at least 4 outcomes | `OPS_MAX_FAILED_RATIO`, `OPS_MIN_FAILED_RATIO_SAMPLE`, `OPS_WINDOW_MS` |
+
+`unsupported` is an expected product outcome and never counts as failure. Delivery of the alert, for example sending a notification on a non-zero exit, belongs to the host scheduler and is outside this repository.
+
 The KPI report is observational. M6 is not complete merely because infrastructure is deployed; the live tester thresholds in `product-spec.md` still need real data.
+
+## Backup and restore drill
+
+`scripts/backup-restore-drill.sh` runs a full backup cycle against the running Postgres container:
+1. `pg_dump -Fc` from the running container into `BACKUP_DIR`, with a `.sha256` file;
+2. restore of that dump into a throwaway, network-less container from the same pinned image;
+3. comparison of application table row counts and the Drizzle migration ledger against the source.
+
+The script fails unless every table exists, the migration counts match, and no restored table is empty while its source has rows.
+
+```bash
+PG_CONTAINER=<postgres-container> BACKUP_DIR=/srv/backups/modding-mvp BACKUP_KEEP=14 \
+  bash scripts/backup-restore-drill.sh
+```
+
+The source database is only read. `BACKUP_KEEP` prunes older drill backups, and only after the new one has been proven restorable.
+
+The script works on the host directly (Docker access required) and prints no credentials. Run it from a daily timer:
+- **RPO:** 24 h for PostgreSQL.
+- **RTO:** the measured restore time plus redeploy. A small beta database restores in seconds; the target is under 1 h.
+
+Restoring production:
+1. stop worker and web;
+2. restore the verified dump into a fresh database volume with `pg_restore --no-owner --exit-on-error`;
+3. start web and worker;
+4. check `/health/ready` and run `ops-status`.
+
+Object-storage artifacts are not part of this drill. They are derived from persisted records; a lost ZIP means the owner must retry or regenerate, with no data loss in PostgreSQL. Back up the SeaweedFS volume with host snapshots if artifact durability becomes a requirement.
 
 ## Upgrade and rollback
 

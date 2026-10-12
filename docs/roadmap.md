@@ -222,7 +222,11 @@ Audit remediation (2026-10-11 audit, A01–A14): **closed in code on 2026-10-12,
 
 Remaining scope after M6B:
 - deploy the audit-remediation runtime and re-run deployment smokes (`pnpm test:container-images`, service E2E, hosted S3 smoke, verify-stack);
-- close the operational gaps the audit listed before public ingress: readiness checks, worker health/alerting, backup/restore drill, container resource limits, and a curl deadline plus single-writer lock for the Factorio cache install;
+- operational gaps the audit listed before public ingress are closed in code (2026-10-12): readiness checks, worker health and the ops-status alert check, the backup/restore drill, Compose resource limits, and a curl deadline plus single-writer lock for the Factorio cache install. Still open:
+  - run the drill on the deployed host;
+  - wire the timers and alert delivery;
+  - apply the limits to the host Compose file;
+  - add CI once a hosted remote exists;
 - enable public HTTPS ingress for testers outside the tailnet (prefer the planned dedicated public VPS/reverse proxy rather than exposing the home server directly);
 - recruit a first 5–10 player cohort, review prompt/support/false-success feedback, then scale toward 30+ active testers and evaluate the product hypotheses from observed beta data.
 

@@ -273,11 +273,13 @@ Before starting M2:
 - [x] A14 — harness validates candidate name/version/symlinks and destination containment before copying.
 - [x] Run `pnpm test:container-images` and `pnpm test:service-integration` on the remediation tree (2026-10-12, green).
 - [ ] Deploy the remediation runtime, then re-run hosted S3 smoke, live E2E and verify-stack.
-- [ ] Add readiness (DB/queue/store) separate from `/health/live`, a worker healthcheck, and alerting on queue age and terminal error rate.
-- [ ] Add CPU/memory/pid limits to beta Compose sized from measured Factorio load.
-- [ ] Add a curl deadline and a single-writer lock to the Factorio runtime cache install.
-- [ ] Document and run a PostgreSQL/S3 backup and restore drill with RPO/RTO.
-- [ ] Add CI workflow running typecheck, unit tests and build on every push.
+- [x] Add readiness (DB/queue/store) separate from `/health/live`, a worker healthcheck, and alerting on queue age and terminal error rate (`/health/ready`, worker health file + image `HEALTHCHECK`, `pnpm ops:status` with exit code 2 on alert; notification delivery is host-side).
+- [x] Add CPU/memory/pid limits to beta Compose sized from measured Factorio load (~200 MB RSS per validation, Repair up to 4 in parallel).
+- [x] Add a curl deadline and a single-writer lock to the Factorio runtime cache install (`flock`, staging swap, `FACTORIO_INSTALL_TIMEOUT_S`).
+- [x] Document a PostgreSQL backup and restore drill with RPO/RTO; `scripts/backup-restore-drill.sh` passes locally (2026-10-12).
+- [ ] Run the backup/restore drill on the deployed host and schedule it plus `ops:status` on host timers.
+- [ ] Apply the resource limits and new image healthchecks to the host-specific Compose file.
+- [ ] Add CI workflow running typecheck, unit tests and build on every push (blocked: the repository has no hosted remote yet).
 
 ## M7 — Platform foundation — planned (ADR-0019)
 - [ ] Define the `GameAdapter` contract:

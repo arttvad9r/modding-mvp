@@ -1,4 +1,4 @@
-import type { S3Client } from "@aws-sdk/client-s3";
+import { HeadBucketCommand, type S3Client } from "@aws-sdk/client-s3";
 import { describe, expect, it } from "vitest";
 
 import { S3ArtifactStore } from "../src/index.js";
@@ -45,6 +45,17 @@ describe("S3ArtifactStore", () => {
       Metadata: { "artifact-file-name": artifact.fileName },
     });
     expect(artifact).not.toHaveProperty("url");
+  });
+
+  it("checks bucket access for readiness with the caller's abort signal", async () => {
+    const client = new CapturingClient();
+    const store = new S3ArtifactStore(client as unknown as S3Client, { bucket: "modding-artifacts" });
+    const controller = new AbortController();
+
+    await store.checkAccess(controller.signal);
+    expect(client.commands[0]).toBeInstanceOf(HeadBucketCommand);
+    expect((client.commands[0] as { input: Record<string, unknown> }).input).toEqual({ Bucket: "modding-artifacts" });
+    expect(client.sendOptions[0]).toEqual({ abortSignal: controller.signal });
   });
 
   it("forwards the publication abort signal and deletes orphaned objects by validated key", async () => {

@@ -43,6 +43,9 @@ for _ in $(seq 1 40); do
 done
 
 curl -fsS "http://127.0.0.1:${port}/health/live" >/dev/null
+# Readiness covers database, pg-boss queue and object storage; details stay component-level only.
+ready="$(curl -fsS "http://127.0.0.1:${port}/health/ready")"
+grep -Fq '"checks":{"database":"ok","queue":"ok","storage":"ok"}' <<<"$ready"
 # Assert stable DOM/route invariants rather than marketing copy, which changes with the UI.
 page="$(curl -fsS "http://127.0.0.1:${port}/")"
 grep -Fq 'id="generation-form"' <<<"$page"
