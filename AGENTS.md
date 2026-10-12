@@ -35,3 +35,8 @@ Service that turns a natural-language request into a validated, installable game
 
 ## Workflow
 Inspect existing behavior, read the relevant contract/ADR, make the smallest coherent change, run narrow checks then the required broader gate, and report only changed behavior, verification and real remaining risks.
+
+## Git
+- `main` is the working branch and must always build and pass checks.
+- Work in `feat/<name>` / `fix/<name>` from `main`; several branches may run in parallel. Merge verified work into `main`, then delete the branch.
+- Push only with the owner's explicit permission.
