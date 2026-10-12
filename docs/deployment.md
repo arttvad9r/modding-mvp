@@ -57,6 +57,14 @@ Deployment evidence from 2026-10-11:
 - migration `0003` added `service_users.metrics_eligible`; the existing deployment-smoke user was marked ineligible, a second live `glm-5.3-flash` E2E succeeded in 20,692 ms using 2,213 tokens with no Repair, and `beta:kpis` remained at a zero real-tester baseline.
 - a compressed PostgreSQL baseline dump is stored on the VPS at `/opt/modding-mvp/backups/post-beta-baseline-20261011.sql.gz` with mode `0600`.
 - home-server runtime `f2f1ae6` now uses Ollama Cloud `glm-5.3-flash` primary with Z.ai Coding Plan `glm-5.3-flash` fallback; READY metadata reports both. A live production-container Ollama prompt produced a Factorio-validated ZIP in 3,773 ms (Factorio 1,389 ms, no Repair, estimated model cost $0.001167), and an isolated forced Ollama endpoint failure returned successfully through Z.ai.
+- 2026-10-12: home-server runtime upgraded `f2f1ae6` → `b3dec33`, covering the audit remediation and the operational hardening (no new migrations).
+  - **Backup:** `backup-restore-drill.sh` passed on the host before the switch; the dump is in `/srv/backups/modding-mvp/`.
+  - **Compose:** the host compose gained the measured resource limits and `S3_READINESS_ENDPOINT=http://object-storage:8333` for web.
+  - **Health:** `/health/ready` reports database/queue/storage `ok`; the web and worker image healthchecks report healthy.
+  - **Live E2E:** an internal smoke user's prompt reached `succeeded` in about 5 s with no Repair; the ZIP downloaded through the Tailscale Serve presigned URL with matching size.
+  - **Checks:** `ops-status` reported `ok`; `verify-stack` passed 30/30.
+  - **Internal smoke users:** three were created, all `metricsEligible=false`.
+  - **Smoke caveat:** the host itself does not resolve its own MagicDNS name, so host-side downloads must pin it with `curl --resolve <name>:8447:<tailscale-ip>`.
 
 ## Preconditions
 
