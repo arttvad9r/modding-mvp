@@ -1,4 +1,4 @@
-# Technical specification v0.4
+# Technical specification v0.5
 
 ## System goal
 Implement a bounded pipeline that converts a user request into a Factorio mod artifact and validates the artifact with the real game runtime before reporting success.
@@ -26,7 +26,7 @@ Implemented capability-specific ModSpec variants:
 - `item_stack_size` — stack-size mutation for an allow-listed base-game item;
 - `technology_cost` — mutation of finite research `unit.count` for an allow-listed base-game technology;
 - `technology_prerequisite` — add/remove one reviewed prerequisite edge between base-game technologies;
-- `new_machine` — create a new reviewed assembling-machine/furnace prototype by cloning a pinned base-game template, plus a new placeable item, recipe, and existing/new technology unlock;
+- `new_machine` — create a new reviewed machine prototype (assembling machine, chemical plant, oil refinery, centrifuge, electric furnace, electric mining drill, or lab) by cloning a pinned base-game template, plus a new placeable item, recipe, and existing/new technology unlock;
 - `new_recipe` — create a new alternative item-only recipe for a reviewed existing base-game result item or same-bundle custom item, with an existing/new technology unlock;
 - `new_item` — create a new intermediate item from a reviewed base item template, plus its item-only recipe and existing/new technology unlock.
 
@@ -46,7 +46,7 @@ For `technology_cost`, M2 supports allow-listed technologies with a finite numer
 
 For `technology_prerequisite`, M2 supports only reviewed technology/prerequisite pairs. Each pair permits exactly one baseline-aware `add` or `remove` operation; arbitrary graph edits are rejected before Factorio execution.
 
-For `new_machine`, M6B supports reviewed templates `assembling-machine-2`, `assembling-machine-3`, and `electric-furnace`. The new internal ID must use the `custom-` namespace. Entity/item graphics and icons are inherited through `table.deepcopy`; generated media is not part of this capability. The typed change carries final crafting speed, energy usage, module slots, stack size, recipe time/ingredients, and an unlock policy. Recipe ingredients and referenced technologies are registry allow-listed. Unlocking may append an effect to one existing reviewed technology or create one technology cloned from a reviewed base template with an application-derived ID, exact prerequisites, science tier, count, and time. Semantic validation checks existence and all requested machine/item/recipe/unlock fields in real Factorio.
+For `new_machine`, the registry supports reviewed templates `assembling-machine-2`, `assembling-machine-3`, `chemical-plant`, `oil-refinery`, `centrifuge` (machine type `assembling-machine`), `electric-furnace` (`furnace`), `electric-mining-drill` (`mining-drill`), and `lab` (`lab`); `factorio-knowledge` is the authoritative list. The new internal ID must use the `custom-` namespace. Entity/item graphics and icons are inherited through `table.deepcopy`; generated media is not part of this capability. The typed change carries the final template speed (`crafting_speed`, `mining_speed`, or `researching_speed`), energy usage, module slots, stack size, recipe time/ingredients, and an unlock policy. Recipe ingredients and referenced technologies are registry allow-listed. Unlocking may append an effect to one existing reviewed technology or create one technology cloned from a reviewed base template with an application-derived ID, exact prerequisites, science tier, count, and time. Semantic validation checks existence and all requested machine/item/recipe/unlock fields in real Factorio.
 
 For `new_recipe`, M6B creates one new disabled `recipe` prototype whose internal ID uses the `custom-` namespace. Ingredients and the single result are item-only and may reference reviewed base-game items or a `new_item` declared in the same ModSpec. The change carries display name, exact crafting time, ingredients, result amount, and the same bounded existing/new technology unlock policy. Semantic validation checks the complete ingredient/result definition and unlock effect. Fluid recipes remain outside this capability.
 
@@ -133,14 +133,16 @@ The existing `factorio-harness` is the authority for real-runtime validation.
 
 A validation run:
 1. creates an isolated temporary directory;
-2. copies the candidate mod into a dedicated `mods/` directory;
-3. writes the required mod list/configuration;
-4. runs a pinned Factorio stable 2.0.x headless binary with a timeout;
-5. captures bounded stdout/stderr/log information;
-6. returns structured PASS/FAIL;
-7. removes temporary files after completion.
+2. validates candidate `info.json` before any file operation: name `[A-Za-z0-9_-]{1,100}`, three-part numeric version, no symlinks inside the candidate, and a destination contained in the run directory;
+3. copies the candidate mod into a dedicated `mods/` directory;
+4. writes a per-run `config.ini` (`read-data` = the binary's game data, `write-data` = the run directory) passed through `--config`, so concurrent runs never share `write-data`, the lock file, or `script-output`;
+5. writes `mod-list.json` that enables `base` and the candidate and explicitly disables the bundled `space-age`, `quality`, and `elevated-rails` mods, because Factorio enables installed-but-unlisted mods by default;
+6. runs a pinned Factorio stable 2.0.x headless binary with a timeout and caller cancellation (`SIGKILL` on expiry);
+7. captures bounded stdout/stderr/log information;
+8. returns structured PASS/FAIL; a lost exclusive-lock race is a `process_error`, not a candidate failure;
+9. removes temporary files after completion.
 
-The source candidate is never mutated.
+The source candidate is never mutated. The validation environment is therefore genuinely base-game-only. Residual boundary: a candidate could branch on other mods that a player has installed (for example Space Age); that behavior is outside base-game validation and remains a documented limitation of automated success.
 
 ## Assertion strategy
 For deterministic prototype-stage changes, tests should assert expected prototype state in the Factorio data stage where feasible. A generated mod passing syntax/load validation alone is not sufficient when the requested semantic change can be asserted.
@@ -184,7 +186,12 @@ Only `factorio_load_failed` and `semantic_assertion_failed` are Repair-eligible 
 
 The model response schema is exactly `{ "dataLua": string }`. The application replaces only the existing `data.lua` content. The accepted ModSpec, `info.json`, manifest paths/roles, and semantic assertion Lua remain unchanged. Repair cannot add `control.lua`, dependencies, assets, validation files, or any other path.
 
-Every candidate is validated by real Factorio using the original semantic assertion Lua. The Factorio generator exposes `validateGeneratedFactorioMod` so repaired bounded manifests use the same validation authority without packaging first. A candidate is successful only when that validation passes.
+Every candidate is validated by real Factorio using the original semantic assertion Lua. Because model-authored Lua is not application-owned, a repaired candidate must additionally pass the integrity checks of ADR-0018 through `validateRepairedFactorioMod`:
+1. the companion-validator run passes the original assertions;
+2. the `data.raw` dump with the validator present equals the dump of the candidate alone, so the code cannot behave differently when it is being checked;
+3. the candidate-alone dump differs from the cached base-game dump only inside the footprint the accepted ModSpec allows (named properties of named prototypes, or prototypes the ModSpec creates and the base game lacks).
+
+The four Factorio runs (validator, validator dump, candidate dump, base dump) execute in parallel in isolated directories; the base dump is cached per binary. A violation is a repairable `semantic_assertion_failed` whose `details.addresses` lists up to 20 offending `type/name[.property]` addresses. A candidate is successful only when all checks pass. Deterministic, application-generated artifacts keep the single validator run.
 
 Maximum automatic Repair model attempts: **2 hard cap**. Attempt history captures outcome, provider/model when available, token/cost metadata, duration, normalized validation error, and terminal reason. Non-repairable validation errors terminate immediately rather than consuming a second model attempt. See ADR-0010.
 
@@ -225,9 +232,12 @@ Worker rules:
 3. execute through a `GenerationExecutor` adapter;
 4. on success, validate a bounded safe ZIP filename/size (currently max 10 MiB), publish bytes through `ArtifactStore`, verify returned key/name/size metadata, and persist the private object reference;
 5. otherwise persist `unsupported` or a normalized typed `failed` result;
-6. refresh the running record through revision-CAS heartbeats while execution is active;
+6. refresh the running record through revision-CAS heartbeats from claim until artifact publication finishes, bounded by `execution + publication + grace` below the pg-boss job expiry;
 7. treat terminal redelivery as idempotent and do not execute already-running work again;
-8. allow a separate CAS-safe recovery pass to mark genuinely stale running records as retryable process failures without silently requeueing them.
+8. allow a separate CAS-safe recovery pass to mark genuinely stale running records, and queued records whose pg-boss job is missing or finished, as retryable process failures without silently requeueing them;
+9. bound execution and publication with deadlines that cancel LLM requests, Factorio processes and uploads, and delete a published object whose terminal record could not be persisted.
+
+Exact defaults, env variables, and KPI latency definitions are owned by `docs/service-contract.md`.
 
 The service record retains immutable `userId`, prompt, accepted ModSpec when applicable, Planner/Repair attempt metadata, aggregate usage/cost, validation state, typed failures, artifact metadata, a one-time `firstDownloadedAt` funnel marker, and bounded structured user feedback. Revision generations additionally retain `sourceGenerationId` and an internal immutable `baseModSpec` snapshot; both optional fields appear together and remain compatible with existing schema-version-2 records. Public API responses omit the duplicated base snapshot. The persisted generation-record contract is currently `schemaVersion: 2`; the pg-boss generation-job payload remains independently versioned at schema version 1 because its shape did not change when ownership was added. `packages/factorio-service-executor` implements the service executor port by running M5 under a fresh temporary root, returning validated ZIP bytes plus mapped service telemetry, and deleting temporary M5 reports/artifacts before returning. See `docs/service-contract.md` and ADR-0011.
 

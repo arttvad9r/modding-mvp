@@ -1,6 +1,6 @@
 # ADR-0001: Factorio-first single-game MVP
 
-Status: Accepted
+Status: Accepted; partially superseded by [ADR-0019](0019-multi-game-platform-direction.md) (the "no second game adapter before the Factorio beta criteria are evaluated" rule)
 Date: 2026-10-10
 
 ## Context

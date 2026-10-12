@@ -1,6 +1,6 @@
-# Roadmap v0.1
+# Roadmap v0.2
 
-The roadmap is milestone-based rather than calendar-based. AI-agent availability and implementation feedback may change elapsed time, but milestone exit criteria should remain explicit.
+The roadmap is milestone-based rather than calendar-based. Since v0.2 it plans a multi-game platform (ADR-0019): Factorio launches first, the GameAdapter platform foundation proceeds in parallel with the Factorio cohort, and Minecraft Java datapacks follow as game #2. AI-agent availability and implementation feedback may change elapsed time, but milestone exit criteria should remain explicit.
 
 ## M0 — Factorio Mod Test Harness
 Status: complete.
@@ -207,14 +207,89 @@ Completed slices:
 - hosted SeaweedFS smoke proving upload -> presigned GET -> byte comparison -> delete;
 - deployed live Z.ai `glm-5.3-flash` E2E proving API -> pg-boss -> worker -> real Factorio -> private object storage -> presigned ZIP -> feedback/survey; the first server smoke succeeded directly in 19.1 s using 2,205 tokens.
 
+Audit remediation (2026-10-11 audit, A01–A14): **closed in code on 2026-10-12, not yet deployed.**
+- A01: malformed request targets and handler rejections can no longer crash the web process.
+- A02: Repair integrity check (ADR-0018) and a base-only validation environment with DLCs disabled.
+- A03/A07: bounded LLM, execution and publication deadlines; heartbeats continue through publication; orphan ZIPs are deleted.
+- A04: orphaned queued records are reconciled against pg-boss job state.
+- A05: retries of failed revisions keep their lineage and snapshot.
+- A06/A14: per-run Factorio `write-data`/lock; candidate metadata is validated.
+- A08/A09: auth-IP budget, plus a stale-poll guard in the UI.
+- A10: wall-clock latency KPIs.
+- A11: container smoke matches the current UI.
+- A12: Vitest 4.1.11; `pnpm audit` is clean.
+- A13: bounded rate-limit bucket retention.
+
 Remaining scope after M6B:
+- deploy the audit-remediation runtime and re-run deployment smokes (`pnpm test:container-images`, service E2E, hosted S3 smoke, verify-stack);
+- close the operational gaps the audit listed before public ingress: readiness checks, worker health/alerting, backup/restore drill, container resource limits, and a curl deadline plus single-writer lock for the Factorio cache install;
 - enable public HTTPS ingress for testers outside the tailnet (prefer the planned dedicated public VPS/reverse proxy rather than exposing the home server directly);
 - recruit a first 5–10 player cohort, review prompt/support/false-success feedback, then scale toward 30+ active testers and evaluate the product hypotheses from observed beta data.
 
 Exit criteria are the product hypotheses in `product-spec.md`, especially success rate, false-success rate, repeat usage, and willingness to pay.
 
+## M7 — Platform foundation (GameAdapter + catalog extraction)
+Status: planned; may start in parallel with the M6 external cohort. It must not change Factorio behavior.
+
+Goal: make the shared layers game-neutral and remove hand-curated catalogs as the scaling bottleneck (ADR-0019).
+
+Scope:
+- `GameAdapter` contract covering:
+  - id and version line;
+  - catalog/registry;
+  - typed change schema and ModSpec root;
+  - Planner/Revision scope;
+  - deterministic generator and assertions;
+  - validator plus integrity check;
+  - packaging;
+  - UI change rendering.
+- Move the Factorio ModSpec/change union out of the shared `domain` core into `factorio-*`. `service-core`, `agent-core` orchestration and `apps/*` depend only on the contract.
+- Add `game` to generation records (existing records default to `factorio`), adapter dispatch in the worker/executor, and per-game UI rendering.
+- Automated Factorio catalog extraction from `data.raw` dumps: candidate targets and baselines are generated, then reviewed policy (allow/deny per type/property, numeric bounds) is applied. This expands coverage from a handful of hand-picked recipes/technologies to most vanilla targets.
+- A generic integrity interface for the installed-environment comparison (ADR-0018 generalized).
+
+Exit criteria:
+- all existing unit, integration, service E2E and Planner/Repair eval gates are unchanged and green for Factorio;
+- no shared package imports a `factorio-*` package or Factorio-specific types;
+- the extracted Factorio catalog reproduces every current allow-listed baseline and expands supported recipe/technology/item targets by at least an order of magnitude, with the Planner eval re-run on the expanded registry.
+
+## M8 — Game #2: Minecraft Java datapacks
+Status: planned after M7 and the Factorio public launch.
+
+Goal: prove the platform on a second, much larger community while keeping the same trust model.
+
+Scope:
+- one pinned current Minecraft Java release (no loader/JAR mods);
+- a datapack adapter covering:
+  - typed changes (recipes, loot tables, tags, simple function/advancement content);
+  - catalog extraction from vanilla data generators and registries;
+  - a deterministic generator;
+  - packaging;
+- a real validation runtime:
+  - official server jar, headless, checksum-pinned, fetched into cache rather than redistributed;
+  - datapack load/reload errors normalized to typed errors;
+  - semantic checks run in-game (for example, function/recipe presence and outputs);
+  - an installed-environment integrity comparison;
+- Minecraft Planner golden corpus (EN/RU) and Repair corpus, if Repair is enabled for the adapter;
+- UI game selection and per-game examples.
+
+Exit criteria:
+- validated datapack ZIPs pass the official server in automation;
+- the Minecraft Planner eval meets the same development gates as Factorio M3 (classification >= 90%, exact supported specs >= 80%);
+- the licensing review for running the server inside the service is documented before any paid use.
+
+## M9 — Monetization gates and server-owner tier
+Status: planned; requires an accepted billing/pricing ADR before implementation.
+
+Scope:
+- licensing gate per game before paid use: written permission from Wube for Factorio headless use in a paid service (see `deployment.md`), and a review of Mojang's EULA and commercial usage guidelines for Minecraft;
+- server-owner tier: server-side-only modifications for community server operators, only for games where server-side mods need no client install and licensing has passed;
+- pricing and billing decision based on observed M6/M8 unit economics, retention and willingness-to-pay data.
+
+## Later game clusters
+After M8, the next candidates share a dedicated-server validator template (SteamCMD): 7 Days to Die (XML XPath modlets), Project Zomboid and Don't Starve Together. Each needs its own adapter, extracted catalog, validator and licensing review. RimWorld stays deferred until an affordable real validation runtime exists.
+
 ## Deferred until beta evidence
-- second game adapter;
 - marketplace;
 - subscriptions/complex billing;
 - asset generation;

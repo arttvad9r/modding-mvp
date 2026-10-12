@@ -1,6 +1,6 @@
 # Agent development rules
 
-Service that turns a natural-language request into a validated, installable Factorio mod. Public brand name is not final; do not hard-code one.
+Service that turns a natural-language request into a validated, installable game mod; Factorio is game #1 of a planned multi-game platform (ADR-0019). Public brand name is not final; do not hard-code one.
 
 ## Sources of truth
 - Product scope: `docs/product-spec.md`; technical contracts/security: `docs/technical-spec.md`; current sequence: `docs/roadmap.md`; tasks: `docs/backlog.md`; capabilities: `docs/capabilities.md`; architecture: `docs/architecture.md`; durable decisions: `docs/adr/`.
@@ -9,7 +9,8 @@ Service that turns a natural-language request into a validated, installable Fact
 
 ## Product scope
 - Factorio stable 2.0.x, prototype/data-stage mods within accepted capabilities.
-- No asset generation, multiplayer cheats, DRM bypass, binary patching, marketplace, billing or multi-game support unless an accepted decision expands scope.
+- Additional games only through the GameAdapter boundary and per-game gates of ADR-0019 (real validation runtime, extracted catalog, licensing review); game #2 is Minecraft Java datapacks.
+- No asset generation, multiplayer cheats, DRM bypass, binary patching, marketplace or billing unless an accepted decision expands scope.
 
 ## Architecture and security invariants
 - Factorio-specific behavior stays in `packages/factorio-*`. Supported capability definitions come from `@project/factorio-knowledge`; do not duplicate them in prompts.

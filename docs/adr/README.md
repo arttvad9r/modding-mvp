@@ -33,7 +33,7 @@ Do not create an ADR merely for:
 5. If later replaced, mark the old record `Superseded by ADR-XXXX` and link both records.
 
 ## Current records
-- [ADR-0001: Factorio-first single-game MVP](0001-factorio-first.md)
+- [ADR-0001: Factorio-first single-game MVP](0001-factorio-first.md) — partially superseded by ADR-0019.
 - [ADR-0002: TypeScript pnpm monorepo](0002-typescript-pnpm-monorepo.md)
 - [ADR-0003: Real Factorio headless is the runtime validation authority](0003-factorio-headless-validation.md)
 - [ADR-0004: Typed ModSpec as the intent-to-code boundary](0004-typed-modspec.md)
@@ -50,3 +50,5 @@ Do not create an ADR merely for:
 - [ADR-0015](0015-composable-mixed-modspec.md) — compose reviewed capability primitives into backward-compatible mixed tweak bundles.
 - [ADR-0016](0016-immutable-follow-up-revisions.md) — follow-up edits create new immutable generations from an accepted ModSpec snapshot.
 - [ADR-0017](0017-reviewed-rebalance-primitives.md) — add reviewed recipe-time, recipe-result, and item-stack rebalance primitives.
+- [ADR-0018](0018-repair-integrity-trust-boundary.md) — repaired Lua must match the installed environment and stay inside the ModSpec `data.raw` footprint.
+- [ADR-0019](0019-multi-game-platform-direction.md) — multi-game platform behind a GameAdapter boundary; Minecraft Java datapacks are game #2.

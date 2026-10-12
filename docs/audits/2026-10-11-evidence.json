@@ -1,0 +1,195 @@
+{
+  "auditDate": "2026-10-11",
+  "sourceCommit": "a7415e28818da7d17ec95251181ff7fcefb8093d",
+  "nodeVersion": "v26.11.1",
+  "initialUntracked": [
+    "apps/landing/"
+  ],
+  "scope": "Local source, local containers, real Factorio, isolated PostgreSQL. No remote production verification.",
+  "probes": {
+    "probes": {
+      "repair_extra_scope": {
+        "status": "repaired"
+      },
+      "repair_validator_detection": {
+        "status": "repaired",
+        "installedSpeed": 99,
+        "expectedSpeed": 4
+      },
+      "retry_revision": {
+        "status": 202,
+        "baseModSpecLost": true,
+        "sourceGenerationIdLost": true
+      },
+      "llm_deadline": {
+        "signalProvided": false,
+        "call": "still_pending"
+      },
+      "publication_race": {
+        "recovered": 1,
+        "finalStatus": "failed"
+      }
+    },
+    "queue": {
+      "jobState": "failed",
+      "generationState": "queued",
+      "recovery": {
+        "scanned": 0,
+        "recovered": 0,
+        "skipped": 0
+      }
+    },
+    "ui-kpi": {
+      "stalePoll": {
+        "displayed": "old-generation",
+        "activeGeneration": "new-generation",
+        "submitEnabled": true
+      },
+      "rateLimit": {
+        "request121": 429
+      },
+      "kpiLatency": {
+        "reportedMs": 3000,
+        "actualMs": 1800000
+      }
+    },
+    "url": {
+      "requestTarget": "//[",
+      "authenticated": false,
+      "processExitCode": 1,
+      "error": "ERR_INVALID_URL",
+      "receivedHttpResponse": false
+    },
+    "path": {
+      "escapedTemporaryWorkingDirectory": true,
+      "persistedAfterHarnessCleanup": true,
+      "entryPoint": "local harness modPath; public generated manifests use safe names"
+    },
+    "concurrency": [
+      {
+        "code": 0,
+        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n/home/artt/Projects/modding-mvp/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
+        "err": ""
+      },
+      {
+        "code": 0,
+        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n/home/artt/Projects/modding-mvp/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
+        "err": ""
+      },
+      {
+        "code": 0,
+        "out": "{\"ok\":true,\"errorType\":null,\"summary\":null}\n",
+        "err": ""
+      },
+      {
+        "code": 0,
+        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n/home/artt/Projects/modding-mvp/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
+        "err": ""
+      }
+    ]
+  },
+  "checks": {
+    "typecheck": "pass",
+    "unitTests": 180,
+    "landingSmoke": "pass",
+    "build": "pass",
+    "integrationTests": 25,
+    "serviceIntegration": {
+      "parallelFirstAttempt": "failed, Factorio lock contention",
+      "isolatedRepeat": "pass, 4 tests"
+    },
+    "containerImages": {
+      "build": "pass, web and worker",
+      "smoke": "failed, stale heading assertion"
+    },
+    "betaCompose": "pass"
+  },
+  "dependencies": {
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 3,
+        "high": 0,
+        "critical": 2
+      },
+      "dependencies": 232,
+      "devDependencies": 0,
+      "optionalDependencies": 0,
+      "totalDependencies": 232
+    },
+    "advisories": [
+      {
+        "module": "esbuild",
+        "severity": "moderate",
+        "title": "esbuild enables any website to send any requests to the development server and read the response",
+        "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+        "affected": "<=0.24.2",
+        "patched": ">=0.25.0",
+        "installedVersions": [
+          "0.18.20"
+        ]
+      },
+      {
+        "module": "vitest",
+        "severity": "moderate",
+        "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+        "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+        "affected": ">=2.1.0 <4.1.11",
+        "patched": ">=4.1.11",
+        "installedVersions": [
+          "3.2.7"
+        ]
+      },
+      {
+        "module": "@vitest/mocker",
+        "severity": "moderate",
+        "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+        "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+        "affected": ">=2.1.0 <4.1.11",
+        "patched": ">=4.1.11",
+        "installedVersions": [
+          "3.2.7"
+        ]
+      },
+      {
+        "module": "tinypool",
+        "severity": "critical",
+        "title": "Tinypool: Prototype Pollution gadget in worker options leads to Remote Code Execution",
+        "url": "https://github.com/advisories/GHSA-5gmw-xhrv-c9v3",
+        "affected": "<=2.1.0",
+        "patched": ">=2.1.1",
+        "installedVersions": [
+          "1.1.1"
+        ]
+      },
+      {
+        "module": "tinypool",
+        "severity": "critical",
+        "title": "Tinypool: Prototype Pollution Gadget to RCE in run() options",
+        "url": "https://github.com/advisories/GHSA-85c8-ppgw-ccpr",
+        "affected": "<2.1.2",
+        "patched": ">=2.1.2",
+        "installedVersions": [
+          "1.1.1"
+        ]
+      }
+    ]
+  },
+  "dependencies-production": {
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0
+      },
+      "dependencies": 70,
+      "devDependencies": 0,
+      "optionalDependencies": 0,
+      "totalDependencies": 70
+    },
+    "advisories": []
+  }
+}

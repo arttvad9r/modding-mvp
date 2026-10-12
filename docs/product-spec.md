@@ -3,6 +3,8 @@
 ## Purpose
 Build a service that turns a natural-language request into a validated, installable Factorio mod for a user who does not need to know Lua or the Factorio mod API.
 
+The service is intended to become a multi-game prompt-to-mod platform (ADR-0019). Factorio is game #1; Minecraft Java datapacks are the planned game #2. Every game is admitted only with a real automatable validation runtime, an automatically extracted knowledge catalog, and a passed licensing review before paid use.
+
 The current beta-facing product name is **MyModz**. It is still treated as a temporary name; internal repository/runtime identifiers do not need to match it yet.
 
 ## MVP promise
@@ -56,7 +58,7 @@ This changes the product promise from only “rebalance my game” to “rebalan
 - runtime `control.lua` gameplay systems;
 - generated textures, sound, 3D assets, or other media;
 - multiplayer cheats, anti-cheat interference, DRM bypass, or binary patching;
-- Minecraft, RimWorld, Terraria, or any second game;
+- a second game *in the Factorio MVP release* (game #2, Minecraft Java datapacks, follows through the GameAdapter boundary of ADR-0019; RimWorld/Terraria and loader-based JAR mods remain out of scope);
 - marketplace or social features;
 - Steam Workshop publishing;
 - complex billing or subscriptions;
@@ -79,7 +81,7 @@ These are working product hypotheses to test during private beta, not establishe
 - >= 80% overall success for prompts inside the declared supported capability set;
 - >= 60% success without a repair attempt;
 - <= 2 automatic repair attempts per generation;
-- median prompt-to-result time <= 3 minutes;
+- median prompt-to-result time <= 3 minutes, measured as wall clock from accepted prompt to published result for succeeded generations (`medianSucceededPromptToResultMs`);
 - false-success rate < 5%;
 - at least 30 private beta testers;
 - at least 10 testers create a second mod;

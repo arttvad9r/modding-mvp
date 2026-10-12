@@ -21,7 +21,7 @@ The registry publishes, for each capability:
 - `item_stack_size` — `set` / `multiply` stack size for reviewed base-game items;
 - `technology_cost` — `set` / `multiply` finite allow-listed technology `unit.count`;
 - `technology_prerequisite` — reviewed `add` / `remove` prerequisite edges;
-- `new_machine` — `create` a new assembling machine or electric furnace from a reviewed base-game template, including its item, recipe, and existing/new technology unlock; custom graphics are not generated and the inherited base assets are reused;
+- `new_machine` — `create` a new machine from one reviewed base-game template (`assembling-machine-2`, `assembling-machine-3`, `chemical-plant`, `oil-refinery`, `centrifuge`, `electric-furnace`, `electric-mining-drill`, `lab`), including its item, recipe, and existing/new technology unlock; the template's speed property is `crafting_speed`, `mining_speed`, or `researching_speed`; custom graphics are not generated and the inherited base assets are reused;
 - `new_recipe` — `create` a new alternative item-only recipe for a reviewed existing base-game result item or a `new_item` declared in the same bundle, with reviewed/same-bundle ingredients and an existing/new technology unlock;
 - `new_item` — `create` a new intermediate item cloned from a reviewed non-placeable base item template, including its own item-only recipe and existing/new technology unlock; same-bundle `new_machine` / `new_recipe` changes may consume it.
 

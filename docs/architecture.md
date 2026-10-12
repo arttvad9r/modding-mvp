@@ -1,4 +1,4 @@
-# Architecture v0.14
+# Architecture v0.15
 
 ## Current state
 M0 is complete: `packages/factorio-harness` validates a candidate mod against pinned Factorio headless 2.0.77 in an isolated temporary environment and returns structured PASS/FAIL.
@@ -21,7 +21,7 @@ Output:
 - `ok: true` when Factorio loads the mod and successfully creates a test map;
 - otherwise `ok: false` with exit code, normalized error summary, and bounded logs.
 
-Every run creates a fresh temporary directory containing a dedicated `mods/` directory, generated `mod-list.json`, and temporary output save. The supplied source mod is copied and never mutated.
+Every run creates a fresh temporary directory containing a dedicated `mods/` directory, generated `mod-list.json`, a per-run `config.ini` (own `write-data`, lock and `script-output`), and temporary output save. Candidate name/version/symlinks are validated before any copy. Bundled `space-age`/`quality`/`elevated-rails` are explicitly disabled, so validation is base-game-only. Runs are asynchronous, cancellable through an `AbortSignal`, and can optionally emit a `data.raw` dump. The supplied source mod is copied and never mutated.
 
 See ADR-0003 for why real Factorio is the validation authority.
 
@@ -58,7 +58,7 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - Only `factorio_load_failed` and `semantic_assertion_failed` are eligible for model Repair.
 - Model output is exactly a replacement `data.lua`; `info.json`, file paths/roles, ModSpec, and semantic assertions remain application-owned.
 - Repair has a hard two-attempt cap and records attempt outcome, provider/model, usage/cost metadata, duration, error, and terminal reason.
-- `packages/factorio-generator` exposes real-Factorio validation for an arbitrary bounded generated manifest while reusing its original semantic assertions.
+- `packages/factorio-generator` exposes real-Factorio validation for an arbitrary bounded generated manifest while reusing its original semantic assertions. Repaired candidates go through `validateRepairedFactorioMod`, which additionally requires identical `data.raw` with and without the companion validator and confines differences from the base game to the accepted ModSpec footprint (ADR-0018).
 - `evals/repair/golden.json` plus `pnpm repair:eval` exercise injected failures through Repair and real Factorio.
 - Z.ai Coding Plan `glm-5.3-flash` also repairs 5/5 golden cases with 5 total attempts.
 
@@ -85,7 +85,8 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `packages/service-postgres` implements a Drizzle/node-postgres repository, versioned migration, pg-boss queue, and transactional `generation row + job` submission using pg-boss `fromDrizzle`.
 - The adapter integration test boots a checksum-pinned user-space PostgreSQL 18.6 server, applies migrations, exercises revision CAS, round-trips pg-boss jobs, and proves enqueue failure rolls back the generation row.
 - `packages/service-s3` implements `ArtifactStore` with AWS SDK v3 PutObject plus short-lived presigned GetObject URLs; permanent public URLs are not persisted. Both a protocol-level test and Docker S3-compatible server test exercise upload/download bytes; the selected beta provider, SeaweedFS 4.39 on the Helsinki VPS, has also passed the hosted upload/presigned-download/delete smoke.
-- `apps/worker` registers a bounded-concurrency pg-boss consumer, invokes `processGenerationJob`, refreshes running-generation heartbeats, periodically recovers stale running records, and wires production env configuration to Postgres/S3/LLM/Factorio adapters.
+- `apps/worker` registers a bounded-concurrency pg-boss consumer, invokes `processGenerationJob`, refreshes running-generation heartbeats, periodically recovers stale running records and orphaned queued records whose pg-boss job is missing/finished, and wires production env configuration to Postgres/S3/LLM/Factorio adapters.
+- Generation lifetime is bounded end to end: per-call LLM deadline and response-size cap, an execution deadline whose `AbortSignal` reaches LLM requests and Factorio processes, and a publication deadline. Heartbeats continue through publication and expire after `execution + publication + grace`, which stays below the pg-boss job expiry. A ZIP whose terminal record cannot be persisted is deleted. See `service-contract.md`.
 - Generation jobs have `retryLimit: 0`. Retryable terminal failures are retried only by explicit owner action, which creates a fresh generation through the normal atomic submission path; terminal records are never reopened. See ADR-0014.
 - `infra/compose.integration.yaml` plus `pnpm test:service-integration` prove the full infrastructure path with Docker PostgreSQL and S3Mock while using real Factorio and a fake typed Planner provider.
 - `apps/web` exposes the private-beta HTTP API with opaque bearer authentication, owner-scoped generation access, PostgreSQL-backed user/IP rate limiting, terminal feedback, and short-lived signed artifact downloads. The API never runs Planner/Factorio synchronously.
@@ -108,6 +109,9 @@ No LLM is required for the deterministic core. Generator correctness and the Fac
 - `packages/service-s3`: private S3-compatible artifact upload and presigned download adapter.
 - `apps/worker`: asynchronous generation job consumer.
 - `apps/web`: private-beta UI/API.
+
+## Planned platform boundary (ADR-0019)
+The service is a multi-game platform with Factorio as game #1. Before game #2 (Minecraft Java datapacks), a behavior-preserving refactor introduces a `GameAdapter` contract. It owns the catalog/registry, typed changes, Planner scope, deterministic generator, real-runtime validator with integrity check, packaging and UI rendering. Shared layers (`domain` core, `service-core`, `agent-core` orchestration, `apps/*`) stop importing Factorio types, and generation records carry `game`. Knowledge catalogs are extracted automatically from game data. Until that refactor lands, the current `factorio-*` package boundaries remain authoritative.
 
 ## Architecture invariants
 - Factorio-specific behavior stays behind Factorio package boundaries.

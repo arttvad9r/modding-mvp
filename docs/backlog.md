@@ -256,6 +256,62 @@ Before starting M2:
 - [x] Exclude explicit internal/operator smoke accounts and all of their activity from product KPI reporting.
 - [ ] Recruit 30+ testers and evaluate the M6 product hypotheses from observed data.
 
+### Audit 2026-10-11 remediation (`docs/audits/2026-10-11.md`)
+- [x] A01 — reject malformed request targets with 400 and convert unexpected handler rejections into 500 without crashing the process.
+- [x] A02 — Repair integrity: identical `data.raw` with and without the validator, and differences from base confined to the ModSpec footprint; base-only validation with bundled DLCs disabled (ADR-0018).
+- [x] A03 — LLM per-call deadline (headers and body) plus response cap; execution deadline `AbortSignal` through executor, pipeline, LLM and Factorio; heartbeat lifetime is bounded.
+- [x] A04 — reconcile orphaned `queued` records against pg-boss job state (missing/finished become retryable `failed`; pending/active are left alone).
+- [x] A05 — retrying a failed revision keeps `sourceGenerationId` and `baseModSpec`.
+- [x] A06 — per-run Factorio `config.ini`/`write-data`/lock; a lock race is a `process_error`.
+- [x] A07 — heartbeat through publication, `finishedAt` after upload, publish deadline, orphan object deletion.
+- [x] A08 — pre-auth IP budget above route budgets, plus a separate failed-auth bucket.
+- [x] A09 — UI poll epoch/abort guard against stale responses.
+- [x] A10 — wall-clock prompt-to-result, succeeded-only latency, queue wait and execution KPIs.
+- [x] A11 — container web smoke matches the current UI.
+- [x] A12 — Vitest 4.1.11, scoped override for drizzle-kit's unused `@esbuild-kit` esbuild; `pnpm audit` is clean.
+- [x] A13 — bounded batched retention of rate-limit buckets older than 24 h.
+- [x] A14 — harness validates candidate name/version/symlinks and destination containment before copying.
+- [x] Run `pnpm test:container-images` and `pnpm test:service-integration` on the remediation tree (2026-10-12, green).
+- [ ] Deploy the remediation runtime, then re-run hosted S3 smoke, live E2E and verify-stack.
+- [ ] Add readiness (DB/queue/store) separate from `/health/live`, a worker healthcheck, and alerting on queue age and terminal error rate.
+- [ ] Add CPU/memory/pid limits to beta Compose sized from measured Factorio load.
+- [ ] Add a curl deadline and a single-writer lock to the Factorio runtime cache install.
+- [ ] Document and run a PostgreSQL/S3 backup and restore drill with RPO/RTO.
+- [ ] Add CI workflow running typecheck, unit tests and build on every push.
+
+## M7 — Platform foundation — planned (ADR-0019)
+- [ ] Define the `GameAdapter` contract:
+  - id and version line;
+  - catalog/registry;
+  - change schema;
+  - Planner/Revision scope;
+  - generator and assertions;
+  - validator plus integrity;
+  - packaging;
+  - UI renderer.
+- [ ] Move the Factorio change union/ModSpec root out of the shared `domain` core; keep shared `ProjectError`, manifest and lifecycle contracts game-neutral.
+- [ ] Make `service-core`, `agent-core` orchestration and `apps/*` depend on the contract only; add a lint/test that shared packages do not import `factorio-*`.
+- [ ] Add `game` to generation records (schema bump with backward-compatible default `factorio`), plus worker/executor adapter dispatch.
+- [ ] Per-game UI rendering of accepted changes and revision diffs.
+- [ ] Factorio catalog extraction from `data.raw` dumps with reviewed policy (type/property allow-lists, numeric bounds, exclusions); regenerate baselines and prove parity with the current hand-curated catalog.
+- [ ] Expand Factorio Planner scope from the extracted catalog and re-run the Planner/Repair evals.
+- [ ] Generalize the integrity interface (installed-environment comparison plus footprint) for adapters.
+
+## M8 — Minecraft Java datapacks — planned
+- [ ] Choose the pinned Minecraft Java release and record the version policy.
+- [ ] Complete the licensing review of Mojang's EULA and commercial usage guidelines for running the official server in the service, before any paid use.
+- [ ] Add a checksum-pinned official server runtime fetched into cache; headless datapack load/reload harness with bounded logs, timeouts and isolated worlds.
+- [ ] Add catalog extraction from vanilla data generators (recipes, items, tags, loot tables, advancements).
+- [ ] Define typed datapack change families, deterministic JSON/`.mcfunction` generator and packaging.
+- [ ] Add in-game semantic assertions and the installed-environment integrity check.
+- [ ] Add EN/RU Minecraft Planner golden corpus and eval gates (classification >= 90%, exact supported specs >= 80%).
+- [ ] Add UI game selection, per-game examples and install guidance.
+
+## M9 — Monetization and server-owner tier — planned
+- [ ] Obtain written permission from Wube for using Factorio headless in a paid service.
+- [ ] Write the pricing/billing ADR from observed unit economics, retention and willingness to pay.
+- [ ] Define the server-owner tier: server-side-only modifications, per-game eligibility and licensing preconditions.
+
 ## Agent task template
 A task sent to Codex/Claude should include:
 
