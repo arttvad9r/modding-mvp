@@ -11,3 +11,6 @@ coverage/
 
 keys.txt
 .runs/
+
+# QA screenshots are local review artifacts, not source
+apps/landing/screenshots/

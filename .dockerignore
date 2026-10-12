@@ -11,3 +11,6 @@ node_modules
 dist
 coverage
 *.log
+
+# QA screenshots are not part of any runtime image
+apps/landing/screenshots
