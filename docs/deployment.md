@@ -181,6 +181,8 @@ Readiness (database, pg-boss queue, object storage) is separate:
 curl -fsS http://127.0.0.1:3000/health/ready
 ```
 
+When web's `S3_ENDPOINT` is a public name used only for signing download URLs (as in the Tailscale topology), set `S3_READINESS_ENDPOINT` to the internal object-storage URL (for example `http://object-storage:8333`) so the storage check probes the same bucket and credentials from inside the network.
+
 Route public traffic on readiness; keep the container healthcheck on liveness so a dependency outage does not restart-loop web.
 
 If `API_TRUST_PROXY=true`, configure it only behind the controlled proxy and ensure the proxy overwrites client forwarding headers.

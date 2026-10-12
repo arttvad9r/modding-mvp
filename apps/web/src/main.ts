@@ -65,8 +65,7 @@ async function main(): Promise<void> {
   if ((accessKeyId === undefined) !== (secretAccessKey === undefined)) {
     throw new Error("S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY must be configured together");
   }
-  const endpoint = optional("S3_ENDPOINT");
-  const artifactStore = createS3ArtifactStore({
+  const storeAt = (endpoint: string | undefined) => createS3ArtifactStore({
     bucket: required("S3_BUCKET"),
     region: optional("S3_REGION") ?? "us-east-1",
     ...(endpoint === undefined ? {} : { endpoint }),
@@ -75,6 +74,11 @@ async function main(): Promise<void> {
       ? {}
       : { credentials: { accessKeyId, secretAccessKey } }),
   });
+  // Web only signs download URLs against S3_ENDPOINT, which may be a public name that does not
+  // resolve inside the container; readiness can probe the same bucket through an internal endpoint.
+  const artifactStore = storeAt(optional("S3_ENDPOINT"));
+  const readinessEndpoint = optional("S3_READINESS_ENDPOINT");
+  const readinessStore = readinessEndpoint === undefined ? artifactStore : storeAt(readinessEndpoint);
 
   const repository = new PostgresGenerationRepository(database.db);
   const users = new PostgresServiceUserRepository(database.db);
@@ -82,7 +86,7 @@ async function main(): Promise<void> {
   const surveys = new PostgresBetaSurveyRepository(database.db);
   const submissionStore = new PostgresGenerationSubmissionStore(database.db, queue);
   const readiness = createReadinessProbe({
-    checks: serviceReadinessChecks({ database: database.pool, queue, storage: artifactStore }),
+    checks: serviceReadinessChecks({ database: database.pool, queue, storage: readinessStore }),
     onCheckFailure: (component, error) => {
       console.error(JSON.stringify({
         type: "readiness_check_failed",

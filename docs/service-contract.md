@@ -127,7 +127,7 @@ The pre-auth IP budget is deliberately larger than every route budget behind it,
 
 ## Implemented HTTP endpoints
 - `GET /health/live` — unauthenticated liveness check; never touches dependencies.
-- `GET /health/ready` — unauthenticated readiness: PostgreSQL `select 1`, pg-boss generation queue present, object-storage bucket reachable (`HeadBucket`). Returns `200 {"status":"ready","checks":{...}}` or `503 {"status":"not_ready","checks":{...}}` with only `ok`/`fail` per component; failure details go to the server log. Each check has a 2 s deadline and the report is cached for 5 s so the endpoint cannot amplify load. Use it for load-balancer/ingress routing, not for container restarts.
+- `GET /health/ready` — unauthenticated readiness: PostgreSQL `select 1`, pg-boss generation queue present, object-storage bucket reachable (`HeadBucket`, through `S3_READINESS_ENDPOINT` when set, because the signing `S3_ENDPOINT` may be a public name unreachable from inside the web container). Returns `200 {"status":"ready","checks":{...}}` or `503 {"status":"not_ready","checks":{...}}` with only `ok`/`fail` per component; failure details go to the server log. Each check has a 2 s deadline and the report is cached for 5 s so the endpoint cannot amplify load. Use it for load-balancer/ingress routing, not for container restarts.
 - `POST /v1/generations` — authenticate, rate-limit, atomically persist+enqueue, return `202`.
 - `GET /v1/generations?limit=1..20` — owner-scoped newest-first recent-generation history.
 - `GET /v1/generations/:id` — owner-scoped status/result; internal `userId`, `baseModSpec`, and object-store key are omitted; successful revisions may include a derived public diff.
