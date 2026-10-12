@@ -8,10 +8,12 @@ import {
   PostgresRateLimitStore,
   PostgresServiceUserRepository,
   createServicePostgresClient,
+  deleteExpiredRateLimitBuckets,
 } from "@project/service-postgres";
 import { createS3ArtifactStore } from "@project/service-s3";
 
 import { createGenerationApiHandler } from "./api.js";
+import { createWebRequestListener } from "./server.js";
 import { createPrivateBetaWebHandler } from "./ui.js";
 
 function optional(name: string): string | undefined {
@@ -31,6 +33,14 @@ function boolean(name: string, fallback: boolean): boolean {
   if (value === "1" || value.toLowerCase() === "true") return true;
   if (value === "0" || value.toLowerCase() === "false") return false;
   throw new Error(`${name} must be true/false or 1/0`);
+}
+
+function boundedInteger(name: string, fallback: number, min: number, max: number): number {
+  const raw = optional(name);
+  if (raw === undefined) return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < min || value > max) throw new Error(`${name} must be an integer ${min}..${max}`);
+  return value;
 }
 
 function port(): number {
@@ -81,9 +91,7 @@ async function main(): Promise<void> {
     trustProxy: boolean("API_TRUST_PROXY", false),
   });
   const handler = createPrivateBetaWebHandler(apiHandler);
-  const server = createServer((request, response) => {
-    void handler(request, response);
-  });
+  const server = createServer(createWebRequestListener(handler));
   const host = optional("API_HOST") ?? "127.0.0.1";
   const listenPort = port();
 
@@ -93,12 +101,31 @@ async function main(): Promise<void> {
   });
   console.log(JSON.stringify({ status: "READY", host, port: listenPort }));
 
+  const cleanupIntervalMs = boundedInteger("RATE_LIMIT_CLEANUP_INTERVAL_MS", 15 * 60_000, 60_000, 24 * 60 * 60_000);
+  let cleanupInFlight: Promise<void> = Promise.resolve();
+  const cleanupRateLimits = () => {
+    cleanupInFlight = deleteExpiredRateLimitBuckets(database.db)
+      .then((result) => {
+        if (result.deleted > 0 || result.truncated) {
+          console.log(JSON.stringify({ type: "rate_limit_cleanup", ...result }));
+        }
+      })
+      .catch((error) => {
+        console.error(JSON.stringify({ type: "rate_limit_cleanup_error", message: String(error) }));
+      });
+  };
+  cleanupRateLimits();
+  const cleanupTimer = setInterval(cleanupRateLimits, cleanupIntervalMs);
+  cleanupTimer.unref();
+
   let closing = false;
   const shutdown = async (signal: string) => {
     if (closing) return;
     closing = true;
     console.log(JSON.stringify({ status: "STOPPING", signal }));
+    clearInterval(cleanupTimer);
     await new Promise<void>((resolve) => server.close(() => resolve())).catch(() => undefined);
+    await cleanupInFlight;
     await queue.stop().catch(() => undefined);
     await database.close().catch(() => undefined);
   };

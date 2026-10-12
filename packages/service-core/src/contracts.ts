@@ -216,10 +216,22 @@ export interface GenerationRepository {
   ): Promise<boolean>;
   listByUserCreatedDesc(userId: string, limit: number): Promise<readonly GenerationRecord[]>;
   listRunningUpdatedBefore(cutoff: string, limit: number): Promise<readonly RunningGenerationRecord[]>;
+  listQueuedCreatedBefore(cutoff: string, limit: number): Promise<readonly QueuedGenerationRecord[]>;
 }
 
 export interface GenerationQueue {
   enqueue(job: GenerationJob): Promise<void>;
+}
+
+/**
+ * Queue-side lifecycle of the jobs that reference one generation:
+ * `pending` (waiting or scheduled for retry), `active` (fetched by a worker),
+ * `finished` (completed, failed or cancelled) or `missing` (no job exists).
+ */
+export type GenerationJobState = "pending" | "active" | "finished" | "missing";
+
+export interface GenerationJobInspector {
+  jobState(generationId: string): Promise<GenerationJobState>;
 }
 
 export interface GenerationSubmissionStore {
@@ -231,10 +243,14 @@ export interface ArtifactStorePutInput {
   readonly fileName: string;
   readonly contentType: "application/zip";
   readonly bytes: Uint8Array;
+  /** Aborts the upload when the worker's publication deadline expires. */
+  readonly signal?: AbortSignal;
 }
 
 export interface ArtifactStore {
   put(input: ArtifactStorePutInput): Promise<ArtifactRef>;
+  /** Removes an object that no persisted generation references. Missing objects are not an error. */
+  delete(key: string): Promise<void>;
 }
 
 export interface ArtifactDownloadSigner {
@@ -268,5 +284,7 @@ export interface GenerationExecutor {
     readonly generationId: string;
     readonly prompt: string;
     readonly baseModSpec?: ModSpec;
+    /** Aborted when the worker's execution deadline expires; executors must stop real work. */
+    readonly signal?: AbortSignal;
   }): Promise<ServiceGenerationExecution>;
 }

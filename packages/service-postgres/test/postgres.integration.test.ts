@@ -6,10 +6,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
+import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import {
   authenticateAccessToken,
   createServiceUser,
+  reconcileOrphanedQueuedGenerations,
   submitGeneration,
   submitGenerationAtomically,
   type GenerationRecord,
@@ -24,8 +26,10 @@ import {
   PostgresGenerationSubmissionStore,
   PostgresRateLimitStore,
   PostgresServiceUserRepository,
+  MAX_RATE_WINDOW_MS,
   buildBetaKpiReport,
   createServicePostgresClient,
+  deleteExpiredRateLimitBuckets,
 } from "../src/index.js";
 
 const execFileAsync = promisify(execFile);
@@ -166,6 +170,34 @@ describe("PostgreSQL service adapters", () => {
     ).resolves.toMatchObject({ allowed: true, remaining: 1 });
   });
 
+  it("deletes only expired rate-limit buckets in bounded batches", async () => {
+    const limiter = new PostgresRateLimitStore(client.db);
+    const now = new Date("2026-10-20T23:00:00.000Z");
+    const expired = new Date(now.getTime() - MAX_RATE_WINDOW_MS - 60_000);
+    for (let index = 0; index < 5; index += 1) {
+      await limiter.consume({ key: `ip:retention-old-${index}:auth`, limit: 10, windowMs: 60_000, now: expired });
+    }
+    // A full-day window last touched 22.5 h ago is still the current window and must survive.
+    const live = new Date("2026-10-20T00:30:00.000Z");
+    await limiter.consume({ key: "user:retention-live:create", limit: 10, windowMs: MAX_RATE_WINDOW_MS, now: live });
+
+    await expect(deleteExpiredRateLimitBuckets(client.db, { now, retentionMs: 1_000 })).rejects.toThrow(/retention/);
+    const firstRun = await deleteExpiredRateLimitBuckets(client.db, { now, batchSize: 2, maxBatches: 2 });
+    expect(firstRun).toMatchObject({ deleted: 4, truncated: true });
+    const secondRun = await deleteExpiredRateLimitBuckets(client.db, { now, batchSize: 2, maxBatches: 2 });
+    expect(secondRun.deleted).toBeGreaterThanOrEqual(1);
+    expect(secondRun.truncated).toBe(false);
+    expect(typeof secondRun.estimatedRows).toBe("number");
+
+    const remaining = await client.db.execute<{ key: string }>(
+      sql`select key from rate_limit_buckets where key like '%retention%' order by key`,
+    );
+    expect(remaining.rows.map((row) => row.key)).toEqual(["user:retention-live:create"]);
+    await expect(
+      limiter.consume({ key: "user:retention-live:create", limit: 10, windowMs: MAX_RATE_WINDOW_MS, now }),
+    ).resolves.toMatchObject({ remaining: 8 });
+  });
+
   it("excludes internal users, their generations, and surveys from beta KPI reporting", async () => {
     const surveys = new PostgresBetaSurveyRepository(client.db);
     await surveys.upsert({
@@ -250,6 +282,73 @@ describe("PostgreSQL service adapters", () => {
         10,
       ),
     ).toEqual([running]);
+  });
+
+  it("reports pg-boss job state so orphaned queued generations fail without touching live jobs", async () => {
+    const repository = new PostgresGenerationRepository(client.db);
+    const createdAt = new Date("2026-10-11T00:02:00.000Z");
+    const ids = {
+      pending: "77777777-7777-4777-8777-777777777771",
+      active: "77777777-7777-4777-8777-777777777772",
+      finished: "77777777-7777-4777-8777-777777777773",
+      missing: "77777777-7777-4777-8777-777777777774",
+    } as const;
+    for (const id of [ids.pending, ids.active, ids.finished]) {
+      await submitGeneration({
+        userId,
+        repository,
+        queue,
+        prompt: "Make steel furnaces twice as fast",
+        generationId: () => id,
+        now: () => createdAt,
+      });
+    }
+    await submitGeneration({
+      userId,
+      repository,
+      queue: { async enqueue() {} },
+      prompt: "Make steel furnaces twice as fast",
+      generationId: () => ids.missing,
+      now: () => createdAt,
+    });
+
+    const fetched = await queue.boss.fetch<{ schemaVersion: 1; generationId: string }>(GENERATION_QUEUE_NAME, {
+      batchSize: 2,
+    });
+    const jobById = new Map(fetched.map((job) => [job.data.generationId, job.id]));
+    expect(jobById.size).toBe(2);
+    // Fetch order is not part of the contract; keep exactly one job active and finish another.
+    const [activeId, finishedId] = [...jobById.keys()];
+    await queue.boss.complete(GENERATION_QUEUE_NAME, jobById.get(finishedId!)!);
+    const pendingId = [ids.pending, ids.active, ids.finished].find((id) => id !== activeId && id !== finishedId)!;
+
+    expect(await queue.jobState(activeId!)).toBe("active");
+    expect(await queue.jobState(finishedId!)).toBe("finished");
+    expect(await queue.jobState(pendingId)).toBe("pending");
+    expect(await queue.jobState(ids.missing)).toBe("missing");
+
+    const queued = await repository.listQueuedCreatedBefore("2026-10-11T00:03:00.000Z", 100);
+    expect(queued.map((record) => record.id)).toEqual(expect.arrayContaining(Object.values(ids)));
+    expect(queued.every((record) => record.status === "queued")).toBe(true);
+
+    await reconcileOrphanedQueuedGenerations({
+      repository,
+      jobs: queue,
+      queuedForMs: 60_000,
+      now: () => new Date("2026-10-11T00:04:00.000Z"),
+    });
+    expect(await repository.get(activeId!)).toMatchObject({ status: "queued" });
+    expect(await repository.get(pendingId)).toMatchObject({ status: "queued" });
+    for (const id of [finishedId!, ids.missing]) {
+      expect(await repository.get(id)).toMatchObject({
+        status: "failed",
+        error: { code: "process_error", retryable: true },
+      });
+    }
+
+    const remaining = await queue.boss.fetch(GENERATION_QUEUE_NAME, { batchSize: 10 });
+    for (const job of remaining) await queue.boss.complete(GENERATION_QUEUE_NAME, job.id);
+    await queue.boss.complete(GENERATION_QUEUE_NAME, jobById.get(activeId!)!);
   });
 
   it("commits generation + pg-boss job atomically and rolls the row back when enqueue fails", async () => {

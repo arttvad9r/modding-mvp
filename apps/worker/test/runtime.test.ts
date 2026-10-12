@@ -28,6 +28,12 @@ class MemoryRepository implements GenerationRepository {
       .slice(0, limit);
   }
   async listRunningUpdatedBefore() { return []; }
+  async listQueuedCreatedBefore(cutoff: string, limit: number) {
+    return [...this.records.values()]
+      .filter((record): record is QueuedGenerationRecord =>
+        record.status === "queued" && record.createdAt < cutoff)
+      .slice(0, limit);
+  }
 }
 
 const userId = "00000000-0000-4000-8000-000000000001";
@@ -49,11 +55,16 @@ describe("generation worker runtime", () => {
 
     let started = 0;
     let stopped = 0;
+    const inspectedJobs: string[] = [];
     let handler: ((jobs: Array<{ data: unknown }>) => Promise<void>) | undefined;
     const queue = {
       queueName: "factorio-generation",
       async start() { started += 1; },
       async stop() { stopped += 1; },
+      async jobState(generationId: string) {
+        inspectedJobs.push(generationId);
+        return "pending";
+      },
       boss: {
         async work(_name: string, _options: unknown, next: typeof handler) {
           handler = next;
@@ -63,6 +74,7 @@ describe("generation worker runtime", () => {
     } as unknown as PgBossGenerationQueue;
     const artifactStore: ArtifactStore = {
       async put() { throw new Error("unsupported result must not publish artifact"); },
+      async delete() { throw new Error("unsupported result must not delete artifacts"); },
     };
     const executor: GenerationExecutor = {
       async execute() {
@@ -87,6 +99,8 @@ describe("generation worker runtime", () => {
     });
     expect(runtime.workerId).toBe("worker-123");
     expect(started).toBe(1);
+    expect(inspectedJobs).toEqual([id]);
+    expect(await repository.get(id)).toMatchObject({ status: "queued" });
     expect(handler).toBeDefined();
 
     await handler!([{ data: { schemaVersion: 1, generationId: id } }]);
@@ -94,5 +108,19 @@ describe("generation worker runtime", () => {
 
     await runtime.stop();
     expect(stopped).toBe(1);
+  });
+
+  it("refuses deadlines that would outlive the pg-boss job expiry", async () => {
+    let started = 0;
+    const queue = { async start() { started += 1; } } as unknown as PgBossGenerationQueue;
+    await expect(startGenerationWorker({
+      queue,
+      repository: new MemoryRepository(),
+      artifactStore: { async put() { throw new Error("unused"); }, async delete() {} },
+      executor: { async execute() { throw new Error("unused"); } },
+      executionTimeoutMs: 800_000,
+      publishTimeoutMs: 60_000,
+    })).rejects.toThrow(/pg-boss job expiry/);
+    expect(started).toBe(0);
   });
 });

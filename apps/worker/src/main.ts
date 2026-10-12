@@ -74,6 +74,9 @@ async function main(): Promise<void> {
   const heartbeatIntervalMs = positiveInteger("WORKER_HEARTBEAT_MS");
   const staleAfterMs = positiveInteger("WORKER_STALE_AFTER_MS");
   const staleRecoveryIntervalMs = positiveInteger("WORKER_RECOVERY_INTERVAL_MS");
+  const executionTimeoutMs = positiveInteger("WORKER_EXECUTION_TIMEOUT_MS");
+  const publishTimeoutMs = positiveInteger("WORKER_PUBLISH_TIMEOUT_MS");
+  const orphanQueuedAfterMs = positiveInteger("WORKER_ORPHAN_QUEUED_AFTER_MS");
   const runtime = await startGenerationWorker({
     queue,
     repository,
@@ -83,6 +86,9 @@ async function main(): Promise<void> {
     ...(heartbeatIntervalMs === undefined ? {} : { heartbeatIntervalMs }),
     ...(staleAfterMs === undefined ? {} : { staleAfterMs }),
     ...(staleRecoveryIntervalMs === undefined ? {} : { staleRecoveryIntervalMs }),
+    ...(executionTimeoutMs === undefined ? {} : { executionTimeoutMs }),
+    ...(publishTimeoutMs === undefined ? {} : { publishTimeoutMs }),
+    ...(orphanQueuedAfterMs === undefined ? {} : { orphanQueuedAfterMs }),
     onRecoveryError(error) {
       console.error(JSON.stringify({ type: "worker_recovery_error", message: String(error) }));
     },

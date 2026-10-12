@@ -100,4 +100,21 @@ export class PostgresGenerationRepository implements GenerationRepository {
       return record;
     });
   }
+
+  async listQueuedCreatedBefore(
+    cutoff: string,
+    limit: number,
+  ): Promise<readonly QueuedGenerationRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(generations)
+      .where(and(eq(generations.status, "queued"), lt(generations.createdAt, new Date(cutoff))))
+      .orderBy(asc(generations.createdAt))
+      .limit(limit);
+    return rows.map((row) => {
+      const record = rowToRecord(row);
+      if (record.status !== "queued") throw new Error(`Expected queued generation: ${record.id}`);
+      return record;
+    });
+  }
 }

@@ -55,7 +55,9 @@ export class PostgresServiceUserRepository implements ServiceUserRepository {
 }
 
 const MAX_RATE_LIMIT = 100_000;
-const MAX_RATE_WINDOW_MS = 24 * 60 * 60_000;
+export const MAX_RATE_WINDOW_MS = 24 * 60 * 60_000;
+const DEFAULT_RATE_LIMIT_DELETE_BATCH = 1_000;
+const DEFAULT_RATE_LIMIT_MAX_BATCHES = 20;
 
 function validateRateLimit(input: RateLimitConsumeInput): {
   key: string;
@@ -103,4 +105,69 @@ export class PostgresRateLimitStore implements RateLimitStore {
       resetAt: new Date(windowStartMs + windowMs).toISOString(),
     };
   }
+}
+
+export interface RateLimitCleanupOptions {
+  readonly now?: Date;
+  /**
+   * Buckets untouched for this long are removed. `updatedAt >= windowStart` and every accepted window is
+   * at most MAX_RATE_WINDOW_MS, so the default horizon never drops a window that can still be counted.
+   */
+  readonly retentionMs?: number;
+  readonly batchSize?: number;
+  readonly maxBatches?: number;
+}
+
+export interface RateLimitCleanupResult {
+  readonly deleted: number;
+  /** True when the run stopped at maxBatches with more expired rows likely left for the next run. */
+  readonly truncated: boolean;
+  /** Planner row estimate after cleanup (pg_class.reltuples); -1 before the table was ever analyzed. */
+  readonly estimatedRows: number;
+}
+
+/** Bounded, batched deletion of expired rate-limit buckets using `rate_limit_updated_idx`. */
+export async function deleteExpiredRateLimitBuckets(
+  db: ServicePostgresDb,
+  options: RateLimitCleanupOptions = {},
+): Promise<RateLimitCleanupResult> {
+  const retentionMs = options.retentionMs ?? MAX_RATE_WINDOW_MS;
+  const batchSize = options.batchSize ?? DEFAULT_RATE_LIMIT_DELETE_BATCH;
+  const maxBatches = options.maxBatches ?? DEFAULT_RATE_LIMIT_MAX_BATCHES;
+  if (!Number.isInteger(retentionMs) || retentionMs < MAX_RATE_WINDOW_MS) {
+    throw new Error(`Rate-limit retention must be an integer >= ${MAX_RATE_WINDOW_MS} ms`);
+  }
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 10_000) {
+    throw new Error("Rate-limit cleanup batch size must be an integer in range 1..10000");
+  }
+  if (!Number.isInteger(maxBatches) || maxBatches < 1 || maxBatches > 1_000) {
+    throw new Error("Rate-limit cleanup max batches must be an integer in range 1..1000");
+  }
+  const now = options.now ?? new Date();
+  const cutoff = new Date(now.getTime() - retentionMs);
+
+  let deleted = 0;
+  let truncated = false;
+  for (let batch = 0; batch < maxBatches; batch += 1) {
+    const result = await db.execute(sql`
+      delete from ${rateLimitBuckets}
+      where (${rateLimitBuckets.key}, ${rateLimitBuckets.windowStart}) in (
+        select ${rateLimitBuckets.key}, ${rateLimitBuckets.windowStart}
+        from ${rateLimitBuckets}
+        where ${rateLimitBuckets.updatedAt} < ${cutoff}
+        order by ${rateLimitBuckets.updatedAt}
+        limit ${batchSize}
+      )
+    `);
+    const count = result.rowCount ?? 0;
+    deleted += count;
+    if (count < batchSize) break;
+    if (batch === maxBatches - 1) truncated = true;
+  }
+
+  const estimate = await db.execute<{ estimate: number | string | null }>(
+    sql`select reltuples as estimate from pg_class where oid = to_regclass('rate_limit_buckets')`,
+  );
+  const estimatedRows = Math.round(Number(estimate.rows[0]?.estimate ?? -1));
+  return { deleted, truncated, estimatedRows };
 }

@@ -1,6 +1,12 @@
 import { PgBoss } from "pg-boss";
 
-import { GenerationJobSchema, type GenerationJob, type GenerationQueue } from "@project/service-core";
+import {
+  GenerationJobSchema,
+  type GenerationJob,
+  type GenerationJobInspector,
+  type GenerationJobState,
+  type GenerationQueue,
+} from "@project/service-core";
 
 export const GENERATION_QUEUE_NAME = "factorio-generation";
 export const GENERATION_QUEUE_OPTIONS = {
@@ -15,7 +21,7 @@ export interface PgBossGenerationQueueOptions {
   readonly queueName?: string;
 }
 
-export class PgBossGenerationQueue implements GenerationQueue {
+export class PgBossGenerationQueue implements GenerationQueue, GenerationJobInspector {
   readonly boss: PgBoss;
   readonly queueName: string;
   private started = false;
@@ -42,6 +48,15 @@ export class PgBossGenerationQueue implements GenerationQueue {
     const job = GenerationJobSchema.parse(input);
     const id = await this.boss.send(this.queueName, job, { retryLimit: GENERATION_QUEUE_OPTIONS.retryLimit });
     if (id === null) throw new Error("pg-boss did not create generation job");
+  }
+
+  async jobState(generationId: string): Promise<GenerationJobState> {
+    if (!this.started) throw new Error("PgBossGenerationQueue must be started before inspecting jobs");
+    const jobs = await this.boss.findJobs(this.queueName, { data: { generationId } });
+    const states = new Set(jobs.map((job) => job.state));
+    if (states.has("created") || states.has("retry")) return "pending";
+    if (states.has("active")) return "active";
+    return jobs.length > 0 ? "finished" : "missing";
   }
 
   async stop(): Promise<void> {

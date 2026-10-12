@@ -11,9 +11,11 @@ import {
   GenerationJobSchema,
   GenerationRecordSchema,
   GenerationTelemetrySchema,
+  type ArtifactRef,
   type ArtifactStore,
   type GenerationExecutor,
   type GenerationJob,
+  type GenerationJobInspector,
   type GenerationRecord,
   type GenerationRepository,
   type RunningGenerationRecord,
@@ -27,6 +29,10 @@ export interface ProcessGenerationJobOptions {
   readonly job: GenerationJob;
   readonly now?: () => Date;
   readonly heartbeatIntervalMs?: number;
+  /** Deadline for executor work (Planner, Factorio, Repair). The executor receives an abort signal. */
+  readonly executionTimeoutMs?: number;
+  /** Deadline for publishing a successful artifact to the object store. */
+  readonly publishTimeoutMs?: number;
 }
 
 export interface ProcessGenerationJobResult {
@@ -38,6 +44,10 @@ const MAX_SERVICE_ARTIFACT_BYTES = 10 * 1024 * 1024;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 const MIN_HEARTBEAT_INTERVAL_MS = 10;
 const MAX_HEARTBEAT_INTERVAL_MS = 300_000;
+// Execution + publication + grace must stay below the pg-boss job expiration (900 s).
+export const DEFAULT_EXECUTION_TIMEOUT_MS = 600_000;
+export const DEFAULT_PUBLISH_TIMEOUT_MS = 120_000;
+export const HEARTBEAT_GRACE_MS = 60_000;
 
 function terminal(record: GenerationRecord): boolean {
   return record.status === "succeeded" || record.status === "unsupported" || record.status === "failed";
@@ -54,7 +64,11 @@ function startRunningHeartbeat(
   initial: RunningGenerationRecord,
   intervalMs: number,
   now: () => Date,
+  maxLifetimeMs: number,
 ): { stop(): Promise<HeartbeatStopResult> } {
+  // A worker that outlives every deadline stops renewing its claim, so stale recovery can
+  // terminate the record even if an executor ignores cancellation.
+  const expiresAt = now().getTime() + maxLifetimeMs;
   let current = initial;
   let stopped = false;
   let timer: NodeJS.Timeout | undefined;
@@ -72,6 +86,7 @@ function startRunningHeartbeat(
 
   const beat = async (): Promise<void> => {
     if (stopped || lostRecord !== undefined || heartbeatError !== undefined) return;
+    if (now().getTime() > expiresAt) return;
     try {
       const updatedAt = now().toISOString();
       const next = GenerationRecordSchema.parse({
@@ -240,6 +255,99 @@ async function persistTerminal(
   return versioned;
 }
 
+function boundedTimeout(value: number | undefined, fallback: number, label: string): number {
+  const resolved = value ?? fallback;
+  if (!Number.isInteger(resolved) || resolved < 1 || resolved > 3_600_000) {
+    throw new ProjectError({
+      code: "input_error",
+      stage: "input",
+      message: `${label} must be an integer in range 1..3600000 ms`,
+    });
+  }
+  return resolved;
+}
+
+async function executeWithDeadline(
+  executor: GenerationExecutor,
+  claimed: RunningGenerationRecord,
+  timeoutMs: number,
+): Promise<{ execution?: ServiceGenerationExecution; error?: unknown }> {
+  const deadline = new AbortController();
+  const timer = setTimeout(() => deadline.abort(), timeoutMs);
+  timer.unref?.();
+  try {
+    const execution = normalizeExecution(
+      await executor.execute({
+        generationId: claimed.id,
+        prompt: claimed.prompt,
+        ...(claimed.baseModSpec === undefined ? {} : { baseModSpec: claimed.baseModSpec }),
+        signal: deadline.signal,
+      }),
+    );
+    return { execution };
+  } catch (error) {
+    return { error };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function publishArtifact(
+  store: ArtifactStore,
+  key: string,
+  artifact: { readonly fileName: string; readonly bytes: Uint8Array },
+  timeoutMs: number,
+) {
+  const deadline = new AbortController();
+  let timer: NodeJS.Timeout | undefined;
+  const timedOut = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      deadline.abort();
+      reject(new ProjectError({
+        code: "process_error",
+        stage: "process",
+        message: `Artifact publication exceeded ${timeoutMs} ms`,
+        retryable: true,
+      }));
+    }, timeoutMs);
+    timer.unref?.();
+  });
+  try {
+    const published = ArtifactRefSchema.parse(
+      await Promise.race([
+        store.put({
+          key,
+          fileName: artifact.fileName,
+          contentType: "application/zip",
+          bytes: artifact.bytes,
+          signal: deadline.signal,
+        }),
+        timedOut,
+      ]),
+    );
+    if (
+      published.key !== key ||
+      published.fileName !== artifact.fileName ||
+      published.contentType !== "application/zip" ||
+      published.sizeBytes !== artifact.bytes.byteLength
+    ) {
+      throw new ProjectError({
+        code: "internal_error",
+        stage: "internal",
+        message: "Artifact store returned metadata that does not match the published ZIP",
+      });
+    }
+    return published;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function removeOrphan(store: ArtifactStore, key: string): Promise<void> {
+  // Best effort: the object is private and unreferenced, so a failed delete leaks storage only.
+  await store.delete(key).catch(() => undefined);
+}
+
 export async function processGenerationJob(
   options: ProcessGenerationJobOptions,
 ): Promise<ProcessGenerationJobResult> {
@@ -257,6 +365,8 @@ export async function processGenerationJob(
       message: `Generation heartbeat interval must be an integer in range ${MIN_HEARTBEAT_INTERVAL_MS}..${MAX_HEARTBEAT_INTERVAL_MS} ms`,
     });
   }
+  const executionTimeoutMs = boundedTimeout(options.executionTimeoutMs, DEFAULT_EXECUTION_TIMEOUT_MS, "Execution timeout");
+  const publishTimeoutMs = boundedTimeout(options.publishTimeoutMs, DEFAULT_PUBLISH_TIMEOUT_MS, "Publish timeout");
   const existing = await options.repository.get(job.generationId);
   if (existing === null) {
     throw new ProjectError({
@@ -272,24 +382,38 @@ export async function processGenerationJob(
     now,
   );
   if (!("status" in claimed)) return claimed;
-  const heartbeat = startRunningHeartbeat(options.repository, claimed, heartbeatIntervalMs, now);
-  let execution: ServiceGenerationExecution | undefined;
-  let executionError: unknown;
-  try {
-    execution = normalizeExecution(
-      await options.executor.execute({
-        generationId: claimed.id,
-        prompt: claimed.prompt,
-        ...(claimed.baseModSpec === undefined ? {} : { baseModSpec: claimed.baseModSpec }),
-      }),
-    );
-  } catch (error) {
-    executionError = error;
+  // The heartbeat keeps the claim alive through execution *and* publication; the record
+  // becomes terminal only after the artifact is durably stored.
+  const heartbeat = startRunningHeartbeat(
+    options.repository,
+    claimed,
+    heartbeatIntervalMs,
+    now,
+    executionTimeoutMs + publishTimeoutMs + HEARTBEAT_GRACE_MS,
+  );
+  const executed = await executeWithDeadline(options.executor, claimed, executionTimeoutMs);
+  let execution = executed.execution;
+  let executionError: unknown = executed.error;
+
+  const key = execution?.status === "success"
+    ? `generations/${claimed.id}/${execution.artifact.fileName}`
+    : undefined;
+  let artifact: ArtifactRef | undefined;
+  let publicationError: unknown;
+  if (execution?.status === "success" && key !== undefined) {
+    try {
+      artifact = await publishArtifact(options.artifactStore, key, execution.artifact, publishTimeoutMs);
+    } catch (error) {
+      publicationError = error;
+      // A put that completes after its deadline must not leave a private orphan behind.
+      await removeOrphan(options.artifactStore, key);
+    }
   }
 
   const heartbeatState = await heartbeat.stop();
   const running = heartbeatState.running;
   if (heartbeatState.lostRecord !== undefined) {
+    if (artifact !== undefined) await removeOrphan(options.artifactStore, artifact.key);
     const actual = heartbeatState.lostRecord;
     if (terminal(actual)) return { outcome: "already_terminal", record: actual };
     if (actual.status === "running") return { outcome: "already_running", record: actual };
@@ -301,7 +425,14 @@ export async function processGenerationJob(
     });
   }
 
-  if (heartbeatState.error !== undefined) executionError = heartbeatState.error;
+  if (heartbeatState.error !== undefined) {
+    executionError = heartbeatState.error;
+    if (artifact !== undefined) {
+      await removeOrphan(options.artifactStore, artifact.key);
+      artifact = undefined;
+    }
+  }
+  const finishedAt = now().toISOString();
   if (executionError !== undefined) {
     const normalized = normalizeProjectError(executionError, {
       code: "process_error",
@@ -309,7 +440,6 @@ export async function processGenerationJob(
       message: "Generation executor failed",
       retryable: true,
     });
-    const finishedAt = now().toISOString();
     const failed = GenerationRecordSchema.parse({
       ...running,
       status: "failed",
@@ -327,8 +457,6 @@ export async function processGenerationJob(
       message: "Generation executor completed without a result",
     });
   }
-
-  const finishedAt = now().toISOString();
 
   if (execution.status === "unsupported") {
     const unsupported = GenerationRecordSchema.parse({
@@ -357,31 +485,8 @@ export async function processGenerationJob(
     return { outcome: "processed", record };
   }
 
-  const key = `generations/${running.id}/${execution.artifact.fileName}`;
-  let artifact;
-  try {
-    artifact = ArtifactRefSchema.parse(
-      await options.artifactStore.put({
-        key,
-        fileName: execution.artifact.fileName,
-        contentType: "application/zip",
-        bytes: execution.artifact.bytes,
-      }),
-    );
-    if (
-      artifact.key !== key ||
-      artifact.fileName !== execution.artifact.fileName ||
-      artifact.contentType !== "application/zip" ||
-      artifact.sizeBytes !== execution.artifact.bytes.byteLength
-    ) {
-      throw new ProjectError({
-        code: "internal_error",
-        stage: "internal",
-        message: "Artifact store returned metadata that does not match the published ZIP",
-      });
-    }
-  } catch (error) {
-    const normalized = normalizeProjectError(error, {
+  if (artifact === undefined) {
+    const normalized = normalizeProjectError(publicationError, {
       code: "process_error",
       stage: "process",
       message: "Artifact publication failed",
@@ -409,7 +514,16 @@ export async function processGenerationJob(
     artifact,
     telemetry: execution.telemetry,
   });
-  const record = await persistTerminal(options.repository, running, succeeded);
+  let record: GenerationRecord;
+  try {
+    record = await persistTerminal(options.repository, running, succeeded);
+  } catch (error) {
+    await removeOrphan(options.artifactStore, artifact.key);
+    throw error;
+  }
+  if (record.status !== "succeeded" || record.artifact?.key !== artifact.key) {
+    await removeOrphan(options.artifactStore, artifact.key);
+  }
   return { outcome: "processed", record };
 }
 
@@ -479,4 +593,81 @@ export async function recoverStaleRunningGenerations(
   }
 
   return { scanned: candidates.length, recovered, skipped };
+}
+
+export interface ReconcileOrphanedQueuedGenerationsOptions {
+  readonly repository: GenerationRepository;
+  readonly jobs: GenerationJobInspector;
+  /** Only records queued for at least this long are inspected. */
+  readonly queuedForMs: number;
+  readonly limit?: number;
+  readonly now?: () => Date;
+}
+
+export interface ReconcileOrphanedQueuedGenerationsResult {
+  readonly scanned: number;
+  readonly failed: number;
+  readonly skipped: number;
+}
+
+/**
+ * Terminates queued records whose queue job can no longer start them, e.g. because the worker
+ * failed between fetching the job and claiming the record. Records whose job is still waiting
+ * or running are left alone, however long the backlog is. The terminal failure is retryable
+ * through the explicit owner retry; nothing is re-executed automatically.
+ */
+export async function reconcileOrphanedQueuedGenerations(
+  options: ReconcileOrphanedQueuedGenerationsOptions,
+): Promise<ReconcileOrphanedQueuedGenerationsResult> {
+  const limit = options.limit ?? 100;
+  if (!Number.isInteger(options.queuedForMs) || options.queuedForMs < 1_000) {
+    throw new ProjectError({
+      code: "input_error",
+      stage: "input",
+      message: "queuedForMs must be an integer >= 1000",
+    });
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > 1_000) {
+    throw new ProjectError({
+      code: "input_error",
+      stage: "input",
+      message: "Orphan reconciliation limit must be an integer in range 1..1000",
+    });
+  }
+
+  const now = options.now ?? (() => new Date());
+  const cutoff = new Date(now().getTime() - options.queuedForMs).toISOString();
+  const candidates = await options.repository.listQueuedCreatedBefore(cutoff, limit);
+  let failed = 0;
+  let skipped = 0;
+
+  for (const candidate of candidates) {
+    const jobState = await options.jobs.jobState(candidate.id);
+    if (jobState === "pending" || jobState === "active") {
+      skipped += 1;
+      continue;
+    }
+    const finishedAt = now().toISOString();
+    const terminalRecord = GenerationRecordSchema.parse({
+      ...candidate,
+      revision: candidate.revision + 1,
+      status: "failed",
+      updatedAt: finishedAt,
+      finishedAt,
+      error: {
+        code: "process_error",
+        stage: "process",
+        message: "Generation job ended before a worker started it",
+        retryable: true,
+        details: { jobState },
+      },
+    });
+    if (await options.repository.compareAndSet(candidate.id, candidate.revision, terminalRecord)) {
+      failed += 1;
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { scanned: candidates.length, failed, skipped };
 }

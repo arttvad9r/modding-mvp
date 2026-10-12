@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   GenerationRecordSchema,
   processGenerationJob,
+  reconcileOrphanedQueuedGenerations,
   recoverStaleRunningGenerations,
   recordGenerationFeedback,
   submitGeneration,
@@ -12,6 +13,7 @@ import {
   type ArtifactStorePutInput,
   type GenerationExecutor,
   type GenerationJob,
+  type GenerationJobState,
   type GenerationQueue,
   type GenerationRecord,
   type GenerationRepository,
@@ -108,6 +110,17 @@ class MemoryRepository implements GenerationRepository {
         return record;
       });
   }
+
+  async listQueuedCreatedBefore(cutoff: string, limit: number) {
+    return [...this.records.values()]
+      .filter((record) => record.status === "queued" && record.createdAt < cutoff)
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+      .slice(0, limit)
+      .map((record) => {
+        if (record.status !== "queued") throw new Error("Expected queued record");
+        return record;
+      });
+  }
 }
 
 class MemoryQueue implements GenerationQueue {
@@ -122,15 +135,22 @@ class MemoryQueue implements GenerationQueue {
 
 class MemoryArtifactStore implements ArtifactStore {
   readonly puts: ArtifactStorePutInput[] = [];
+  readonly deletes: string[] = [];
+  beforeReturn: (input: ArtifactStorePutInput) => Promise<void> = async () => undefined;
 
   async put(input: ArtifactStorePutInput): Promise<ArtifactRef> {
     this.puts.push(input);
+    await this.beforeReturn(input);
     return {
       key: input.key,
       fileName: input.fileName,
       contentType: input.contentType,
       sizeBytes: input.bytes.byteLength,
     };
+  }
+
+  async delete(key: string): Promise<void> {
+    this.deletes.push(key);
   }
 }
 
@@ -339,6 +359,7 @@ describe("generation worker state machine", () => {
       async put() {
         throw new Error("object storage unavailable");
       },
+      async delete() {},
     };
     const executor = new FixedExecutor({
       status: "success",
@@ -503,5 +524,248 @@ describe("service feedback", () => {
       revision: 3,
       feedback: { rating: "down", intentMatch: "partial", gameTest: "not_tested", mainIssue: "missing_capability", note: "Need runtime scripting" },
     });
+  });
+});
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const successExecution: ServiceGenerationExecution = {
+  status: "success",
+  modSpec,
+  artifact: { fileName: "faster-steel-furnace_0.1.0.zip", bytes: new Uint8Array([1, 2, 3, 4]) },
+  telemetry,
+};
+
+describe("generation worker deadlines and publication lifecycle", () => {
+  it("keeps heartbeating through a slow upload and records finishedAt after publication", async () => {
+    const repository = new MemoryRepository();
+    const queue = new MemoryQueue();
+    await queued(repository, queue);
+    let clock = fixedDate.getTime();
+    const now = () => new Date(clock);
+    const artifacts = new MemoryArtifactStore();
+    let recovery: Awaited<ReturnType<typeof recoverStaleRunningGenerations>> | undefined;
+    artifacts.beforeReturn = async () => {
+      clock += 2_000;
+      await sleep(60);
+      recovery = await recoverStaleRunningGenerations({ repository, staleAfterMs: 1_000, now });
+    };
+
+    const result = await processGenerationJob({
+      repository,
+      artifactStore: artifacts,
+      executor: new FixedExecutor(successExecution),
+      job: queue.jobs[0]!,
+      now,
+      heartbeatIntervalMs: 10,
+    });
+
+    expect(recovery).toEqual({ scanned: 0, recovered: 0, skipped: 0 });
+    expect(result.record).toMatchObject({ status: "succeeded", finishedAt: new Date(clock).toISOString() });
+    expect(artifacts.deletes).toEqual([]);
+  });
+
+  it("deletes the uploaded object when the claim is lost during publication", async () => {
+    const repository = new MemoryRepository();
+    const queue = new MemoryQueue();
+    await queued(repository, queue);
+    const artifacts = new MemoryArtifactStore();
+    artifacts.beforeReturn = async () => {
+      const current = (await repository.get(generationId))!;
+      await repository.compareAndSet(generationId, current.revision, GenerationRecordSchema.parse({
+        ...current,
+        revision: current.revision + 1,
+        status: "failed",
+        finishedAt: fixedDate.toISOString(),
+        error: { code: "process_error", stage: "process", message: "Generation worker heartbeat became stale", retryable: true },
+      }));
+      await sleep(40);
+    };
+
+    const result = await processGenerationJob({
+      repository,
+      artifactStore: artifacts,
+      executor: new FixedExecutor(successExecution),
+      job: queue.jobs[0]!,
+      now: () => fixedDate,
+      heartbeatIntervalMs: 10,
+    });
+
+    expect(result).toMatchObject({ outcome: "already_terminal", record: { status: "failed" } });
+    expect(artifacts.deletes).toEqual([`generations/${generationId}/faster-steel-furnace_0.1.0.zip`]);
+  });
+
+  it("bounds publication time, aborts the upload, and cleans up a late object", async () => {
+    const repository = new MemoryRepository();
+    const queue = new MemoryQueue();
+    await queued(repository, queue);
+    const artifacts = new MemoryArtifactStore();
+    artifacts.beforeReturn = () => new Promise<void>(() => undefined);
+
+    const result = await processGenerationJob({
+      repository,
+      artifactStore: artifacts,
+      executor: new FixedExecutor(successExecution),
+      job: queue.jobs[0]!,
+      now: () => fixedDate,
+      publishTimeoutMs: 30,
+    });
+
+    expect(result.record).toMatchObject({
+      status: "failed",
+      error: { code: "process_error", retryable: true, message: "Artifact publication exceeded 30 ms" },
+    });
+    expect(artifacts.puts[0]?.signal?.aborted).toBe(true);
+    expect(artifacts.deletes).toEqual([`generations/${generationId}/faster-steel-furnace_0.1.0.zip`]);
+  });
+
+  it("aborts executor work at the execution deadline and persists a retryable failure", async () => {
+    const repository = new MemoryRepository();
+    const queue = new MemoryQueue();
+    await queued(repository, queue);
+    let observed: AbortSignal | undefined;
+    const executor: GenerationExecutor = {
+      async execute({ signal }) {
+        observed = signal;
+        await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+        throw new ProjectError({
+          code: "process_error",
+          stage: "process",
+          message: "Generation exceeded its execution deadline",
+          retryable: true,
+        });
+      },
+    };
+
+    const result = await processGenerationJob({
+      repository,
+      artifactStore: new MemoryArtifactStore(),
+      executor,
+      job: queue.jobs[0]!,
+      now: () => fixedDate,
+      executionTimeoutMs: 30,
+    });
+
+    expect(observed?.aborted).toBe(true);
+    expect(result.record).toMatchObject({
+      status: "failed",
+      error: { code: "process_error", retryable: true, message: "Generation exceeded its execution deadline" },
+    });
+  });
+
+  it("stops renewing the claim after every deadline so recovery can end an executor that ignores cancellation", async () => {
+    const repository = new MemoryRepository();
+    const queue = new MemoryQueue();
+    await queued(repository, queue);
+    let clock = fixedDate.getTime();
+    const now = () => new Date(clock);
+    const artifacts = new MemoryArtifactStore();
+    const executor: GenerationExecutor = {
+      async execute() {
+        await sleep(30);
+        clock += 60 * 60_000;
+        await sleep(50);
+        const recovery = await recoverStaleRunningGenerations({ repository, staleAfterMs: 5 * 60_000, now });
+        expect(recovery.recovered).toBe(1);
+        return successExecution;
+      },
+    };
+
+    const result = await processGenerationJob({
+      repository,
+      artifactStore: artifacts,
+      executor,
+      job: queue.jobs[0]!,
+      now,
+      heartbeatIntervalMs: 10,
+    });
+
+    expect(result.record).toMatchObject({ status: "failed", error: { message: "Generation worker heartbeat became stale" } });
+    expect(artifacts.deletes).toEqual([`generations/${generationId}/faster-steel-furnace_0.1.0.zip`]);
+  });
+});
+
+describe("orphaned queued generation reconciliation", () => {
+  const ids = {
+    pending: "22222222-2222-4222-8222-222222222222",
+    active: "33333333-3333-4333-8333-333333333333",
+    finished: "44444444-4444-4444-8444-444444444444",
+    missing: "55555555-5555-4555-8555-555555555555",
+    fresh: "66666666-6666-4666-8666-666666666666",
+  } as const;
+
+  async function seed(repository: MemoryRepository, id: string, createdAt: Date) {
+    await submitGeneration({
+      userId,
+      repository,
+      queue: new MemoryQueue(),
+      prompt: "Make steel furnaces twice as fast",
+      generationId: () => id,
+      now: () => createdAt,
+    });
+  }
+
+  it("fails only queued records whose job can no longer start them, as a retryable failure", async () => {
+    const repository = new MemoryRepository();
+    const old = new Date(fixedDate.getTime() - 10 * 60_000);
+    for (const id of [ids.pending, ids.active, ids.finished, ids.missing]) await seed(repository, id, old);
+    await seed(repository, ids.fresh, fixedDate);
+    const states = new Map<string, GenerationJobState>([
+      [ids.pending, "pending"],
+      [ids.active, "active"],
+      [ids.finished, "finished"],
+      [ids.missing, "missing"],
+      [ids.fresh, "missing"],
+    ]);
+    const inspected: string[] = [];
+
+    const result = await reconcileOrphanedQueuedGenerations({
+      repository,
+      jobs: { async jobState(id) { inspected.push(id); return states.get(id)!; } },
+      queuedForMs: 60_000,
+      now: () => fixedDate,
+    });
+
+    expect(result).toEqual({ scanned: 4, failed: 2, skipped: 2 });
+    expect(inspected).not.toContain(ids.fresh);
+    expect(await repository.get(ids.pending)).toMatchObject({ status: "queued" });
+    expect(await repository.get(ids.active)).toMatchObject({ status: "queued" });
+    expect(await repository.get(ids.fresh)).toMatchObject({ status: "queued" });
+    for (const id of [ids.finished, ids.missing]) {
+      expect(await repository.get(id)).toMatchObject({
+        status: "failed",
+        finishedAt: fixedDate.toISOString(),
+        error: { code: "process_error", retryable: true, details: { jobState: states.get(id) } },
+      });
+    }
+  });
+
+  it("does not overwrite a record that a worker claimed concurrently", async () => {
+    const repository = new MemoryRepository();
+    await seed(repository, ids.finished, new Date(fixedDate.getTime() - 10 * 60_000));
+
+    const result = await reconcileOrphanedQueuedGenerations({
+      repository,
+      jobs: {
+        async jobState(id) {
+          const current = (await repository.get(id))!;
+          await repository.compareAndSet(id, current.revision, GenerationRecordSchema.parse({
+            ...current,
+            revision: current.revision + 1,
+            status: "running",
+            startedAt: fixedDate.toISOString(),
+            updatedAt: fixedDate.toISOString(),
+          }));
+          return "finished";
+        },
+      },
+      queuedForMs: 60_000,
+      now: () => fixedDate,
+    });
+
+    expect(result).toEqual({ scanned: 1, failed: 0, skipped: 1 });
+    expect(await repository.get(ids.finished)).toMatchObject({ status: "running" });
   });
 });

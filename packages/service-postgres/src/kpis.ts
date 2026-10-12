@@ -38,7 +38,14 @@ export interface BetaKpiReport {
     readonly repairedSuccesses: number;
     readonly downloadStarted: number;
     readonly downloadStartRate: number | null;
+    /** Wall clock from accepted prompt (`createdAt`) to terminal record (`finishedAt`), all terminal outcomes. */
     readonly medianPromptToResultMs: number | null;
+    /** Same wall-clock interval for `succeeded` only, so fast unsupported/failed outcomes cannot mask ZIP latency. */
+    readonly medianSucceededPromptToResultMs: number | null;
+    /** `startedAt - createdAt` for terminal records a worker claimed. */
+    readonly medianQueueWaitMs: number | null;
+    /** Executor pipeline duration from telemetry; excludes queue wait, upload and persistence. */
+    readonly medianExecutionMs: number | null;
     readonly medianFactorioValidationMs: number | null;
   };
   readonly feedback: {
@@ -85,6 +92,11 @@ function ratio(numerator: number, denominator: number): number | null {
   return denominator === 0 ? null : numerator / denominator;
 }
 
+function intervalMs(from: string, to: string): number | null {
+  const elapsed = Date.parse(to) - Date.parse(from);
+  return Number.isFinite(elapsed) && elapsed >= 0 ? elapsed : null;
+}
+
 function median(values: readonly number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((left, right) => left - right);
@@ -108,7 +120,10 @@ export function calculateBetaKpis(
     failed: 0,
   };
   const promptsByUser = new Map<string, Set<string>>();
-  const terminalDurations: number[] = [];
+  const promptToResultDurations: number[] = [];
+  const succeededPromptToResultDurations: number[] = [];
+  const queueWaitDurations: number[] = [];
+  const executionDurations: number[] = [];
   const validationDurations: number[] = [];
   let directSucceeded = 0;
   let repairedSuccesses = 0;
@@ -139,9 +154,18 @@ export function calculateBetaKpis(
     promptsByUser.set(record.userId, prompts);
 
     if (record.status === "queued" || record.status === "running") continue;
+    const promptToResult = intervalMs(record.createdAt, record.finishedAt);
+    if (promptToResult !== null) {
+      promptToResultDurations.push(promptToResult);
+      if (record.status === "succeeded") succeededPromptToResultDurations.push(promptToResult);
+    }
+    if (record.startedAt !== undefined) {
+      const queueWait = intervalMs(record.createdAt, record.startedAt);
+      if (queueWait !== null) queueWaitDurations.push(queueWait);
+    }
     const telemetry = record.telemetry;
     if (telemetry !== undefined) {
-      terminalDurations.push(telemetry.durationMs);
+      executionDurations.push(telemetry.durationMs);
       totalTokens += telemetry.usage.totalTokens;
       if (telemetry.usage.estimatedCostUsd !== undefined) {
         estimatedCostUsd += telemetry.usage.estimatedCostUsd;
@@ -210,7 +234,10 @@ export function calculateBetaKpis(
       repairedSuccesses,
       downloadStarted,
       downloadStartRate: ratio(downloadStarted, byStatus.succeeded),
-      medianPromptToResultMs: median(terminalDurations),
+      medianPromptToResultMs: median(promptToResultDurations),
+      medianSucceededPromptToResultMs: median(succeededPromptToResultDurations),
+      medianQueueWaitMs: median(queueWaitDurations),
+      medianExecutionMs: median(executionDurations),
       medianFactorioValidationMs: median(validationDurations),
     },
     feedback: {

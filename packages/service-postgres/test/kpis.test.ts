@@ -188,7 +188,11 @@ describe("private-beta KPI report", () => {
       repairedSuccesses: 1,
       downloadStarted: 1,
       downloadStartRate: 0.5,
-      medianPromptToResultMs: 2_000,
+      // Wall clock createdAt -> finishedAt: succeeded 3 s, 3 s; failed 4 s; unsupported 2 s.
+      medianPromptToResultMs: 3_000,
+      medianSucceededPromptToResultMs: 3_000,
+      medianQueueWaitMs: 1_000,
+      medianExecutionMs: 2_000,
       medianFactorioValidationMs: 100,
     });
     expect(report.generations.nonUnsupportedTerminalSuccessRate).toBeCloseTo(2 / 3);
@@ -256,6 +260,47 @@ describe("private-beta KPI report", () => {
     expect(report.feedback.problemOutcomeRate).toBe(1);
   });
 
+  it("measures prompt-to-result on the wall clock, including queue wait and publication", () => {
+    const slow = GenerationRecordSchema.parse({
+      ...succeeded({
+        id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        prompt: "Make steel furnaces twice as fast",
+        repaired: false,
+        durationMs: 3_000,
+        totalTokens: 100,
+        feedback: "up",
+      }),
+      startedAt: "2026-10-11T00:29:00.000Z",
+      updatedAt: "2026-10-11T00:30:00.000Z",
+      finishedAt: "2026-10-11T00:30:00.000Z",
+    });
+    const fastUnsupported = GenerationRecordSchema.parse({
+      schemaVersion: 2,
+      id: "abababab-abab-4bab-8bab-abababababab",
+      userId: userB,
+      revision: 2,
+      prompt: "Add a new planet",
+      status: "unsupported",
+      createdAt,
+      updatedAt: "2026-10-11T00:00:01.000Z",
+      startedAt: "2026-10-11T00:00:00.500Z",
+      finishedAt: "2026-10-11T00:00:01.000Z",
+      reason: "Outside current capability registry",
+      telemetry: { durationMs: 400, attempts: [], usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } },
+    });
+
+    const report = calculateBetaKpis({
+      provisionedUserIds: [userA, userB],
+      generationRecords: [slow, fastUnsupported],
+      surveyResponses: [],
+    });
+
+    expect(report.generations.medianPromptToResultMs).toBe((1_800_000 + 1_000) / 2);
+    expect(report.generations.medianSucceededPromptToResultMs).toBe(1_800_000);
+    expect(report.generations.medianQueueWaitMs).toBe((1_740_000 + 500) / 2);
+    expect(report.generations.medianExecutionMs).toBe((3_000 + 400) / 2);
+  });
+
   it("returns null rates when there is no observed denominator", () => {
     const report = calculateBetaKpis({
       provisionedUserIds: [],
@@ -266,6 +311,9 @@ describe("private-beta KPI report", () => {
     expect(report.generations.directSuccessRate).toBeNull();
     expect(report.generations.downloadStartRate).toBeNull();
     expect(report.generations.medianPromptToResultMs).toBeNull();
+    expect(report.generations.medianSucceededPromptToResultMs).toBeNull();
+    expect(report.generations.medianQueueWaitMs).toBeNull();
+    expect(report.generations.medianExecutionMs).toBeNull();
     expect(report.generations.medianFactorioValidationMs).toBeNull();
     expect(report.feedback.succeededFeedbackCoverage).toBeNull();
     expect(report.feedback.reportedFalseSuccessRate).toBeNull();

@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -64,6 +65,7 @@ export class S3ArtifactStore implements ArtifactStore {
         ContentType: "application/zip",
         Metadata: { "artifact-file-name": fileName },
       }),
+      input.signal === undefined ? {} : { abortSignal: input.signal },
     );
 
     return ArtifactRefSchema.parse({
@@ -72,6 +74,11 @@ export class S3ArtifactStore implements ArtifactStore {
       contentType: "application/zip",
       sizeBytes: input.bytes.byteLength,
     });
+  }
+
+  async delete(keyInput: string): Promise<void> {
+    const key = ArtifactKeySchema.parse(keyInput);
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   async createDownloadUrl(
