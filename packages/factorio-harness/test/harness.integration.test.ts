@@ -46,4 +46,25 @@ end
     expect(result.summary).toContain('expected=4');
     expect(result.summary).toContain('actual=3');
   });
+
+  it('runs concurrent validations without sharing Factorio lock or write-data', async () => {
+    const results = await Promise.all(
+      Array.from({ length: 4 }, () => runFactorioModTest({ modPath: validMod })),
+    );
+
+    expect(results.map((result) => result.errorType)).toEqual([null, null, null, null]);
+    expect(results.every((result) => result.ok)).toBe(true);
+  }, 120_000);
+
+  it('validates against the base game only, with bundled expansions disabled', async () => {
+    const result = await runFactorioModTest({
+      modPath: validMod,
+      semanticAssertionLua: `if mods["space-age"] or mods["quality"] or mods["elevated-rails"] then
+  error("__PROJECT_SEMANTIC_ASSERTION__|environment|expected=base-only|actual=expansion-enabled", 0)
+end
+`,
+    });
+
+    expect(result.ok).toBe(true);
+  });
 });
