@@ -4,8 +4,7 @@ Service that turns a natural-language request into a validated, installable game
 
 ## Sources of truth
 - Product scope: `docs/product-spec.md`; technical contracts/security: `docs/technical-spec.md`; current sequence: `docs/roadmap.md`; tasks: `docs/backlog.md`; capabilities: `docs/capabilities.md`; architecture: `docs/architecture.md`; durable decisions: `docs/adr/`.
-- Read only documents relevant to the task. If code and an accepted contract disagree, establish which is stale instead of silently inventing a third behavior.
-- Current work is M6 private beta; M6B content-mod capability exists. Exact deployed commit/provider/eval counts and rollout history belong in git/deployment docs, not this file.
+- If code and an accepted contract disagree, establish which is stale instead of silently inventing a third behavior.
 
 ## Product scope
 - Factorio stable 2.0.x, prototype/data-stage mods within accepted capabilities.
@@ -28,15 +27,9 @@ Service that turns a natural-language request into a validated, installable game
 - Planner/repair: `pnpm planner:eval`, `pnpm repair:eval`, `pnpm prompt:plan -- "<request>"`, `pnpm prompt:build -- "<request>"`.
 - Service/database operations are documented in package/deployment docs; do not run production-impacting commands merely because they appear in historical instructions.
 
-## Definition of done
-- Requested behavior is implemented through the real product path; important behavior has appropriate tests; targeted checks and `pnpm typecheck`/`pnpm test` pass.
-- Run Factorio/runtime integration only when that behavior changed. Update public contracts/specs when behavior changes and ADR only for durable architectural decisions.
-- Avoid unrelated refactors and dependencies without concrete justification. Never delete/weaken failing tests to get green output.
-
-## Workflow
-Inspect existing behavior, read the relevant contract/ADR, make the smallest coherent change, run narrow checks then the required broader gate, and report only changed behavior, verification and real remaining risks.
+## Verification scope
+- Run Factorio/runtime integration only when that behavior changed; never delete or weaken failing tests to get green output.
 
 ## Git
 - `main` is the working branch and must always build and pass checks.
 - Work in `feat/<name>` / `fix/<name>` from `main`; several branches may run in parallel. Merge verified work into `main`, then delete the branch.
-- Push only with the owner's explicit permission.
