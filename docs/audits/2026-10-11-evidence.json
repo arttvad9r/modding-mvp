@@ -68,12 +68,12 @@
     "concurrency": [
       {
         "code": 0,
-        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n/home/artt/Projects/modding-mvp/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
+        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n<modding-mvp checkout>/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
         "err": ""
       },
       {
         "code": 0,
-        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n/home/artt/Projects/modding-mvp/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
+        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n<modding-mvp checkout>/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
         "err": ""
       },
       {
@@ -83,7 +83,7 @@
       },
       {
         "code": 0,
-        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n/home/artt/Projects/modding-mvp/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
+        "out": "{\"ok\":false,\"errorType\":\"factorio_load_failed\",\"summary\":\"0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\",\"log\":\"   0.000 Error Util.cpp:81: Couldn't acquire exclusive lock for\\n<modding-mvp checkout>/.tools/factorio/.lock: Resource temporarily unavailable.\\nIs another instance already running?\\n\"}\n",
         "err": ""
       }
     ]
