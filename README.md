@@ -1,22 +1,39 @@
-# AI modding MVP
+# Factorio AI Modding Pipeline
 
-Working repository for a prompt-to-mod service. The public product name is intentionally undecided.
+**From a natural-language request to a validated Factorio mod ZIP.**
 
-## Product direction
-The first MVP targets Factorio stable 2.0.x and aims to turn a supported natural-language request into a validated, installable mod ZIP.
+[![CI](https://github.com/arttvad9r/modding-mvp/actions/workflows/ci.yml/badge.svg)](https://github.com/arttvad9r/modding-mvp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Factorio](https://img.shields.io/badge/Factorio-2.0.77-orange)](https://www.factorio.com/)
 
-The project deliberately starts with prototype-stage modifications and one game. See [`docs/product-spec.md`](docs/product-spec.md) for scope and non-goals.
+This repository is an end-to-end prototype for AI-assisted game mod generation. A constrained planner turns a prompt into a typed `ModSpec`, deterministic code generation produces the mod, a real pinned Factorio runtime validates it, and a bounded repair loop can fix supported failures before an installable ZIP is returned.
+
+```mermaid
+flowchart LR
+    P[User prompt] --> L[LLM planner]
+    L --> S[Typed ModSpec]
+    S --> G[Deterministic generator]
+    G --> F[Real Factorio validation]
+    F -->|PASS| Z[Installable ZIP]
+    F -->|supported failure| R[Bounded repair]
+    R --> F
+```
+
+## What this project demonstrates
+
+- **Constrained AI planning** behind a provider-neutral LLM boundary rather than free-form code generation.
+- **Deterministic generation** from an allow-listed typed specification.
+- **Real-game verification** against a pinned Factorio 2.0.77 Linux headless runtime.
+- **Bounded repair** with preserved semantic assertions and hard retry limits.
+- **Production-shaped backend work**: PostgreSQL/pg-boss jobs, S3-compatible private artifacts, worker heartbeats, authentication, rate limits, telemetry and Docker deployment.
+- **Evidence-driven development** through golden planner evals, integration tests and live end-to-end runs.
 
 ## Current status
-- M0 — Factorio Mod Test Harness: complete.
-- M1 — Deterministic ModSpec engine: complete.
-- M2 — Expand deterministic capabilities: complete.
-- M3 — Natural-language Planner: complete.
-- M4 — Repair loop: complete.
-- M5 — Local end-to-end prototype: complete.
-- M6 — Private beta service: in progress.
 
-M0 validates candidate mods against a real pinned Factorio 2.0.77 Linux headless runtime and returns structured PASS/FAIL results. M1 adds typed ModSpec generation, semantic validation, safe manifests, and installable ZIP packaging. M2 adds four deterministic capability families, a machine-readable Planner-facing registry in `packages/factorio-knowledge`, a 20-fixture real-Factorio E2E corpus, and typed cross-pipeline errors. M3 adds a provider-agnostic LLM boundary, constrained Planner, OpenAI Responses plus OpenAI-compatible Chat Completions transports, Ollama Cloud/Z.ai presets, bounded structured-output retry, and a 24-case golden eval corpus. Planner quality is verified on both Ollama Cloud and Z.ai; Z.ai `glm-5.3-flash` on the Coding Plan endpoint passes all 24 classification cases and all 12 supported ModSpec cases. M4 adds a hard-capped data.lua-only Repair loop that preserves the accepted ModSpec and original semantic assertions; Z.ai `glm-5.3-flash` repairs 5/5 injected failures. M5 adds one local prompt-to-ZIP command, bounded progress, persisted run telemetry, and feedback capture. M6 is in progress: `packages/service-core` defines the asynchronous API/worker lifecycle, `packages/factorio-service-executor` connects workers to the validated M5 pipeline, and `packages/service-postgres` now provides versioned Drizzle migrations, revision-CAS persistence, pg-boss queueing, and atomic generation+job submission verified against real PostgreSQL 18.6. `packages/service-s3` implements private S3-compatible artifact storage/presigned downloads, and `apps/worker` now consumes pg-boss jobs with heartbeat/stale recovery. A Docker-backed integration proves atomic submit -> worker -> real Factorio -> object storage -> persisted success -> presigned download. Authenticated create/get/feedback/download HTTP endpoints, per-user ownership, PostgreSQL rate limits, and beta-token provisioning are now implemented. The tester UI, explicit retry policy, beta KPI instrumentation, hosted SeaweedFS smoke, and a production-like Helsinki VPS deployment are implemented. A live server E2E with Z.ai `glm-5.3-flash` now proves API -> queue -> worker -> real Factorio -> private object storage -> presigned ZIP -> feedback/survey. Public ingress for testers outside the tailnet and live beta recruitment remain.
+Milestones M0–M5 are complete: real-game harness, typed ModSpec engine, expanded capabilities, natural-language planner, repair loop and local prompt-to-ZIP pipeline. M6 is an active private-beta service with API/worker lifecycle, PostgreSQL queueing, S3-compatible artifacts, tester UI and a production-like deployment. Public tester ingress and recruitment remain intentionally unfinished.
+
+The public product name is intentionally undecided; the repository name reflects its prototype origin.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
@@ -31,6 +48,8 @@ Key documents:
 - [`docs/service-contract.md`](docs/service-contract.md) — private-beta API/worker contract;
 - [`docs/deployment.md`](docs/deployment.md) — private-beta build/deployment runbook;
 - [`docs/adr/README.md`](docs/adr/README.md) — architecture decision records.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — contribution and verification rules;
+- [`SECURITY.md`](SECURITY.md) — security boundaries and reporting.
 
 AI coding agents must also follow [`AGENTS.md`](AGENTS.md).
 
