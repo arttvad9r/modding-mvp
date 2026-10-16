@@ -9,6 +9,10 @@
 
 This repository is an end-to-end prototype for AI-assisted game mod generation. A constrained planner turns a prompt into a typed `ModSpec`, deterministic code generation produces the mod, a real pinned Factorio runtime validates it, and a bounded repair loop can fix supported failures before an installable ZIP is returned.
 
+<p align="center">
+  <img src="docs/assets/readme-landing.png" width="1100" alt="Current MyModz private-beta landing page concept">
+</p>
+
 ```mermaid
 flowchart LR
     P[User prompt] --> L[LLM planner]
@@ -33,7 +37,7 @@ flowchart LR
 
 Milestones M0–M5 are complete: real-game harness, typed ModSpec engine, expanded capabilities, natural-language planner, repair loop and local prompt-to-ZIP pipeline. M6 is an active private-beta service with API/worker lifecycle, PostgreSQL queueing, S3-compatible artifacts, tester UI and a production-like deployment. Public tester ingress and recruitment remain intentionally unfinished.
 
-The public product name is intentionally undecided; the repository name reflects its prototype origin.
+The current landing-page concept uses **MyModz**; product naming is not finalized, and the repository name still reflects its prototype origin.
 
 ## Documentation
 Start with [`docs/README.md`](docs/README.md).
